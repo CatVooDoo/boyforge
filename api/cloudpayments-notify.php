@@ -1,12 +1,6 @@
 <?php
-/**
- * api/cloudpayments-notify.php — Webhook обработчик уведомлений CloudPayments (Pay, Check, Fail)
- * BOYFORGE
- */
-
 header('Content-Type: application/json; charset=utf-8');
 
-// Загрузка конфигурации из .env
 $envFile = __DIR__ . '/../.env';
 $env = [];
 if (file_exists($envFile)) {
@@ -24,10 +18,8 @@ if (file_exists($envFile)) {
 $apiSecret       = $env['CLOUDPAYMENTS_API_SECRET'] ?? 'c0a9234eb56f475d09c62f83484f768c';
 $googleScriptUrl = $env['GOOGLE_SCRIPT_URL'] ?? '';
 
-// Чтение входящих данных
 $rawBody = file_get_contents('php://input');
 
-// Проверка HMAC подписи от CloudPayments
 $hmacHeader = $_SERVER['HTTP_CONTENT_HMAC'] ?? $_SERVER['HTTP_X_CONTENT_HMAC'] ?? '';
 if (!empty($hmacHeader) && !empty($apiSecret)) {
     $expectedHmac = base64_encode(hash_hmac('sha256', $rawBody, $apiSecret, true));
@@ -38,7 +30,6 @@ if (!empty($hmacHeader) && !empty($apiSecret)) {
     }
 }
 
-// Парсинг входящих параметров
 $data = [];
 if (!empty($_POST)) {
     $data = $_POST;
@@ -49,7 +40,6 @@ if (!empty($_POST)) {
     }
 }
 
-// Извлечение основных полей
 $transactionId = isset($data['TransactionId']) ? (string)$data['TransactionId'] : '';
 $amount        = isset($data['Amount']) ? (string)$data['Amount'] : '';
 $currency      = isset($data['Currency']) ? (string)$data['Currency'] : 'RUB';
@@ -59,7 +49,6 @@ $accountId     = isset($data['AccountId']) ? (string)$data['AccountId'] : '';
 $cardType      = isset($data['CardType']) ? (string)$data['CardType'] : '';
 $cardLastFour  = isset($data['CardLastFour']) ? (string)$data['CardLastFour'] : '';
 
-// Извлечение пользовательских данных из поля Data
 $customData = [];
 if (!empty($data['Data'])) {
     if (is_string($data['Data'])) {
@@ -80,7 +69,6 @@ $city          = $customData['city'] ?? 'Москва';
 
 $orderDate = date('d.m.Y H:i:s');
 
-// Запись / отправка в Google Таблицы
 if (!empty($googleScriptUrl) && $googleScriptUrl !== 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
     $gPayload = [
         'date'        => $orderDate,
@@ -110,5 +98,5 @@ if (!empty($googleScriptUrl) && $googleScriptUrl !== 'YOUR_GOOGLE_APPS_SCRIPT_UR
     curl_close($ch);
 }
 
-// Для CloudPayments обязателен ответ {"code": 0}
+// CloudPayments webhook response
 echo json_encode(['code' => 0]);

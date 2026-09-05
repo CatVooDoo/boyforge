@@ -1,12 +1,6 @@
 <?php
-/**
- * api/ozon-order.php — Обработчик заказов с OZON Доставкой
- * BOYFORGE
- */
-
 header('Content-Type: application/json; charset=utf-8');
 
-// Разрешаем только POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode([
@@ -16,7 +10,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// Загрузка конфигурации из .env (внутри src)
 $envFile = __DIR__ . '/../.env';
 $env = [];
 if (file_exists($envFile)) {
@@ -35,14 +28,12 @@ $ozonClientId     = $env['OZON_CLIENT_ID'] ?? 'b2685381-5aea-463e-9087-0f38bd729
 $ozonClientSecret = $env['OZON_CLIENT_SECRET'] ?? '5cc652ac46578c0af829d2aec1b1bf7ae4c3f594f2781ca72a4a5883ab5c7b28';
 $googleScriptUrl  = $env['GOOGLE_SCRIPT_URL'] ?? 'https://script.google.com/macros/s/AKfycbwEX5yOenoxiIpkFlt0BGHbV4SPmJiWIrzIFU-0t8R-4lN59vMuTnhMhlAP6ImemV59Fw/exec';
 
-// Получаем входные данные
 $rawInput = file_get_contents('php://input');
 $inputData = json_decode($rawInput, true);
 if (!is_array($inputData)) {
     $inputData = $_POST;
 }
 
-// Санитизация
 $productId     = isset($inputData['productId']) ? trim((string)$inputData['productId']) : '';
 $productName   = isset($inputData['productName']) ? trim((string)$inputData['productName']) : '';
 $price         = isset($inputData['price']) ? trim((string)$inputData['price']) : '';
@@ -58,12 +49,10 @@ $transactionId = isset($inputData['transactionId']) ? trim((string)$inputData['t
 $customOrderId = isset($inputData['orderId']) ? trim((string)$inputData['orderId']) : '';
 $source        = 'OZON Доставка / CloudPayments';
 
-// Форматирование Telegram ника (добавляем @ если не указан)
 if (!empty($tgUsername) && $tgUsername[0] !== '@') {
     $tgUsername = '@' . $tgUsername;
 }
 
-// Валидация
 if (empty($productName)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Не указан товар.'], JSON_UNESCAPED_UNICODE);
@@ -80,16 +69,13 @@ if (empty($phone)) {
     exit;
 }
 
-// ПВЗ теперь опционален — если не выбран, фиксируем статус согласования
 if (empty($pvzAddress)) {
     $pvzAddress = 'Не выбран (согласовать в Telegram)';
 }
 
-// Уникальный номер заказа
 $orderNum = !empty($customOrderId) ? $customOrderId : ('BF-OZON-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6)));
 $orderDate = date('d.m.Y H:i:s');
 
-// Формируем полезную нагрузку
 $orderPayload = [
     'orderId'       => $orderNum,
     'date'          => $orderDate,
@@ -111,7 +97,6 @@ $orderPayload = [
     'userAgent'     => $_SERVER['HTTP_USER_AGENT'] ?? ''
 ];
 
-// 1. Дублирование в Google Таблицу (если настроена)
 if (!empty($googleScriptUrl) && $googleScriptUrl !== 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
     $contactInfo = $phone . ' / ' . $tgUsername . ' (ПВЗ: ' . $city . ', ' . $pvzAddress . ')';
     if (!empty($transactionId)) {
@@ -146,7 +131,6 @@ if (!empty($googleScriptUrl) && $googleScriptUrl !== 'YOUR_GOOGLE_APPS_SCRIPT_UR
     curl_close($ch);
 }
 
-// Успешный ответ
 echo json_encode([
     'success'    => true,
     'orderId'    => $orderNum,
