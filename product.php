@@ -324,10 +324,7 @@ if (file_exists($envFile)) {
   <div class="order-modal ozon-modal" id="orderModal" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="order-modal-dialog ozon-modal-dialog">
       <div class="order-modal-header ozon-modal-header">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span class="fivepost-logo-pill">5Post</span>
-          <h3 class="order-modal-title ozon-modal-title">Оформление заказа</h3>
-        </div>
+        <h3 class="order-modal-title ozon-modal-title">Оформление заказа</h3>
         <button type="button" class="order-modal-close ozon-modal-close" id="orderModalClose" aria-label="Закрыть">&times;</button>
       </div>
 
@@ -349,20 +346,24 @@ if (file_exists($envFile)) {
           <!-- 1. Контактные данные -->
           <div class="ozon-section">
             <div class="ozon-section-title">1. Контактные данные покупателя</div>
+            <div class="ozon-field">
+              <label for="orderFio">ФИО получателя <span style="color:#ef4444;">*</span></label>
+              <input type="text" id="orderFio" class="ozon-input" placeholder="Иванов Иван Иванович" required autocomplete="name">
+            </div>
             <div class="ozon-fields-grid">
               <div class="ozon-field">
-                <label for="orderTg">Ваш Telegram (@username)</label>
+                <label for="orderTg">Ваш Telegram (@username) <span style="color:#ef4444;">*</span></label>
                 <input type="text" id="orderTg" class="ozon-input" placeholder="@username" required autocomplete="off">
               </div>
               <div class="ozon-field">
-                <label for="orderPhone">Номер телефона</label>
+                <label for="orderPhone">Номер телефона <span style="color:#ef4444;">*</span></label>
                 <input type="tel" id="orderPhone" class="ozon-input" placeholder="+7 (999) 000-00-00" required autocomplete="tel">
               </div>
             </div>
           </div>
 
           <!-- 2. Пункт выдачи 5Post -->
-          <div class="ozon-section" style="margin-top: 4px;">
+          <div class="ozon-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
             <div style="display:flex; align-items:center; justify-content:space-between;">
               <div class="ozon-section-title">2. Доставка 5Post (Пятёрочка / Перекрёсток)</div>
             </div>
@@ -435,7 +436,10 @@ if (file_exists($envFile)) {
     </script>
   <?php endif; ?>
 
-  <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU"></script>
+  <?php
+    $yandexApiKey = $env['YANDEX_MAPS_API_KEY'] ?? getenv('YANDEX_MAPS_API_KEY') ?: '3612542e-8832-4f60-879c-72b492b06944';
+  ?>
+  <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=<?= htmlspecialchars($yandexApiKey) ?>"></script>
   <script src="js/product.js?v=<?= filemtime(__DIR__ . '/js/product.js') ?>"></script>
   <script src="js/main.js?v=23"></script>
   <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>

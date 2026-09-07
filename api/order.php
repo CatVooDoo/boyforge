@@ -41,6 +41,7 @@ $productName   = isset($inputData['productName']) ? trim((string)$inputData['pro
 $price         = isset($inputData['price']) ? trim((string)$inputData['price']) : '';
 $gender        = isset($inputData['gender']) ? trim((string)$inputData['gender']) : '';
 $size          = isset($inputData['size']) ? trim((string)$inputData['size']) : '';
+$fio           = isset($inputData['fio']) ? trim((string)$inputData['fio']) : '';
 $contact       = isset($inputData['contact']) ? trim((string)$inputData['contact']) : '';
 $phone         = isset($inputData['phone']) ? trim((string)$inputData['phone']) : '';
 $tgUsername    = isset($inputData['tgUsername']) ? trim((string)$inputData['tgUsername']) : '';
@@ -55,6 +56,7 @@ $fivepostDetails     = isset($inputData['fivepostPointDetails']) ? trim((string)
 
 if (empty($contact)) {
     $parts = [];
+    if (!empty($fio)) $parts[] = "Получатель: $fio";
     if (!empty($phone)) $parts[] = $phone;
     if (!empty($tgUsername)) $parts[] = $tgUsername;
     if (!empty($fivepostAddress)) {
@@ -85,6 +87,7 @@ $orderPayload = [
     'price'       => $price,
     'gender'      => $gender,
     'size'        => $size,
+    'fio'         => $fio,
     'contact'     => $contact,
     'source'      => $source,
     'ip'          => $_SERVER['REMOTE_ADDR'] ?? '',

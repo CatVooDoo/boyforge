@@ -14,6 +14,7 @@
 
     const closeBtn = document.getElementById("orderModalClose") || document.getElementById("ozonModalClose");
     const form = document.getElementById("orderForm") || document.getElementById("ozonOrderForm");
+    const fioInput = document.getElementById("orderFio");
     const tgInput = document.getElementById("orderTg") || document.getElementById("ozonTg") || document.getElementById("ozonName");
     const phoneInput = document.getElementById("orderPhone") || document.getElementById("ozonPhone");
     const submitBtn = document.getElementById("orderConfirmBtn") || document.getElementById("ozonConfirmBtn");
@@ -194,7 +195,7 @@
       chipsContainer.innerHTML = "";
       cities.forEach(function (cityName) {
         const chip = document.createElement("span");
-        const isActive = (cityName === activeCity || (cityName.indexOf("Пенза") !== -1 && (activeCity || "").indexOf("Пенза") !== -1));
+        const isActive = (cityName === activeCity);
         chip.className = "bf-city-chip" + (isActive ? " active" : "");
         chip.textContent = "г. " + cityName;
         chip.setAttribute("data-city", cityName);
@@ -204,14 +205,14 @@
           currentCity = cityName;
           if (searchInput) searchInput.value = "";
           if (clearSearchBtn) clearSearchBtn.style.display = "none";
-          loadPoints(cityName, "");
+          loadPoints(cityName, "", false);
         });
         chipsContainer.appendChild(chip);
       });
     }
 
-    function loadPoints(city, search) {
-      if (mapLoader) mapLoader.style.display = "flex";
+    function loadPoints(city, search, isInitial) {
+      if (isInitial && mapLoader) mapLoader.style.display = "flex";
 
       let url = "api/fivepost-points.php?";
       if (city) url += "city=" + encodeURIComponent(city) + "&";
@@ -223,8 +224,12 @@
           if (data && data.success && Array.isArray(data.points)) {
             currentPoints = data.points;
             renderMarkers(data.points);
+
+            if (data.city) {
+              currentCity = data.city;
+            }
             if (data.cities && chipsContainer) {
-              renderChips(data.cities, city || currentCity);
+              renderChips(data.cities, currentCity);
             }
           }
         })
@@ -266,7 +271,7 @@
           yandexMap.geoObjects.add(pointsCollection);
           mapInitialized = true;
 
-          loadPoints(currentCity, "");
+          loadPoints(currentCity, "", true);
 
           setTimeout(function () {
             try {
@@ -322,8 +327,9 @@
         }
         clearTimeout(searchDebounceTimer);
         searchDebounceTimer = setTimeout(function () {
-          loadPoints(currentCity, val);
-        }, 250);
+          // Ищем по городу или улице без мерцания загрузчика
+          loadPoints("", val, false);
+        }, 200);
       });
     }
 
@@ -331,7 +337,7 @@
       clearSearchBtn.addEventListener("click", function () {
         if (searchInput) searchInput.value = "";
         clearSearchBtn.style.display = "none";
-        loadPoints(currentCity, "");
+        loadPoints(currentCity, "", false);
       });
     }
 
@@ -449,6 +455,7 @@
           <div class="ozon-success-summary">
             <div><span>Товар:</span> ${order.productName} (${order.gender}, размер ${order.size})</div>
             <div><span>Сумма:</span> <strong>${order.price}</strong> <span style="color:#10b981; font-weight:600;">(Оплачено)</span></div>
+            ${order.fio ? `<div><span>ФИО получателя:</span> <strong>${escapeHtml(order.fio)}</strong></div>` : ''}
             <div><span>Telegram:</span> <strong>${order.tgUsername}</strong></div>
             <div><span>Телефон:</span> ${order.phone}</div>
             ${order.fivepostPointAddress ? `<div><span>Доставка 5Post:</span> <strong>${order.fivepostPointAddress}</strong> (${pointTypeRu})</div>` : ''}
@@ -469,8 +476,22 @@
       form.addEventListener("submit", function (e) {
         e.preventDefault();
 
+        const fio = (fioInput?.value || "").trim();
         let tg = (tgInput?.value || "").trim();
         const phone = (phoneInput?.value || "").trim();
+
+        if (!fio || fio.length < 3) {
+          showStatus("Укажите ваше ФИО (Фамилию, Имя и Отчество)", "error");
+          fioInput?.focus();
+          return;
+        }
+
+        const fioWords = fio.split(/\s+/).filter(Boolean);
+        if (fioWords.length < 2) {
+          showStatus("Укажите как минимум Имя и Фамилию для получения посылки в 5Post", "error");
+          fioInput?.focus();
+          return;
+        }
 
         if (!tg) {
           showStatus("Укажите ваш @username в Telegram", "error");
@@ -523,6 +544,7 @@
           price: state.price,
           gender: state.gender,
           size: state.size,
+          fio: fio,
           tgUsername: tg,
           phone: phone,
           fivepostPointId: pointId,
@@ -568,10 +590,12 @@
           googlePaySupport: true,
           restrictedPaymentMethods: [],
           payer: {
+            name: fio,
             phone: cleanPhone,
             Phone: cleanPhone
           },
           userInfo: {
+            name: fio,
             accountId: tg,
             phone: cleanPhone
           },
