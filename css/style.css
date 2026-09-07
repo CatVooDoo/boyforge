@@ -522,7 +522,19 @@ h1,h2,h3,h4,h5,h6{ font-weight:700; line-height:1.12; }
 
 .product-actions{ margin-bottom:38px; display:flex; flex-direction:column; gap:12px; }
 .product-actions .btn-primary,
-.product-actions .btn-outline{ width:100%; padding:20px; font-size:13px; text-align:center; }
+.product-actions .btn-outline{
+  width:100%;
+  margin:0;
+  padding:18px 20px;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:1.2px;
+  text-align:center;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1.2;
+}
 
 .btn-ozon{
   display:inline-flex; align-items:center; justify-content:center; gap:12px;

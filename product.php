@@ -192,7 +192,7 @@ if ($found) {
 
           <div class="product-actions">
             <button type="button" class="btn-primary btn-block" id="orderModalBtn">
-              Оформить заказ
+              Оформить заказ с доставкой
             </button>
             <a href="<?= htmlspecialchars($tgBase) ?>" class="btn-outline btn-block" id="orderBtn" target="_blank" rel="noopener">
               Заказать в Telegram
