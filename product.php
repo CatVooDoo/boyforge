@@ -62,6 +62,22 @@ if ($found) {
         'tg' => $tgBase
     ];
 }
+
+$fivepostApiKey = '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a';
+$envFile = __DIR__ . '/.env';
+if (file_exists($envFile)) {
+    $envLines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($envLines as $envLine) {
+        $envLine = trim($envLine);
+        if ($envLine === '' || $envLine[0] === '#') continue;
+        if (strpos($envLine, '=') !== false) {
+            list($k, $v) = explode('=', $envLine, 2);
+            if (trim($k) === '5POST_API_KEY') {
+                $fivepostApiKey = trim($v, " \t\n\r\0\x0B\"'");
+            }
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -308,11 +324,15 @@ if ($found) {
   <div class="order-modal ozon-modal" id="orderModal" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="order-modal-dialog ozon-modal-dialog">
       <div class="order-modal-header ozon-modal-header">
-        <h3 class="order-modal-title ozon-modal-title">Оформление заказа</h3>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="fivepost-logo-pill">5Post</span>
+          <h3 class="order-modal-title ozon-modal-title">Оформление заказа</h3>
+        </div>
         <button type="button" class="order-modal-close ozon-modal-close" id="orderModalClose" aria-label="Закрыть">&times;</button>
       </div>
 
       <div class="order-modal-body ozon-modal-body">
+        <!-- Мини-превью выбранного товара -->
         <div class="ozon-prod-summary">
           <img class="ozon-prod-thumb" id="orderModalProdImg" src="" alt="Товар">
           <div class="ozon-prod-info">
@@ -326,8 +346,9 @@ if ($found) {
         </div>
 
         <form id="orderForm" novalidate>
+          <!-- 1. Контактные данные -->
           <div class="ozon-section">
-            <div class="ozon-section-title">Контактные данные покупателя</div>
+            <div class="ozon-section-title">1. Контактные данные покупателя</div>
             <div class="ozon-fields-grid">
               <div class="ozon-field">
                 <label for="orderTg">Ваш Telegram (@username)</label>
@@ -340,7 +361,60 @@ if ($found) {
             </div>
           </div>
 
-          <div style="margin-top:20px;">
+          <!-- 2. Пункт выдачи 5Post -->
+          <div class="ozon-section" style="margin-top: 4px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div class="ozon-section-title">2. Доставка 5Post (Пятёрочка / Перекрёсток)</div>
+            </div>
+
+            <!-- Скрытые поля для данных выбранной точки 5Post -->
+            <input type="hidden" id="fivepostPointId" name="fivepostPointId" value="">
+            <input type="hidden" id="fivepostPointName" name="fivepostPointName" value="">
+            <input type="hidden" id="fivepostPointAddress" name="fivepostPointAddress" value="">
+            <input type="hidden" id="fivepostPointType" name="fivepostPointType" value="">
+            <input type="hidden" id="fivepostPointDetails" name="fivepostPointDetails" value="">
+
+            <!-- Карточка уже выбранного пункта выдачи -->
+            <div class="fivepost-selected-card" id="fivepostSelectedCard" style="display:none;">
+              <div class="fivepost-selected-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              </div>
+              <div class="fivepost-selected-details">
+                <div class="fivepost-selected-header">
+                  <span class="fivepost-selected-badge" id="fivepostPointTypeBadge">Постамат</span>
+                  <strong class="fivepost-selected-name" id="fivepostPointNameDisplay">Пятёрочка</strong>
+                </div>
+                <div class="fivepost-selected-address" id="fivepostPointAddressDisplay">г. Пенза, ул. Примерная, д. 1</div>
+                <div class="fivepost-selected-extra" id="fivepostPointExtraDisplay">Выдача заказа 5Post</div>
+              </div>
+              <button type="button" class="fivepost-change-btn" id="fivepostChangeBtn">Изменить</button>
+            </div>
+
+            <!-- Блок карты и поиска по городам -->
+            <div class="fivepost-map-wrapper" id="fivepostMapWrapper">
+              <!-- Поиск по городам и улицам -->
+              <div class="bf-city-search-wrap">
+                <div class="bf-city-search-box">
+                  <svg class="bf-search-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  <input type="text" id="fivepostCitySearch" class="ozon-input bf-city-search-input" placeholder="Поиск по городу или улице (например, Пенза, Победы…)" autocomplete="off">
+                  <button type="button" id="fivepostCityClear" class="bf-clear-btn" style="display:none;" aria-label="Очистить">&times;</button>
+                </div>
+                <div class="bf-city-chips" id="fivepostCityChips">
+                  <span class="bf-city-chip active" data-city="Пенза">г. Пенза</span>
+                </div>
+              </div>
+
+              <!-- Контейнер интерактивной Яндекс.Карты -->
+              <div id="fivepostCustomMap" class="bf-custom-map">
+                <div class="fivepost-map-loader" id="fivepostMapLoader">
+                  <div class="fivepost-spinner"></div>
+                  <span>Загрузка карты и точек выдачи…</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:16px;">
             <p class="ozon-status-msg order-status-msg" id="orderFormStatus"></p>
             <button type="submit" class="btn-primary btn-block" id="orderConfirmBtn" style="margin-top:8px;">
               Оплатить онлайн картой / СБП
@@ -361,9 +435,10 @@ if ($found) {
     </script>
   <?php endif; ?>
 
+  <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU"></script>
   <script src="js/product.js?v=<?= filemtime(__DIR__ . '/js/product.js') ?>"></script>
   <script src="js/main.js?v=23"></script>
   <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>
-  <script src="js/checkout.js?v=1"></script>
+  <script src="js/checkout.js?v=<?= filemtime(__DIR__ . '/js/checkout.js') ?>"></script>
 </body>
 </html>

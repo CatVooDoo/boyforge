@@ -19,6 +19,45 @@
     const submitBtn = document.getElementById("orderConfirmBtn") || document.getElementById("ozonConfirmBtn");
     const statusMsg = document.getElementById("orderFormStatus") || document.getElementById("ozonFormStatus");
 
+    // Элементы 5Post и кастомной Яндекс.Карты
+    const fivepostIdInput = document.getElementById("fivepostPointId");
+    const fivepostNameInput = document.getElementById("fivepostPointName");
+    const fivepostAddrInput = document.getElementById("fivepostPointAddress");
+    const fivepostTypeInput = document.getElementById("fivepostPointType");
+    const fivepostDetailsInput = document.getElementById("fivepostPointDetails");
+
+    const fivepostCard = document.getElementById("fivepostSelectedCard");
+    const fivepostMapWrapper = document.getElementById("fivepostMapWrapper");
+    const fivepostMapContainer = document.getElementById("fivepostCustomMap") || document.getElementById("fivepost-widget-map");
+    const fivepostChangeBtn = document.getElementById("fivepostChangeBtn");
+
+    const searchInput = document.getElementById("fivepostCitySearch");
+    const clearSearchBtn = document.getElementById("fivepostCityClear");
+    const chipsContainer = document.getElementById("fivepostCityChips");
+    const mapLoader = document.getElementById("fivepostMapLoader");
+
+    const badgeEl = document.getElementById("fivepostPointTypeBadge");
+    const nameEl = document.getElementById("fivepostPointNameDisplay");
+    const addrEl = document.getElementById("fivepostPointAddressDisplay");
+    const extraEl = document.getElementById("fivepostPointExtraDisplay");
+
+    let yandexMap = null;
+    let pointsCollection = null;
+    let currentPoints = [];
+    let currentCity = "Пенза";
+    let customPinLayout = null;
+    let mapInitialized = false;
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     // Получить текущее состояние товара со страницы
     function getProductState() {
       const gActive = document.querySelector("#genders button.active");
@@ -48,6 +87,269 @@
       setTimeout(function () {
         gendersWrap.classList.remove("gender-error");
       }, 2500);
+    }
+
+    // Обработка выбора точки 5Post на карте
+    function handleSelect5PostPoint(point) {
+      if (!point) return;
+
+      const pointId = point.id || "";
+      const pointType = point.type || "POSTAMAT";
+      const pointName = point.name || (pointType === "POSTAMAT" ? "Постамат 5Post" : "Касса «Пятёрочка»");
+      const pointAddr = point.full_address || point.resultAddress || point.address || "";
+      const pointExtra = [point.additional, point.work_hours].filter(Boolean).join(" · ");
+
+      if (fivepostIdInput) fivepostIdInput.value = pointId;
+      if (fivepostNameInput) fivepostNameInput.value = pointName;
+      if (fivepostAddrInput) fivepostAddrInput.value = pointAddr;
+      if (fivepostTypeInput) fivepostTypeInput.value = pointType;
+      if (fivepostDetailsInput) fivepostDetailsInput.value = pointExtra;
+
+      if (badgeEl) {
+        badgeEl.textContent = pointType === "POSTAMAT" ? "Постамат" : "Касса";
+      }
+      if (nameEl) nameEl.textContent = pointName;
+      if (addrEl) addrEl.textContent = pointAddr;
+      if (extraEl) extraEl.textContent = pointExtra || "Выдача заказа 5Post";
+
+      if (fivepostCard) fivepostCard.style.display = "flex";
+      if (fivepostMapWrapper) fivepostMapWrapper.style.display = "none";
+
+      showStatus("", null);
+    }
+
+    function createCustomPinLayout() {
+      if (customPinLayout || typeof ymaps === "undefined") return customPinLayout;
+      customPinLayout = ymaps.templateLayoutFactory.createClass(
+        '<div class="bf-map-pin" title="$[properties.hintContent]">' +
+          '<div class="bf-pin-body">BF</div>' +
+          '<div class="bf-pin-tail"></div>' +
+        '</div>'
+      );
+      return customPinLayout;
+    }
+
+    function renderMarkers(points) {
+      if (!pointsCollection || !yandexMap) return;
+      pointsCollection.removeAll();
+
+      if (!points || points.length === 0) {
+        return;
+      }
+
+      const pinLayout = createCustomPinLayout();
+
+      points.forEach(function (point) {
+        if (!point.lat || !point.lng) return;
+
+        const isPostamat = (point.type === "POSTAMAT");
+        const badgeText = isPostamat ? "Постамат" : "Касса";
+        const titleName = point.name || (isPostamat ? "Постамат 5Post" : "Касса «Пятёрочка»");
+        const fullAddr = point.full_address || point.street || "";
+
+        const balloonHtml = `
+          <div class="bf-balloon">
+            <div class="bf-balloon-header">
+              <span class="bf-balloon-badge">${badgeText}</span>
+              <strong class="bf-balloon-name">${escapeHtml(titleName)}</strong>
+            </div>
+            <div class="bf-balloon-address">${escapeHtml(fullAddr)}</div>
+            ${point.work_hours ? `<div class="bf-balloon-extra">🕒 ${escapeHtml(point.work_hours)}</div>` : ''}
+            ${point.additional ? `<div class="bf-balloon-extra">ℹ️ ${escapeHtml(point.additional)}</div>` : ''}
+            <button type="button" class="bf-balloon-select-btn" data-point-id="${escapeHtml(point.id)}">Выбрать эту точку</button>
+          </div>
+        `;
+
+        const placemark = new ymaps.Placemark([point.lat, point.lng], {
+          hintContent: (point.name ? point.name + " · " : "") + fullAddr,
+          balloonContent: balloonHtml
+        }, {
+          iconLayout: pinLayout,
+          iconOffset: [0, 0],
+          iconShape: {
+            type: "Rectangle",
+            coordinates: [[-17, -42], [17, 0]]
+          },
+          hideIconOnBalloonOpen: false,
+          balloonOffset: [0, -42],
+          balloonCloseButton: true,
+          balloonAutoPan: true
+        });
+
+        pointsCollection.add(placemark);
+      });
+
+      if (points.length === 1) {
+        yandexMap.setCenter([points[0].lat, points[0].lng], 15, { checkZoomRange: true });
+      } else if (points.length > 1) {
+        const bounds = pointsCollection.getBounds();
+        if (bounds) {
+          yandexMap.setBounds(bounds, { checkZoomRange: true, zoomMargin: 40 });
+        }
+      }
+    }
+
+    function renderChips(cities, activeCity) {
+      if (!chipsContainer) return;
+      chipsContainer.innerHTML = "";
+      cities.forEach(function (cityName) {
+        const chip = document.createElement("span");
+        const isActive = (cityName === activeCity || (cityName.indexOf("Пенза") !== -1 && (activeCity || "").indexOf("Пенза") !== -1));
+        chip.className = "bf-city-chip" + (isActive ? " active" : "");
+        chip.textContent = "г. " + cityName;
+        chip.setAttribute("data-city", cityName);
+        chip.addEventListener("click", function () {
+          document.querySelectorAll(".bf-city-chip").forEach(function (c) { c.classList.remove("active"); });
+          chip.classList.add("active");
+          currentCity = cityName;
+          if (searchInput) searchInput.value = "";
+          if (clearSearchBtn) clearSearchBtn.style.display = "none";
+          loadPoints(cityName, "");
+        });
+        chipsContainer.appendChild(chip);
+      });
+    }
+
+    function loadPoints(city, search) {
+      if (mapLoader) mapLoader.style.display = "flex";
+
+      let url = "api/fivepost-points.php?";
+      if (city) url += "city=" + encodeURIComponent(city) + "&";
+      if (search) url += "search=" + encodeURIComponent(search);
+
+      fetch(url)
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data && data.success && Array.isArray(data.points)) {
+            currentPoints = data.points;
+            renderMarkers(data.points);
+            if (data.cities && chipsContainer) {
+              renderChips(data.cities, city || currentCity);
+            }
+          }
+        })
+        .catch(function (err) {
+          console.error("Ошибка загрузки точек 5Post:", err);
+        })
+        .finally(function () {
+          if (mapLoader) mapLoader.style.display = "none";
+        });
+    }
+
+    function initCustomYandexMap() {
+      if (!fivepostMapContainer) return;
+
+      if (mapInitialized && yandexMap) {
+        setTimeout(function () {
+          try {
+            yandexMap.container.fitToViewport();
+          } catch (e) {}
+        }, 120);
+        return;
+      }
+
+      function setupYandexMap() {
+        if (typeof ymaps === "undefined") return;
+
+        ymaps.ready(function () {
+          if (mapInitialized) return;
+
+          yandexMap = new ymaps.Map(fivepostMapContainer, {
+            center: [53.20066, 44.99965], // Центр Пензы
+            zoom: 12,
+            controls: ["zoomControl", "fullscreenControl"]
+          }, {
+            suppressMapOpenBlock: true
+          });
+
+          pointsCollection = new ymaps.GeoObjectCollection();
+          yandexMap.geoObjects.add(pointsCollection);
+          mapInitialized = true;
+
+          loadPoints(currentCity, "");
+
+          setTimeout(function () {
+            try {
+              yandexMap.container.fitToViewport();
+            } catch (e) {}
+          }, 200);
+        });
+      }
+
+      if (typeof ymaps !== "undefined") {
+        setupYandexMap();
+      } else {
+        let attempts = 0;
+        const checkInterval = setInterval(function () {
+          attempts++;
+          if (typeof ymaps !== "undefined") {
+            clearInterval(checkInterval);
+            setupYandexMap();
+          } else if (attempts > 30) {
+            clearInterval(checkInterval);
+            if (mapLoader) {
+              mapLoader.innerHTML = `<span style="color:#ef4444; font-size:12px;">Не удалось загрузить Яндекс.Карты. Проверьте соединение.</span>`;
+            }
+          }
+        }, 200);
+      }
+    }
+
+    // Делегирование клика по кнопке «Выбрать эту точку» в балуне Яндекс.Карты
+    if (fivepostMapContainer) {
+      fivepostMapContainer.addEventListener("click", function (e) {
+        const btn = e.target.closest(".bf-balloon-select-btn");
+        if (btn) {
+          const pid = btn.getAttribute("data-point-id");
+          const pt = currentPoints.find(function (p) { return String(p.id) === String(pid); });
+          if (pt) {
+            handleSelect5PostPoint(pt);
+            if (yandexMap && yandexMap.balloon) {
+              yandexMap.balloon.close();
+            }
+          }
+        }
+      });
+    }
+
+    // Поиск по городу и улице
+    let searchDebounceTimer = null;
+    if (searchInput) {
+      searchInput.addEventListener("input", function () {
+        const val = this.value.trim();
+        if (clearSearchBtn) {
+          clearSearchBtn.style.display = val ? "block" : "none";
+        }
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(function () {
+          loadPoints(currentCity, val);
+        }, 250);
+      });
+    }
+
+    if (clearSearchBtn) {
+      clearSearchBtn.addEventListener("click", function () {
+        if (searchInput) searchInput.value = "";
+        clearSearchBtn.style.display = "none";
+        loadPoints(currentCity, "");
+      });
+    }
+
+    // Кнопка «Изменить» выбранный пункт
+    if (fivepostChangeBtn) {
+      fivepostChangeBtn.addEventListener("click", function () {
+        if (fivepostCard) fivepostCard.style.display = "none";
+        if (fivepostMapWrapper) {
+          fivepostMapWrapper.style.display = "block";
+          if (yandexMap) {
+            setTimeout(function () {
+              try {
+                yandexMap.container.fitToViewport();
+              } catch (e) {}
+            }, 100);
+          }
+        }
+      });
     }
 
     // Telegram-маска: автодобавление @
@@ -100,6 +402,9 @@
       modal.classList.add("is-open");
       modal.setAttribute("aria-hidden", "false");
       document.body.classList.add("no-scroll");
+
+      // Инициализируем или подгоняем интерактивную Яндекс.Карту
+      initCustomYandexMap();
     }
 
     function closeModal() {
@@ -131,23 +436,26 @@
       const modalBody = modal.querySelector(".order-modal-body") || modal.querySelector(".ozon-modal-body");
       if (!modalBody) return;
 
+      const pointTypeRu = order.fivepostPointType === "POSTAMAT" ? "Постамат" : (order.fivepostPointType === "TOBACCO" ? "Касса" : "Пункт выдачи");
+
       modalBody.innerHTML = `
         <div class="ozon-success-box order-success-box">
           <div class="ozon-success-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
           <h3>Заказ успешно оплачен!</h3>
           <div class="ozon-order-id">Номер заказа: <strong>${orderId}</strong></div>
           <p class="ozon-success-desc">
-            Спасибо! Платёж через <strong>CloudPayments</strong> успешно проведён. Мы передали данные менеджеру для сборки заказа.
+            Спасибо! Платёж через <strong>CloudPayments</strong> успешно проведён. Мы сформировали заказ для отправки через <strong>5Post</strong>.
           </p>
           <div class="ozon-success-summary">
             <div><span>Товар:</span> ${order.productName} (${order.gender}, размер ${order.size})</div>
             <div><span>Сумма:</span> <strong>${order.price}</strong> <span style="color:#10b981; font-weight:600;">(Оплачено)</span></div>
             <div><span>Telegram:</span> <strong>${order.tgUsername}</strong></div>
             <div><span>Телефон:</span> ${order.phone}</div>
+            ${order.fivepostPointAddress ? `<div><span>Доставка 5Post:</span> <strong>${order.fivepostPointAddress}</strong> (${pointTypeRu})</div>` : ''}
             ${order.transactionId ? `<div><span>ID транзакции:</span> #${order.transactionId}</div>` : ''}
           </div>
           <p class="ozon-sms-note">
-            Электронный кассовый чек отправлен. Наш менеджер свяжется с вами в Telegram <strong>${order.tgUsername}</strong> для подтверждения отправки.
+            Электронный кассовый чек отправлен. По прибытии заказа в постамат/кассу 5Post вам поступит SMS с кодом получения.
           </p>
           <button type="button" class="btn-primary btn-block" id="orderDoneBtn" style="margin-top:12px;">Отлично</button>
         </div>
@@ -185,6 +493,25 @@
           return;
         }
 
+        // Проверка выбора точки 5Post
+        const pointId = (fivepostIdInput?.value || "").trim();
+        if (!pointId) {
+          showStatus("Пожалуйста, выберите удобный магазин или постамат 5Post на карте", "error");
+          if (fivepostMapWrapper) {
+            fivepostMapWrapper.style.display = "block";
+            if (fivepostCard) fivepostCard.style.display = "none";
+            fivepostMapWrapper.scrollIntoView({ behavior: "smooth", block: "center" });
+            if (yandexMap) {
+              setTimeout(function () {
+                try {
+                  yandexMap.container.fitToViewport();
+                } catch (e) {}
+              }, 100);
+            }
+          }
+          return;
+        }
+
         const state = getProductState();
         const numPrice = parseFloat(state.price.replace(/[^\d.]/g, "")) || 3200;
         const orderId = "BF-" + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -198,7 +525,12 @@
           size: state.size,
           tgUsername: tg,
           phone: phone,
-          source: "Онлайн-оплата (CloudPayments)"
+          fivepostPointId: pointId,
+          fivepostPointName: (fivepostNameInput?.value || "").trim(),
+          fivepostPointAddress: (fivepostAddrInput?.value || "").trim(),
+          fivepostPointType: (fivepostTypeInput?.value || "").trim(),
+          fivepostPointDetails: (fivepostDetailsInput?.value || "").trim(),
+          source: "Онлайн-оплата (5Post + CloudPayments)"
         };
 
         if (typeof cp === "undefined" || !cp.CloudPayments) {

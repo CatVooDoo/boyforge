@@ -45,12 +45,22 @@ $contact       = isset($inputData['contact']) ? trim((string)$inputData['contact
 $phone         = isset($inputData['phone']) ? trim((string)$inputData['phone']) : '';
 $tgUsername    = isset($inputData['tgUsername']) ? trim((string)$inputData['tgUsername']) : '';
 $transactionId = isset($inputData['transactionId']) ? trim((string)$inputData['transactionId']) : '';
-$source        = isset($inputData['source']) ? trim((string)$inputData['source']) : 'Сайт (Telegram)';
+$source        = isset($inputData['source']) ? trim((string)$inputData['source']) : 'Сайт (5Post + CloudPayments)';
+
+$fivepostPointId     = isset($inputData['fivepostPointId']) ? trim((string)$inputData['fivepostPointId']) : '';
+$fivepostPointName   = isset($inputData['fivepostPointName']) ? trim((string)$inputData['fivepostPointName']) : '';
+$fivepostAddress     = isset($inputData['fivepostPointAddress']) ? trim((string)$inputData['fivepostPointAddress']) : '';
+$fivepostType        = isset($inputData['fivepostPointType']) ? trim((string)$inputData['fivepostPointType']) : '';
+$fivepostDetails     = isset($inputData['fivepostPointDetails']) ? trim((string)$inputData['fivepostPointDetails']) : '';
 
 if (empty($contact)) {
     $parts = [];
     if (!empty($phone)) $parts[] = $phone;
     if (!empty($tgUsername)) $parts[] = $tgUsername;
+    if (!empty($fivepostAddress)) {
+        $typeRu = ($fivepostType === 'POSTAMAT') ? 'Постамат' : (($fivepostType === 'TOBACCO') ? 'Касса' : 'ПВЗ');
+        $parts[] = "5Post: $fivepostAddress ($typeRu)" . (!empty($fivepostPointId) ? " [ID: $fivepostPointId]" : '');
+    }
     if (!empty($transactionId)) $parts[] = '[ОПЛАЧЕНО CloudPayments #' . $transactionId . ']';
     $contact = implode(' / ', $parts);
 }
@@ -124,3 +134,4 @@ echo json_encode([
     'google_response' => $response,
     'order'           => $orderPayload
 ], JSON_UNESCAPED_UNICODE);
+
