@@ -433,6 +433,11 @@ h1,h2,h3,h4,h5,h6{ font-weight:700; line-height:1.12; }
    ============================================================ */
 .product-layout{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(36px,5vw,70px); margin-top:10px; }
 .product-gallery{ display:grid; grid-template-columns:84px 1fr; gap:16px; align-items:start; }
+.product-gallery.no-thumbs,
+.product-gallery:not(:has(.thumbs img:nth-child(2))),
+.product-gallery:has(#thumbs:empty),
+.product-gallery:has(#thumbs[style*="none"]){ grid-template-columns:1fr; gap:0; }
+.product-gallery.no-thumbs .thumbs{ display:none !important; }
 .thumbs{ display:flex; flex-direction:column; gap:12px; }
 .thumbs img{
   aspect-ratio:3/4; object-fit:cover; cursor:pointer; border:1.5px solid transparent; opacity:.55;
@@ -516,7 +521,8 @@ h1,h2,h3,h4,h5,h6{ font-weight:700; line-height:1.12; }
 }
 
 .product-actions{ margin-bottom:38px; display:flex; flex-direction:column; gap:12px; }
-.product-actions .btn-primary{ width:100%; padding:20px; font-size:13px; }
+.product-actions .btn-primary,
+.product-actions .btn-outline{ width:100%; padding:20px; font-size:13px; text-align:center; }
 
 .btn-ozon{
   display:inline-flex; align-items:center; justify-content:center; gap:12px;

@@ -1,7 +1,7 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
+declare(strict_types=1);
 
-define('GOOGLE_SCRIPT_URL', 'https://script.google.com/macros/s/AKfycbwEX5yOenoxiIpkFlt0BGHbV4SPmJiWIrzIFU-0t8R-4lN59vMuTnhMhlAP6ImemV59Fw/exec');
+header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -12,6 +12,22 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+$envFile = __DIR__ . '/../.env';
+$env = [];
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || $line[0] === '#') continue;
+        if (strpos($line, '=') !== false) {
+            list($key, $val) = explode('=', $line, 2);
+            $env[trim($key)] = trim($val, " \t\n\r\0\x0B\"'");
+        }
+    }
+}
+
+$googleScriptUrl = $env['GOOGLE_SCRIPT_URL'] ?? 'https://script.google.com/macros/s/AKfycbwEX5yOenoxiIpkFlt0BGHbV4SPmJiWIrzIFU-0t8R-4lN59vMuTnhMhlAP6ImemV59Fw/exec';
+
 $rawInput = file_get_contents('php://input');
 $inputData = json_decode($rawInput, true);
 
@@ -19,13 +35,29 @@ if (!is_array($inputData)) {
     $inputData = $_POST;
 }
 
-$productId   = isset($inputData['productId']) ? trim((string)$inputData['productId']) : '';
-$productName = isset($inputData['productName']) ? trim((string)$inputData['productName']) : '';
-$price       = isset($inputData['price']) ? trim((string)$inputData['price']) : '';
-$gender      = isset($inputData['gender']) ? trim((string)$inputData['gender']) : '';
-$size        = isset($inputData['size']) ? trim((string)$inputData['size']) : '';
-$contact     = isset($inputData['contact']) ? trim((string)$inputData['contact']) : '';
-$source      = isset($inputData['source']) ? trim((string)$inputData['source']) : 'Сайт (Telegram)';
+$productId     = isset($inputData['productId']) ? trim((string)$inputData['productId']) : '';
+$orderId       = isset($inputData['orderId']) ? trim((string)$inputData['orderId']) : '';
+$productName   = isset($inputData['productName']) ? trim((string)$inputData['productName']) : '';
+$price         = isset($inputData['price']) ? trim((string)$inputData['price']) : '';
+$gender        = isset($inputData['gender']) ? trim((string)$inputData['gender']) : '';
+$size          = isset($inputData['size']) ? trim((string)$inputData['size']) : '';
+$contact       = isset($inputData['contact']) ? trim((string)$inputData['contact']) : '';
+$phone         = isset($inputData['phone']) ? trim((string)$inputData['phone']) : '';
+$tgUsername    = isset($inputData['tgUsername']) ? trim((string)$inputData['tgUsername']) : '';
+$transactionId = isset($inputData['transactionId']) ? trim((string)$inputData['transactionId']) : '';
+$source        = isset($inputData['source']) ? trim((string)$inputData['source']) : 'Сайт (Telegram)';
+
+if (empty($contact)) {
+    $parts = [];
+    if (!empty($phone)) $parts[] = $phone;
+    if (!empty($tgUsername)) $parts[] = $tgUsername;
+    if (!empty($transactionId)) $parts[] = '[ОПЛАЧЕНО CloudPayments #' . $transactionId . ']';
+    $contact = implode(' / ', $parts);
+}
+
+if (!empty($orderId)) {
+    $productId = $orderId . (!empty($productId) ? " ($productId)" : '');
+}
 
 if (empty($productName)) {
     http_response_code(400);
@@ -49,17 +81,17 @@ $orderPayload = [
     'userAgent'   => $_SERVER['HTTP_USER_AGENT'] ?? ''
 ];
 
-if (empty(GOOGLE_SCRIPT_URL) || GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
+if (empty($googleScriptUrl) || $googleScriptUrl === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
     echo json_encode([
         'success' => true,
         'mode'    => 'test_mode',
-        'message' => 'Тестовый режим: данные успешно приняты и валидированы (URL Google Script пока не задан).',
+        'message' => 'Тестовый режим: данные успешно приняты и валидированы.',
         'order'   => $orderPayload
     ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     exit;
 }
 
-$ch = curl_init(GOOGLE_SCRIPT_URL);
+$ch = curl_init($googleScriptUrl);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST           => true,
@@ -74,6 +106,7 @@ curl_setopt_array($ch, [
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlError = curl_error($ch);
+curl_close($ch);
 
 if ($curlError) {
     http_response_code(500);

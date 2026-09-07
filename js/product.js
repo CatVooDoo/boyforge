@@ -13,11 +13,13 @@
   };
 
   document.addEventListener("DOMContentLoaded", function () {
-    if (!window.PRODUCTS) return;
-
-    var params = new URLSearchParams(window.location.search);
-    var id = params.get("id");
-    var p = window.getProductById ? window.getProductById(id) : null;
+    var p = window.PRODUCT_DATA;
+    if (!p) {
+      if (!window.PRODUCTS) return;
+      var params = new URLSearchParams(window.location.search);
+      var id = params.get("id");
+      p = window.getProductById ? window.getProductById(id) : null;
+    }
 
     var main = document.querySelector("main.container");
 
@@ -94,9 +96,11 @@
     }
 
     // миниатюры (десктоп)
+    var galleryWrap = thumbs ? thumbs.closest(".product-gallery") : null;
     if (thumbs) {
       if (imgs.length > 1) {
         thumbs.style.display = "";
+        if (galleryWrap) galleryWrap.classList.remove("no-thumbs");
         thumbs.innerHTML = imgs.map(function (src, i) {
           return '<img src="' + esc(src) + '" alt="' + esc(p.name) + " — фото " + (i + 1) +
                  '"' + (i === 0 ? ' class="active"' : "") + ' data-i="' + i + '">';
@@ -109,6 +113,7 @@
         });
       } else {
         thumbs.style.display = "none"; // одно фото — миниатюры не нужны
+        if (galleryWrap) galleryWrap.classList.add("no-thumbs");
       }
     }
 

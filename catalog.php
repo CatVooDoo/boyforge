@@ -1,15 +1,64 @@
-﻿<!DOCTYPE html>
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/includes/db.php';
+
+$catFilter = trim((string)($_GET['cat'] ?? 'all'));
+$sort = trim((string)($_GET['sort'] ?? 'pop'));
+
+// Получаем активные категории из таблицы categories
+$catStmt = $pdo->query("SELECT * FROM categories WHERE is_active = 1 ORDER BY sort_order ASC, name ASC");
+$categoriesList = $catStmt->fetchAll();
+
+// Формируем запрос на получение товаров
+$sql = "SELECT * FROM products WHERE is_active = 1";
+$params = [];
+
+if ($catFilter !== '' && $catFilter !== 'all') {
+    $sql .= " AND (cat_id = :cat OR cat = :cat)";
+    $params[':cat'] = $catFilter;
+}
+
+switch ($sort) {
+    case 'cheap':
+        $sql .= " ORDER BY price_numeric ASC, id ASC";
+        break;
+    case 'exp':
+        $sql .= " ORDER BY price_numeric DESC, id ASC";
+        break;
+    case 'new':
+        $sql .= " ORDER BY id DESC";
+        break;
+    default:
+        $sql .= " ORDER BY sort_order ASC, id ASC";
+        break;
+}
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$products = $stmt->fetchAll();
+$totalCount = count($products);
+
+function pluralizeGoods(int $n): string {
+    $m10 = $n % 10;
+    $m100 = $n % 100;
+    if ($m10 === 1 && $m100 !== 11) return 'товар';
+    if ($m10 >= 2 && $m10 <= 4 && ($m100 < 10 || $m100 >= 20)) return 'товара';
+    return 'товаров';
+}
+?>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Каталог — BOYFORGE</title>
-  <meta name="description" content="Каталог BOYFORGE: футболки с авторскими принтами. Пошив в России, DTF-печать. Заказ через Telegram.">
+  <meta name="description" content="Каталог BOYFORGE: одежда с авторскими принтами. Пошив в России, DTF-печать. Заказ через Telegram.">
   <link rel="icon" href="images/favicon.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=11">
+  <link rel="stylesheet" href="css/style.css?v=12">
 </head>
 <body>
 
@@ -51,7 +100,6 @@
       <a href="reviews.php">Отзывы</a>
       <a href="contacts.php">Контакты</a>
     </div>
-
   </nav>
 
   <main>
@@ -66,35 +114,75 @@
       <div class="catalog-head">
         <h1 class="catalog-title">Каталог</h1>
         <div class="catalog-head-right">
-          <span class="catalog-count" id="catalogCount"></span>
+          <span class="catalog-count" id="catalogCount"><?= $totalCount ?> <?= pluralizeGoods($totalCount) ?></span>
           <div class="sort-field">
             <span>Сортировка</span>
-            <select id="sortSelect" aria-label="Сортировка">
-              <option value="pop">По умолчанию</option>
-              <option value="cheap">Сначала дешевле</option>
-              <option value="exp">Сначала дороже</option>
-              <option value="new">Сначала новинки</option>
+            <select id="sortSelect" aria-label="Сортировка" onchange="applyFilter('sort', this.value)">
+              <option value="pop" <?= $sort === 'pop' ? 'selected' : '' ?>>По умолчанию</option>
+              <option value="cheap" <?= $sort === 'cheap' ? 'selected' : '' ?>>Сначала дешевле</option>
+              <option value="exp" <?= $sort === 'exp' ? 'selected' : '' ?>>Сначала дороже</option>
+              <option value="new" <?= $sort === 'new' ? 'selected' : '' ?>>Сначала новинки</option>
             </select>
           </div>
         </div>
       </div>
 
-      <!-- фильтры-чипы -->
+      <!-- фильтры-чипы по категориям -->
       <div class="chips" role="group" aria-label="Категории">
-        <button class="chip" type="button" data-cat="all">Все</button>
-        <button class="chip" type="button" data-cat="tshirt">Футболки</button>
-        <button class="chip" type="button" data-cat="sweatshirt">Свитшоты</button>
+        <a href="catalog.php?cat=all&sort=<?= urlencode($sort) ?>" 
+           class="chip <?= ($catFilter === 'all' || $catFilter === '') ? 'is-active' : '' ?>">Все</a>
+        <?php foreach ($categoriesList as $c): ?>
+          <?php
+            $catSlug = $c['slug'];
+            $isActiveChip = ($catFilter === $catSlug || $catFilter === $c['name']);
+          ?>
+          <a href="catalog.php?cat=<?= urlencode($catSlug) ?>&sort=<?= urlencode($sort) ?>" 
+             class="chip <?= $isActiveChip ? 'is-active' : '' ?>">
+             <?= htmlspecialchars($c['name']) ?>
+          </a>
+        <?php endforeach; ?>
       </div>
 
-      <!-- сетка товаров (заполняется из catalog.js) -->
-      <div class="catalog-grid" id="catalogGrid"></div>
-
-      <!-- пустое состояние -->
-      <div class="empty-state" id="emptyState" hidden>
-        <div class="empty-title">Ничего не найдено</div>
-        <p class="empty-sub">В этой категории пока нет товаров. Загляните в другую или напишите нам — подберём под вас.</p>
-        <button type="button" class="btn-outline empty-back" id="emptyBack">Сбросить фильтр</button>
-      </div>
+      <!-- сетка товаров (вывод напрямую из базы данных MariaDB) -->
+      <?php if (!empty($products)): ?>
+        <div class="catalog-grid" id="catalogGrid">
+          <?php foreach ($products as $p): ?>
+            <?php
+              $pId = (int)$p['id'];
+              $pName = htmlspecialchars($p['name']);
+              $pPrice = htmlspecialchars($p['price']);
+              $pImg = htmlspecialchars($p['img'] ?: '');
+              $tags = json_decode($p['tags'] ?? '[]', true);
+              if (!is_array($tags)) $tags = [];
+            ?>
+            <a href="product.php?id=<?= $pId ?>" class="card card-in">
+              <div class="card-img">
+                <img src="<?= $pImg ?>" alt="<?= $pName ?>" loading="lazy"
+                     onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','<?= addslashes($pName) ?>');">
+                <?php if (in_array('Хит', $tags, true)): ?>
+                  <span class="badge-hit">хит</span>
+                <?php endif; ?>
+                <?php if (in_array('Новая коллекция', $tags, true)): ?>
+                  <span class="badge-new-collection">новая коллекция</span>
+                <?php elseif (in_array('Новинка', $tags, true) || in_array('Новая', $tags, true)): ?>
+                  <span class="badge-new">новинка</span>
+                <?php endif; ?>
+              </div>
+              <div class="card-info">
+                <div class="card-title"><?= $pName ?></div>
+                <div class="card-price"><?= $pPrice ?></div>
+              </div>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      <?php else: ?>
+        <!-- пустое состояние -->
+        <div class="empty-state" id="emptyState">
+          <div class="empty-title">Ничего не найдено</div>
+          <p class="empty-sub">В этой категории пока нет товаров. Загляните в другую или напишите нам — подберём под вас.</p>
+          <a href="catalog.php" class="btn-outline empty-back">Сбросить фильтр</a>
+        </div>
+      <?php endif; ?>
 
     </div>
   </main>
@@ -128,8 +216,13 @@
     </div>
   </footer>
 
-  <script src="js/products.js?v=11"></script>
-  <script src="js/catalog.js?v=11"></script>
-  <script src="js/main.js?v=11"></script>
+  <script>
+    function applyFilter(key, val) {
+      const url = new URL(window.location.href);
+      url.searchParams.set(key, val);
+      window.location.href = url.toString();
+    }
+  </script>
+  <script src="js/main.js?v=12"></script>
 </body>
 </html>

@@ -1,4 +1,15 @@
-﻿<!DOCTYPE html>
+<?php
+declare(strict_types=1);
+require_once __DIR__ . '/includes/db.php';
+
+try {
+    $popStmt = $pdo->query("SELECT * FROM products WHERE is_active = 1 ORDER BY sort_order ASC, id ASC LIMIT 4");
+    $popularProducts = $popStmt->fetchAll();
+} catch (Exception $e) {
+    $popularProducts = [];
+}
+?>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
@@ -112,55 +123,29 @@
       </div>
 
       <div class="grid-4" id="popularGrid">
-
-        <a href="product.php?id=1" class="card reveal">
-          <div class="card-img">
-            <img src="images/bratya/p-bratya.jpg" alt="Футболка «Братья Святославичи»" loading="lazy"
-                 onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','Футболка «Братья Святославичи»');">
-            <span class="badge-hit">Новая коллекция</span>
-          </div>
-          <div class="card-info">
-            <div class="card-title">Футболка «Братья Святославичи»</div>
-            <div class="card-price">3 200 ₽</div>
-          </div>
-        </a>
-
-        <a href="product.php?id=2" class="card reveal">
-          <div class="card-img">
-            <img src="images/krivzha/p-krivzha.jpg" alt="Футболка «Врёшь Кривжа»" loading="lazy"
-                 onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','Футболка «Врёшь Кривжа»');">
-                 <span class="badge-hit">Новая коллекция</span>
-          </div>
-          <div class="card-info">
-            <div class="card-title">Футболка «Врёшь Кривжа»</div>
-            <div class="card-price">3 200 ₽</div>
-          </div>
-        </a>
-
-        <a href="product.php?id=3" class="card reveal">
-          <div class="card-img">
-            <img src="images/varyag/p-varyag.jpg" alt="Футболка «Варяга меч кормит»" loading="lazy"
-                 onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','Футболка «Варяга меч кормит»');">
-                 <span class="badge-hit">Новая коллекция</span>
-          </div>
-          <div class="card-info">
-            <div class="card-title">Футболка «Варяга меч кормит»</div>
-            <div class="card-price">3 200 ₽</div>
-          </div>
-        </a>
-
-        <a href="product.php?id=4" class="card reveal">
-          <div class="card-img">
-            <img src="images/ranopoh/p-ranopoh.jpg" alt="Футболка «Рано меня похоронили»" loading="lazy"
-                 onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','Футболка «Рано меня похоронили»');">
-                 <span class="badge-hit">Хит</span>
-          </div>
-          <div class="card-info">
-            <div class="card-title">Футболка «Рано меня похоронили»</div>
-            <div class="card-price">3 200 ₽</div>
-          </div>
-        </a>
-
+        <?php foreach ($popularProducts as $p): ?>
+          <?php
+            $pId = (int)$p['id'];
+            $pName = htmlspecialchars($p['name']);
+            $pPrice = htmlspecialchars($p['price']);
+            $pImg = htmlspecialchars($p['img']);
+            $pTags = json_decode($p['tags'] ?? '[]', true) ?: [];
+            $badge = in_array('Новая коллекция', $pTags, true) ? 'Новая коллекция' : (in_array('Хит', $pTags, true) ? 'Хит' : '');
+          ?>
+          <a href="product.php?id=<?= $pId ?>" class="card reveal">
+            <div class="card-img">
+              <img src="<?= $pImg ?>" alt="<?= $pName ?>" loading="lazy"
+                   onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','<?= addslashes($pName) ?>');">
+              <?php if ($badge !== ''): ?>
+                <span class="badge-hit"><?= $badge ?></span>
+              <?php endif; ?>
+            </div>
+            <div class="card-info">
+              <div class="card-title"><?= $pName ?></div>
+              <div class="card-price"><?= $pPrice ?></div>
+            </div>
+          </a>
+        <?php endforeach; ?>
       </div>
 
       <a href="catalog.php" class="btn-outline reveal">Весь каталог</a>

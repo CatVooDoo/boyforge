@@ -1,14 +1,79 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/includes/db.php';
+
+$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$product = null;
+
+if ($id > 0) {
+    $stmt = $pdo->prepare("SELECT * FROM products WHERE id = :id AND is_active = 1 LIMIT 1");
+    $stmt->execute([':id' => $id]);
+    $product = $stmt->fetch();
+}
+
+$found = ($product !== false && $product !== null);
+
+if ($found) {
+    $pName = htmlspecialchars($product['name']);
+    $pPrice = htmlspecialchars($product['price']);
+    $pSub = htmlspecialchars($product['sub'] ?: 'Футболка · авторский принт');
+    $pDesc = htmlspecialchars($product['description'] ?: 'Плотный хлопок, DTF-печать — мягкий стойкий принт, который не трескается со временем. Уход: стирка при 30°, без отбеливателя.');
+    $pImg = htmlspecialchars($product['img'] ?: '');
+
+    $imgs = json_decode($product['imgs'] ?? '[]', true);
+    if (!is_array($imgs) || empty($imgs)) {
+        $imgs = array_values(array_filter([$product['img'] ?: '']));
+    } else {
+        $imgs = array_values(array_filter($imgs));
+    }
+    if (empty($imgs) && !empty($product['img'])) {
+        $imgs = [$product['img']];
+    }
+
+    $specs = json_decode($product['specs'] ?? '[]', true);
+    if (!is_array($specs)) {
+        $specs = [];
+    }
+
+    $tgBase = $product['tg_link'] ?: ('https://telegram.me/theboyforge?text=' . rawurlencode('Здравствуйте! Хочу заказать: ' . $product['name']));
+
+    // Получаем похожие товары из базы данных
+    $relStmt = $pdo->prepare("SELECT * FROM products WHERE is_active = 1 AND cat_id = :cat_id AND id != :id ORDER BY sort_order ASC, id ASC LIMIT 4");
+    $relStmt->execute([
+        ':cat_id' => $product['cat_id'],
+        ':id' => $id
+    ]);
+    $relatedProducts = $relStmt->fetchAll();
+
+    // Подготавливаем объект для клиента (галерея, выбор размера и заказ)
+    $clientProduct = [
+        'id' => (int)$product['id'],
+        'catId' => $product['cat_id'],
+        'cat' => $product['cat'],
+        'name' => $product['name'],
+        'price' => $product['price'],
+        'img' => $product['img'],
+        'imgs' => $imgs,
+        'sub' => $product['sub'],
+        'tags' => json_decode($product['tags'] ?? '[]', true) ?: [],
+        'desc' => $product['description'],
+        'specs' => $specs,
+        'tg' => $tgBase
+    ];
+}
+?>
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title id="metaTitle">Товар · BOYFORGE</title>
+  <title id="metaTitle"><?= $found ? $pName . ' · BOYFORGE' : 'Товар не найден · BOYFORGE' ?></title>
   <link rel="icon" href="images/favicon.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=22">
+  <link rel="stylesheet" href="css/style.css?v=<?= filemtime(__DIR__ . '/css/style.css') ?>">
 </head>
 <body class="page-product">
 
@@ -50,97 +115,156 @@
       <a href="reviews.php">Отзывы</a>
       <a href="contacts.php">Контакты</a>
     </div>
-
   </nav>
 
   <main class="container">
+    <?php if (!$found): ?>
+      <!-- Товар не найден -->
+      <div class="empty-state" style="padding:120px 20px">
+        <div class="empty-title">Товар не найден</div>
+        <p class="empty-sub">Возможно, позиция была снята с публикации или ссылка устарела. Загляните в каталог — там актуальные позиции.</p>
+        <a class="btn-outline empty-back" href="catalog.php">В каталог</a>
+      </div>
+    <?php else: ?>
 
-    <nav class="breadcrumbs" aria-label="Хлебные крошки">
-      <a href="index.php">Главная</a> <span>/</span>
-      <a href="catalog.php">Каталог</a> <span>/</span>
-      <span id="crumbName">Товар</span>
-    </nav>
+      <nav class="breadcrumbs" aria-label="Хлебные крошки">
+        <a href="index.php">Главная</a> <span>/</span>
+        <a href="catalog.php">Каталог</a> <span>/</span>
+        <span id="crumbName"><?= $pName ?></span>
+      </nav>
 
-    <div class="product-layout">
+      <div class="product-layout">
 
-      <!-- ГАЛЕРЕЯ -->
-      <div class="product-gallery">
-        <div class="thumbs" id="thumbs"><!-- миниатюры добавит JS (десктоп) --></div>
-        <div class="main-photo">
-          <img src="" alt="" id="galleryMain">
+        <!-- ГАЛЕРЕЯ (вывод из БД) -->
+        <?php $hasMultipleImgs = count($imgs) > 1; ?>
+        <div class="product-gallery <?= !$hasMultipleImgs ? 'no-thumbs' : '' ?>">
+          <div class="thumbs" id="thumbs" <?= !$hasMultipleImgs ? 'style="display:none;"' : '' ?>>
+            <?php if ($hasMultipleImgs): ?>
+              <?php foreach ($imgs as $i => $src): ?>
+                <img src="<?= htmlspecialchars($src) ?>" 
+                     alt="<?= $pName ?> — фото <?= $i + 1 ?>" 
+                     class="<?= $i === 0 ? 'active' : '' ?>" 
+                     data-i="<?= $i ?>">
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </div>
+
+          <div class="main-photo">
+            <img src="<?= htmlspecialchars($imgs[0] ?? $pImg) ?>" alt="<?= $pName ?> — фото 1" id="galleryMain">
+          </div>
+
+          <div class="gallery-dots" id="galleryDots" <?= !$hasMultipleImgs ? 'style="display:none;"' : '' ?>>
+            <?php if ($hasMultipleImgs): ?>
+              <?php foreach ($imgs as $i => $src): ?>
+                <button type="button" aria-label="Фото <?= $i + 1 ?>" class="<?= $i === 0 ? 'active' : '' ?>" data-i="<?= $i ?>"></button>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </div>
         </div>
-        <div class="gallery-dots" id="galleryDots"><!-- точки добавит JS (мобайл) --></div>
+
+        <!-- ИНФО О ТОВАРЕ (вывод из БД) -->
+        <div class="product-info">
+          <h1 id="prodName"><?= $pName ?></h1>
+          <div class="product-art" id="prodArt"><?= $pSub ?></div>
+
+          <div class="product-price">
+            <span class="new" id="prodPrice"><?= $pPrice ?></span>
+          </div>
+
+          <div class="gender-title">
+            <span>Пол</span>
+          </div>
+          <div class="genders" id="genders">
+            <button type="button" data-gender="Мужской">Мужской</button>
+            <button type="button" data-gender="Женский">Женский</button>
+          </div>
+
+          <div class="size-title">
+            <span>Размер</span>
+          </div>
+          <div class="sizes">
+            <button type="button">S</button>
+            <button type="button" class="active">M</button>
+            <button type="button">L</button>
+            <button type="button">XL</button>
+            <button type="button">2XL</button>
+          </div>
+
+          <div class="product-actions">
+            <button type="button" class="btn-primary btn-block" id="orderModalBtn">
+              Оформить заказ
+            </button>
+            <a href="<?= htmlspecialchars($tgBase) ?>" class="btn-outline btn-block" id="orderBtn" target="_blank" rel="noopener">
+              Заказать в Telegram
+            </a>
+          </div>
+
+          <div class="product-accordion">
+            <div class="accordion-item open">
+              <button class="accordion-head" type="button">Описание <span class="plus">+</span></button>
+              <div class="accordion-body"><div class="accordion-body-inner">
+                <p id="prodDesc"><?= nl2br($pDesc) ?></p>
+              </div></div>
+            </div>
+
+            <div class="accordion-item">
+              <button class="accordion-head" type="button">Характеристики <span class="plus">+</span></button>
+              <div class="accordion-body"><div class="accordion-body-inner">
+                <ul class="specs" id="prodSpecs">
+                  <?php if (!empty($specs)): ?>
+                    <?php foreach ($specs as $row): ?>
+                      <li>
+                        <span><?= htmlspecialchars((string)($row[0] ?? '')) ?></span>
+                        <?= htmlspecialchars((string)($row[1] ?? '')) ?>
+                      </li>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
+                </ul>
+              </div></div>
+            </div>
+
+            <div class="accordion-item">
+              <button class="accordion-head" type="button">Доставка и оплата <span class="plus">+</span></button>
+              <div class="accordion-body"><div class="accordion-body-inner">
+                <p>Доставка через Ozon (по номеру телефона) или CDEK там, где Ozon недоступен.
+                Для стран СНГ доставка через CDEK оплачивается покупателем. Оплата — по счёту
+                на email, чек приходит автоматически. Отправка обычно 7–10 дней.</p>
+              </div></div>
+            </div>
+          </div>
+
+        </div>
       </div>
 
-      <!-- ИНФО -->
-      <div class="product-info">
-        <h1 id="prodName">Товар</h1>
-        <div class="product-art" id="prodArt">Футболка · авторский принт</div>
-
-        <div class="product-price">
-          <span class="new" id="prodPrice">—</span>
-        </div>
-
-        <div class="gender-title">
-          <span>Пол</span>
-        </div>
-        <div class="genders" id="genders">
-          <button type="button" data-gender="Мужской">Мужской</button>
-          <button type="button" data-gender="Женский">Женский</button>
-        </div>
-
-        <div class="size-title">
-          <span>Размер</span>
-        </div>
-        <div class="sizes">
-          <button>S</button>
-          <button class="active">M</button>
-          <button>L</button>
-          <button>XL</button>
-          <button>2XL</button>
-        </div>
-
-
-        <div class="product-actions">
-          <button type="button" class="btn-ozon btn-block" id="ozonOrderBtn">
-            <svg class="ozon-btn-icon" viewBox="0 0 24 24" width="20" height="20" fill="none">
-              <rect width="24" height="24" rx="5" fill="#005BFF"/>
-              <text x="12" y="16" fill="#fff" font-size="8.5" font-family="system-ui, -apple-system, sans-serif" font-weight="900" text-anchor="middle" letter-spacing="0.5">OZON</text>
-            </svg>
-            Заказать с OZON доставкой
-          </button>
-          <a href="#" class="btn-primary btn-block" id="orderBtn" target="_blank" rel="noopener">
-            Заказать в Telegram
-          </a>
-        </div>
-
-        <div class="product-accordion">
-          <div class="accordion-item open">
-            <button class="accordion-head" type="button">Описание <span class="plus">+</span></button>
-            <div class="accordion-body"><div class="accordion-body-inner">
-              <p id="prodDesc"></p>
-            </div></div>
-          </div>
-
-          <div class="accordion-item">
-            <button class="accordion-head" type="button">Характеристики <span class="plus">+</span></button>
-            <div class="accordion-body"><div class="accordion-body-inner">
-              <ul class="specs" id="prodSpecs"></ul>
-            </div></div>
-          </div>
-
-          <div class="accordion-item">
-            <button class="accordion-head" type="button">Доставка и оплата <span class="plus">+</span></button>
-            <div class="accordion-body"><div class="accordion-body-inner">
-              <p>Доставка через Ozon (по номеру телефона) или CDEK там, где Ozon недоступен.
-              Для стран СНГ доставка через CDEK оплачивается покупателем. Оплата — по счёту
-              на email, чек приходит автоматически. Отправка обычно 7–10 дней.</p>
-            </div></div>
+      <!-- ПОХОЖИЕ ТОВАРЫ (вывод из БД) -->
+      <?php if (!empty($relatedProducts)): ?>
+        <div style="margin-top: 70px; padding-top: 40px; border-top: 1px solid var(--border);">
+          <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Похожие товары</h2>
+          <div class="grid-4" id="relatedGrid">
+            <?php foreach ($relatedProducts as $r): ?>
+              <?php
+                $rTags = json_decode($r['tags'] ?? '[]', true) ?: [];
+                $rName = htmlspecialchars($r['name']);
+              ?>
+              <a href="product.php?id=<?= (int)$r['id'] ?>" class="card">
+                <div class="card-img">
+                  <img src="<?= htmlspecialchars($r['img']) ?>" alt="<?= $rName ?>" loading="lazy"
+                       onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','<?= addslashes($rName) ?>');">
+                  <?php if (in_array('Хит', $rTags, true)): ?>
+                    <span class="badge-hit">хит</span>
+                  <?php endif; ?>
+                </div>
+                <div class="card-info">
+                  <div class="card-title"><?= $rName ?></div>
+                  <div class="card-price"><?= htmlspecialchars($r['price']) ?></div>
+                </div>
+              </a>
+            <?php endforeach; ?>
           </div>
         </div>
+      <?php endif; ?>
 
-      </div>
-    </div>
+    <?php endif; ?>
   </main>
 
   <!-- ===== FOOTER ===== -->
@@ -172,119 +296,53 @@
     </div>
   </footer>
 
-  <script src="js/products.js?v=20"></script>
-  <script src="js/product.js?v=20"></script>
-  <script src="js/main.js?v=20"></script>
-
-
   <!-- модалка увеличенного фото товара -->
-<div class="pv-modal" id="pvModal" aria-hidden="true">
-  <button class="pv-modal-close" id="pvClose" aria-label="Закрыть">&times;</button>
-  <button class="pv-modal-arrow pv-prev" id="pvPrev" aria-label="Предыдущее">&#8249;</button>
-  <img class="pv-modal-img" id="pvImg" src="" alt="">
-  <button class="pv-modal-arrow pv-next" id="pvNext" aria-label="Следующее">&#8250;</button>
-</div>
+  <div class="pv-modal" id="pvModal" aria-hidden="true">
+    <button class="pv-modal-close" id="pvClose" aria-label="Закрыть">&times;</button>
+    <button class="pv-modal-arrow pv-prev" id="pvPrev" aria-label="Предыдущее">&#8249;</button>
+    <img class="pv-modal-img" id="pvImg" src="" alt="">
+    <button class="pv-modal-arrow pv-next" id="pvNext" aria-label="Следующее">&#8250;</button>
+  </div>
 
-  <!-- ===== МОДАЛЬНОЕ ОКНО OZON ДОСТАВКИ ===== -->
-  <div class="ozon-modal" id="ozonModal" aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="ozon-modal-dialog">
-      <div class="ozon-modal-header">
-        <div class="ozon-brand-wrap">
-          <span class="ozon-logo-pill">OZON</span>
-          <h3 class="ozon-modal-title">Оформление с OZON Доставкой</h3>
-        </div>
-        <button type="button" class="ozon-modal-close" id="ozonModalClose" aria-label="Закрыть">&times;</button>
+  <!-- ===== МОДАЛЬНОЕ ОКНО ОФОРМЛЕНИЯ ЗАКАЗА ===== -->
+  <div class="order-modal ozon-modal" id="orderModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="order-modal-dialog ozon-modal-dialog">
+      <div class="order-modal-header ozon-modal-header">
+        <h3 class="order-modal-title ozon-modal-title">Оформление заказа</h3>
+        <button type="button" class="order-modal-close ozon-modal-close" id="orderModalClose" aria-label="Закрыть">&times;</button>
       </div>
 
-      <div class="ozon-modal-body">
-        <!-- Мини-карточка товара -->
+      <div class="order-modal-body ozon-modal-body">
         <div class="ozon-prod-summary">
-          <img class="ozon-prod-thumb" id="ozonModalProdImg" src="" alt="Товар">
+          <img class="ozon-prod-thumb" id="orderModalProdImg" src="" alt="Товар">
           <div class="ozon-prod-info">
-            <div class="ozon-prod-name" id="ozonModalProdName">Товар BOYFORGE</div>
-            <div class="ozon-prod-price" id="ozonModalProdPrice">—</div>
+            <div class="ozon-prod-name" id="orderModalProdName">Товар BOYFORGE</div>
+            <div class="ozon-prod-price" id="orderModalProdPrice">—</div>
             <div class="ozon-prod-tags">
-              <span class="ozon-pill" id="ozonModalProdGender">Мужской</span>
-              <span class="ozon-pill">Размер: <strong id="ozonModalProdSize">M</strong></span>
+              <span class="ozon-pill" id="orderModalProdGender">Мужской</span>
+              <span class="ozon-pill">Размер: <strong id="orderModalProdSize">M</strong></span>
             </div>
           </div>
         </div>
 
-        <form id="ozonOrderForm" novalidate>
-          <!-- 1. Данные покупателя -->
+        <form id="orderForm" novalidate>
           <div class="ozon-section">
-            <div class="ozon-section-title">1. Контактные данные покупателя</div>
+            <div class="ozon-section-title">Контактные данные покупателя</div>
             <div class="ozon-fields-grid">
               <div class="ozon-field">
-                <label for="ozonTg">Ваш Telegram (@username)</label>
-                <input type="text" id="ozonTg" class="ozon-input" placeholder="@username" required autocomplete="off">
+                <label for="orderTg">Ваш Telegram (@username)</label>
+                <input type="text" id="orderTg" class="ozon-input" placeholder="@username" required autocomplete="off">
               </div>
               <div class="ozon-field">
-                <label for="ozonPhone">Номер телефона</label>
-                <input type="tel" id="ozonPhone" class="ozon-input" placeholder="+7 (999) 000-00-00" required autocomplete="tel">
+                <label for="orderPhone">Номер телефона</label>
+                <input type="tel" id="orderPhone" class="ozon-input" placeholder="+7 (999) 000-00-00" required autocomplete="tel">
               </div>
             </div>
           </div>
 
-          <!-- 2. Выбор города и ПВЗ -->
-          <div class="ozon-section" style="margin-top:16px;">
-            <div class="ozon-section-title" style="display:flex; align-items:center; justify-content:space-between;">
-              <span>2. Пункт выдачи OZON</span>
-              <span style="font-size:11px; font-weight:normal; color:#9ca3af;">(необязательно)</span>
-            </div>
-            <p style="font-size:12px; color:#888; margin:2px 0 10px 0;">
-              Вы можете выбрать удобный ПВЗ на карте или согласовать адрес позже в Telegram.
-            </p>
-
-            <!-- Города -->
-            <div class="ozon-city-chips">
-              <button type="button" class="ozon-city-chip active" data-city="Москва">Москва</button>
-              <button type="button" class="ozon-city-chip" data-city="Санкт-Петербург">Санкт-Петербург</button>
-              <button type="button" class="ozon-city-chip" data-city="Екатеринбург">Екатеринбург</button>
-              <button type="button" class="ozon-city-chip" data-city="Казань">Казань</button>
-              <button type="button" class="ozon-city-chip" data-city="Новосибирск">Новосибирск</button>
-              <button type="button" class="ozon-city-chip" data-city="Краснодар">Краснодар</button>
-            </div>
-
-            <!-- Поиск по городу / улице и кнопка геолокации -->
-            <div class="ozon-search-row" style="margin-top:8px;">
-              <input type="text" id="ozonCitySearch" class="ozon-input" placeholder="Поиск по городу, метро или улице (например, Арбат)...">
-              <button type="button" class="ozon-geo-btn" id="ozonGeoBtn" title="Найти ближайший ПВЗ рядом со мной">
-                Рядом
-              </button>
-            </div>
-
-            <!-- Переключатель Виджет: Карта / Список -->
-            <div class="ozon-view-tabs">
-              <span style="font-size:11px; font-weight:600; color:#6b7280;">Способ выбора:</span>
-              <div class="ozon-tab-btns">
-                <button type="button" class="ozon-tab-btn active" id="ozonTabMap">Карта ПВЗ</button>
-                <button type="button" class="ozon-tab-btn" id="ozonTabList">Списком</button>
-              </div>
-            </div>
-
-            <!-- Контейнер интерактивной карты -->
-            <div class="ozon-map-wrap" id="ozonMapWrap">
-              <div id="ozonMap"></div>
-            </div>
-
-            <!-- Контейнер списка -->
-            <div class="ozon-list-wrap" id="ozonListWrap" style="display:none;">
-              <div class="ozon-pvz-list" id="ozonPvzList"></div>
-            </div>
-
-            <!-- Выбранный ПВЗ -->
-            <div class="ozon-selected-box" id="ozonSelectedPvzBox" style="display:none; margin-top:10px;">
-              <div id="ozonSelectedPvzText"></div>
-            </div>
-            <input type="hidden" id="ozonSelectedPvzInput" name="pvzAddress">
-            <input type="hidden" id="ozonSelectedPvzIdInput" name="pvzId">
-          </div>
-
-          <!-- Кнопка оплаты через CloudPayments -->
           <div style="margin-top:20px;">
-            <p class="ozon-status-msg" id="ozonFormStatus"></p>
-            <button type="submit" class="btn-ozon btn-block" id="ozonConfirmBtn" style="margin-top:8px;">
+            <p class="ozon-status-msg order-status-msg" id="orderFormStatus"></p>
+            <button type="submit" class="btn-primary btn-block" id="orderConfirmBtn" style="margin-top:8px;">
               Оплатить онлайн картой / СБП
             </button>
             <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:8px; font-size:11px; color:#9ca3af;">
@@ -297,8 +355,15 @@
     </div>
   </div>
 
+  <?php if ($found): ?>
+    <script>
+      window.PRODUCT_DATA = <?= json_encode($clientProduct, JSON_UNESCAPED_UNICODE) ?>;
+    </script>
+  <?php endif; ?>
+
+  <script src="js/product.js?v=<?= filemtime(__DIR__ . '/js/product.js') ?>"></script>
+  <script src="js/main.js?v=23"></script>
   <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>
-  <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
-  <script src="js/ozon-delivery.js?v=5"></script>
+  <script src="js/checkout.js?v=1"></script>
 </body>
 </html>
