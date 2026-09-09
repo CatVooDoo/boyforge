@@ -204,6 +204,44 @@ switch ($action) {
         ], JSON_UNESCAPED_UNICODE);
         exit;
 
+    case 'save_tag':
+        $name = trim((string)($_POST['name'] ?? ''));
+        if ($name === '') {
+            echo json_encode(['success' => false, 'error' => 'Укажите название бейджа'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        if (mb_strlen($name) > 64) {
+            echo json_encode(['success' => false, 'error' => 'Название бейджа слишком длинное (макс. 64 символа)'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("INSERT IGNORE INTO tags (name) VALUES (:name)");
+        $stmt->execute([':name' => $name]);
+
+        echo json_encode([
+            'success' => true,
+            'tag' => $name,
+            'message' => "Бейдж «{$name}» сохранен в базе"
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+
+    case 'delete_tag':
+        $name = trim((string)($_POST['name'] ?? ''));
+        if ($name === '') {
+            echo json_encode(['success' => false, 'error' => 'Укажите название бейджа'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("DELETE FROM tags WHERE name = :name");
+        $stmt->execute([':name' => $name]);
+
+        echo json_encode([
+            'success' => true,
+            'tag' => $name,
+            'message' => "Бейдж «{$name}» удален из общего списка"
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+
     default:
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Неизвестное действие'], JSON_UNESCAPED_UNICODE);

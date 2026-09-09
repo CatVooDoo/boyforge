@@ -211,6 +211,37 @@ function initDatabase(PDO $pdo): void {
             $stmtCat->execute($c);
         }
     }
+
+    $sqlTags = "CREATE TABLE IF NOT EXISTS tags (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+
+    $pdo->exec($sqlTags);
+
+    $tagsCount = (int)$pdo->query("SELECT COUNT(*) FROM tags")->fetchColumn();
+    if ($tagsCount === 0) {
+        $initialTags = ['Новая коллекция', 'Хит', 'S–3XL', 'Оверсайз', 'Лимитированный тираж'];
+        $stmtTag = $pdo->prepare("INSERT IGNORE INTO tags (name) VALUES (:name)");
+        foreach ($initialTags as $t) {
+            $stmtTag->execute([':name' => $t]);
+        }
+
+        // Import existing tags from products if any
+        $existingProductTags = $pdo->query("SELECT tags FROM products WHERE tags IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($existingProductTags as $tJson) {
+            $parsed = json_decode((string)$tJson, true);
+            if (is_array($parsed)) {
+                foreach ($parsed as $singleTag) {
+                    $singleTag = trim((string)$singleTag);
+                    if ($singleTag !== '') {
+                        $stmtTag->execute([':name' => $singleTag]);
+                    }
+                }
+            }
+        }
+    }
 }
 
 initDatabase($pdo);

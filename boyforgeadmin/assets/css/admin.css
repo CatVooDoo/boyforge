@@ -486,6 +486,81 @@ button {
   color: #333333;
 }
 
+/* Badges in Edit Form */
+.tags-badge-container {
+  display: flex;
+  gap: 8px 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  margin-bottom: 14px;
+}
+
+.badge-checkbox-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  background: #f7f7f5;
+  border: 1px solid #e2e2dc;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.badge-checkbox-item:hover {
+  background: #ededeb;
+  border-color: #d0d0c8;
+}
+
+.badge-checkbox-item input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #000;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+}
+
+.badge-checkbox-item input[type="checkbox"]:checked + .badge-tag-text {
+  font-weight: 600;
+  color: #000;
+}
+
+.badge-tag-text {
+  color: #333;
+  line-height: 1;
+}
+
+.badge-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: #999;
+  cursor: pointer;
+  border-radius: 50%;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+  margin-left: 4px;
+  transition: all 0.15s ease;
+}
+
+.badge-delete-btn:hover {
+  color: #e53e3e;
+  background: rgba(229, 62, 62, 0.12);
+}
+
+.tag-add-wrapper {
+  display: flex;
+  gap: 8px;
+  max-width: 440px;
+}
+
 /* Switch */
 .switch-label {
   position: relative;
