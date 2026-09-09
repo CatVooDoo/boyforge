@@ -20,7 +20,7 @@ try {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=27">
+  <link rel="stylesheet" href="css/style.css?v=28">
 </head>
 <body class="home">
 
@@ -130,14 +130,23 @@ try {
             $pPrice = htmlspecialchars($p['price']);
             $pImg = htmlspecialchars($p['img']);
             $pTags = json_decode($p['tags'] ?? '[]', true) ?: [];
-            $badge = in_array('Новая коллекция', $pTags, true) ? 'Новая коллекция' : (in_array('Хит', $pTags, true) ? 'Хит' : '');
+            $cardBadges = [];
+            foreach ($pTags as $t) {
+                $t = trim((string)$t);
+                if ($t === '' || preg_match('/^[A-Za-z0-9]+[–\-][A-Za-z0-9]+$/u', $t)) continue;
+                $cardBadges[] = $t;
+            }
           ?>
           <a href="product.php?id=<?= $pId ?>" class="card reveal">
             <div class="card-img">
               <img src="<?= $pImg ?>" alt="<?= $pName ?>" loading="lazy"
                    onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','<?= addslashes($pName) ?>');">
-              <?php if ($badge !== ''): ?>
-                <span class="badge-hit"><?= $badge ?></span>
+              <?php if (!empty($cardBadges)): ?>
+                <div class="card-badges">
+                  <?php foreach (array_slice($cardBadges, 0, 2) as $badgeItem): ?>
+                    <span class="card-badge"><?= htmlspecialchars($badgeItem) ?></span>
+                  <?php endforeach; ?>
+                </div>
               <?php endif; ?>
             </div>
             <div class="card-info">

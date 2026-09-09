@@ -260,14 +260,24 @@ if (file_exists($envFile)) {
             <?php foreach ($relatedProducts as $r): ?>
               <?php
                 $rTags = json_decode($r['tags'] ?? '[]', true) ?: [];
+                $rBadges = [];
+                foreach ($rTags as $t) {
+                    $t = trim((string)$t);
+                    if ($t === '' || preg_match('/^[A-Za-z0-9]+[–\-][A-Za-z0-9]+$/u', $t)) continue;
+                    $rBadges[] = $t;
+                }
                 $rName = htmlspecialchars($r['name']);
               ?>
               <a href="product.php?id=<?= (int)$r['id'] ?>" class="card">
                 <div class="card-img">
                   <img src="<?= htmlspecialchars($r['img']) ?>" alt="<?= $rName ?>" loading="lazy"
                        onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','<?= addslashes($rName) ?>');">
-                  <?php if (in_array('Хит', $rTags, true)): ?>
-                    <span class="badge-hit">хит</span>
+                  <?php if (!empty($rBadges)): ?>
+                    <div class="card-badges">
+                      <?php foreach (array_slice($rBadges, 0, 2) as $badgeItem): ?>
+                        <span class="card-badge"><?= htmlspecialchars($badgeItem) ?></span>
+                      <?php endforeach; ?>
+                    </div>
                   <?php endif; ?>
                 </div>
                 <div class="card-info">

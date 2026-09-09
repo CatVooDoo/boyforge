@@ -15,8 +15,9 @@ $sql = "SELECT * FROM products WHERE is_active = 1";
 $params = [];
 
 if ($catFilter !== '' && $catFilter !== 'all') {
-    $sql .= " AND (cat_id = :cat OR cat = :cat)";
-    $params[':cat'] = $catFilter;
+    $sql .= " AND (cat_id = :cat_slug OR cat = :cat_name)";
+    $params[':cat_slug'] = $catFilter;
+    $params[':cat_name'] = $catFilter;
 }
 
 switch ($sort) {
@@ -58,7 +59,7 @@ function pluralizeGoods(int $n): string {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=12">
+  <link rel="stylesheet" href="css/style.css?v=28">
 </head>
 <body>
 
@@ -154,18 +155,25 @@ function pluralizeGoods(int $n): string {
               $pImg = htmlspecialchars($p['img'] ?: '');
               $tags = json_decode($p['tags'] ?? '[]', true);
               if (!is_array($tags)) $tags = [];
+              $cardBadges = [];
+              foreach ($tags as $t) {
+                  $t = trim((string)$t);
+                  if ($t === '' || preg_match('/^[A-Za-z0-9]+[–\-][A-Za-z0-9]+$/u', $t)) {
+                      continue;
+                  }
+                  $cardBadges[] = $t;
+              }
             ?>
             <a href="product.php?id=<?= $pId ?>" class="card card-in">
               <div class="card-img">
                 <img src="<?= $pImg ?>" alt="<?= $pName ?>" loading="lazy"
                      onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','<?= addslashes($pName) ?>');">
-                <?php if (in_array('Хит', $tags, true)): ?>
-                  <span class="badge-hit">хит</span>
-                <?php endif; ?>
-                <?php if (in_array('Новая коллекция', $tags, true)): ?>
-                  <span class="badge-new-collection">новая коллекция</span>
-                <?php elseif (in_array('Новинка', $tags, true) || in_array('Новая', $tags, true)): ?>
-                  <span class="badge-new">новинка</span>
+                <?php if (!empty($cardBadges)): ?>
+                  <div class="card-badges">
+                    <?php foreach (array_slice($cardBadges, 0, 2) as $badgeItem): ?>
+                      <span class="card-badge"><?= htmlspecialchars($badgeItem) ?></span>
+                    <?php endforeach; ?>
+                  </div>
                 <?php endif; ?>
               </div>
               <div class="card-info">
