@@ -12,15 +12,58 @@ var SPREADSHEET_ID = "15TQEi8I2dkhpXoZfunY2PCaoL1zuQjZ7iTyEz9C7nbE";
 var SHEET_NAME = "Заказы";
 
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({
-    status: "ok",
-    message: "BOYFORGE Google Sheets Webhook активен и готов принимать заказы!"
-  })).setMimeType(ContentService.MimeType.JSON);
+  try {
+    var ss = null;
+    try {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+    } catch (e1) {}
+    if (!ss) {
+      try {
+        ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      } catch (e2) {}
+    }
+
+    var sheetName = "—";
+    var rows = 0;
+    if (ss) {
+      var sheet = ss.getSheetByName(SHEET_NAME) || ss.getActiveSheet();
+      if (sheet) {
+        sheetName = sheet.getName();
+        ensureHeaders(sheet);
+        rows = sheet.getLastRow();
+      }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "ok",
+      spreadsheetFound: ss !== null,
+      sheetName: sheetName,
+      totalRows: rows,
+      message: "BOYFORGE Google Sheets Webhook активен и готов принимать заказы!"
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      error: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 function doPost(e) {
   try {
-    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var ss = null;
+    try {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+    } catch (e1) {}
+    if (!ss) {
+      try {
+        ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      } catch (e2) {}
+    }
+    if (!ss) {
+      throw new Error("Не удалось получить доступ к таблице (проверьте права доступа в Apps Script)");
+    }
+
     var sheet = ss.getSheetByName(SHEET_NAME) || ss.getActiveSheet();
     
     // Проверяем наличие заголовков таблицы
