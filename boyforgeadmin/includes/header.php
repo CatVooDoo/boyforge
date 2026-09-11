@@ -26,6 +26,8 @@ $csrfToken = getCsrfToken();
 $currentScript = basename($_SERVER['PHP_SELF']);
 $isProductsActive = ($currentScript === 'index.php' || $currentScript === 'edit.php');
 $isCategoriesActive = ($currentScript === 'categories.php');
+$isOrdersActive = ($currentScript === 'orders.php');
+$isLogsActive = ($currentScript === 'logs.php');
 ?>
 <header class="admin-header">
   <div class="header-container">
@@ -34,6 +36,8 @@ $isCategoriesActive = ($currentScript === 'categories.php');
       <nav class="admin-nav">
         <a href="index.php" class="nav-link <?= $isProductsActive ? 'active' : '' ?>">Товары</a>
         <a href="categories.php" class="nav-link <?= $isCategoriesActive ? 'active' : '' ?>">Категории</a>
+        <a href="orders.php" class="nav-link <?= $isOrdersActive ? 'active' : '' ?>">Заказы</a>
+        <a href="logs.php" class="nav-link <?= $isLogsActive ? 'active' : '' ?>">Логи 5Post</a>
       </nav>
     </div>
 

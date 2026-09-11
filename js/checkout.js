@@ -231,6 +231,20 @@
             if (data.cities && chipsContainer) {
               renderChips(data.cities, currentCity);
             }
+
+            if (data.points.length === 0) {
+              showStatus("В населённом пункте «" + (data.city || search) + "» пунктов 5Post нет (сеть действует в магазинах «Пятёрочка» и «Перекрёсток»). Выберите другой город или оформите доставку CDEK.", "info");
+              if (yandexMap && typeof ymaps !== "undefined" && ymaps.geocode) {
+                ymaps.geocode(data.city || search).then(function (res) {
+                  const firstGeo = res.geoObjects.get(0);
+                  if (firstGeo) {
+                    yandexMap.setCenter(firstGeo.geometry.getCoordinates(), 11, { checkZoomRange: true });
+                  }
+                }).catch(function () {});
+              }
+            } else {
+              showStatus("", null);
+            }
           }
         })
         .catch(function (err) {
@@ -449,6 +463,7 @@
           <div class="ozon-success-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
           <h3>Заказ успешно оплачен!</h3>
           <div class="ozon-order-id">Номер заказа: <strong>${orderId}</strong></div>
+          ${order.fivepostBarcode ? `<div class="ozon-order-id" style="margin-top:6px; font-size:13px; color:#10b981;">Трек 5Post: <strong>${escapeHtml(order.fivepostBarcode)}</strong></div>` : ''}
           <p class="ozon-success-desc">
             Спасибо! Платёж через <strong>CloudPayments</strong> успешно проведён. Мы сформировали заказ для отправки через <strong>5Post</strong>.
           </p>
@@ -621,8 +636,14 @@
             body: JSON.stringify(finalPayload)
           })
             .then(res => res.json())
-            .catch(function () { return {}; })
-            .finally(function () {
+            .then(data => {
+              if (data && data.fivepost && data.fivepost.barcode) {
+                finalPayload.fivepostBarcode = data.fivepost.barcode;
+                finalPayload.fivepostOrderId = data.fivepost.orderId;
+              }
+              showSuccessScreen(orderId, finalPayload);
+            })
+            .catch(function () {
               showSuccessScreen(orderId, finalPayload);
             });
         }

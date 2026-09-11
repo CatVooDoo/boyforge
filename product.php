@@ -63,7 +63,7 @@ if ($found) {
     ];
 }
 
-$fivepostApiKey = '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a';
+$env = [];
 $envFile = __DIR__ . '/.env';
 if (file_exists($envFile)) {
     $envLines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -72,12 +72,11 @@ if (file_exists($envFile)) {
         if ($envLine === '' || $envLine[0] === '#') continue;
         if (strpos($envLine, '=') !== false) {
             list($k, $v) = explode('=', $envLine, 2);
-            if (trim($k) === '5POST_API_KEY') {
-                $fivepostApiKey = trim($v, " \t\n\r\0\x0B\"'");
-            }
+            $env[trim($k)] = trim($v, " \t\n\r\0\x0B\"'");
         }
     }
 }
+$fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a';
 ?>
 <!DOCTYPE html>
 <html lang="ru">
