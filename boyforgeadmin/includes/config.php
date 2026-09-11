@@ -260,6 +260,10 @@ function verifyCsrfToken(?string $token): bool {
     return hash_equals($_SESSION['boyforge_csrf_token'], $token);
 }
 
+function checkCsrfToken(?string $token): bool {
+    return verifyCsrfToken($token);
+}
+
 function isAdminLoggedIn(): bool {
     return !empty($_SESSION['boyforge_admin_logged']);
 }

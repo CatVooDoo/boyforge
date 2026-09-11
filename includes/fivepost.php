@@ -70,9 +70,10 @@ class FivePostClient {
      * Раздел 4: Получение Bearer токена POST jwtGenerate
      */
     public function getJwtToken(): ?string {
-        $cacheFile = sys_get_temp_dir() . '/5post_jwt_' . md5($this->apiKey . $this->baseUrl) . '.json';
+        $userSuffix = function_exists('posix_geteuid') ? ('_' . posix_geteuid()) : '';
+        $cacheFile = sys_get_temp_dir() . '/5post_jwt_' . md5($this->apiKey . $this->baseUrl) . $userSuffix . '.json';
         if (file_exists($cacheFile)) {
-            $cached = json_decode((string)file_get_contents($cacheFile), true);
+            $cached = json_decode((string)@file_get_contents($cacheFile), true);
             if (is_array($cached) && !empty($cached['jwt']) && !empty($cached['expires_at'])) {
                 if (time() < $cached['expires_at']) {
                     return $cached['jwt'];
@@ -123,10 +124,11 @@ class FivePostClient {
         if ($httpCode === 200 && is_string($response)) {
             $json = json_decode($response, true);
             if (!empty($json['jwt'])) {
-                file_put_contents($cacheFile, json_encode([
+                @file_put_contents($cacheFile, json_encode([
                     'jwt' => $json['jwt'],
                     'expires_at' => time() + 3000
                 ]));
+                @chmod($cacheFile, 0666);
                 return $json['jwt'];
             }
         }
@@ -429,6 +431,52 @@ class FivePostClient {
             'error'     => $errorMsg,
             'payload'   => $payload,
             'raw'       => (string)$response
+        ];
+    }
+
+    /**
+     * Отмена заказа в 5Post: DELETE /api/v2/cancelOrder/byOrderId/{orderId}
+     */
+    public function cancelOrder(string $orderId): array {
+        $jwt = $this->getJwtToken();
+        if (!$jwt) {
+            return [
+                'success'   => false,
+                'http_code' => 401,
+                'error'     => 'Не удалось получить авторизационный токен 5Post'
+            ];
+        }
+
+        $url = $this->baseUrl . '/api/v2/cancelOrder/byOrderId/' . urlencode($orderId);
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_CUSTOMREQUEST  => 'DELETE',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_HTTPHEADER     => [
+                'Authorization: Bearer ' . $jwt,
+                'Content-Type: application/json'
+            ],
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+
+        $this->log('CANCEL_ORDER_RESPONSE', [
+            'OrderId'    => $orderId,
+            'HTTP_Code'  => $httpCode,
+            'Curl_Error' => $curlErr ?: 'none',
+            'Response'   => (string)$response
+        ]);
+
+        return [
+            'success'   => ($httpCode >= 200 && $httpCode < 300),
+            'http_code' => $httpCode,
+            'response'  => (string)$response
         ];
     }
 }

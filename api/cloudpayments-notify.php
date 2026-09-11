@@ -73,7 +73,47 @@ $fpClient->log('CLOUDPAYMENTS_WEBHOOK_RECEIVED', [
 
 // Обрабатываем только успешную оплату (Status: Completed)
 if ($status === 'Completed') {
-    // 1. Обновляем статус в БД
+    // 1. Проверяем существующий статус заказа в базе (защита от дублирования и обогащение данными)
+    $checkStmt = $pdo->prepare("SELECT * FROM orders WHERE order_id = :oid");
+    $checkStmt->execute([':oid' => $orderId]);
+    $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($existing) {
+        if (empty($fivepostPointId) && !empty($existing['fivepost_point_id'])) {
+            $fivepostPointId = (string)$existing['fivepost_point_id'];
+        }
+        if (empty($fivepostAddress) && !empty($existing['fivepost_point_address'])) {
+            $fivepostAddress = (string)$existing['fivepost_point_address'];
+        }
+        if (empty($fivepostType) && !empty($existing['fivepost_point_type'])) {
+            $fivepostType = (string)$existing['fivepost_point_type'];
+        }
+        if (empty($fio) && !empty($existing['fio'])) {
+            $fio = (string)$existing['fio'];
+        }
+        if (empty($phone) && !empty($existing['phone'])) {
+            $phone = (string)$existing['phone'];
+        }
+        if (empty($productName) && !empty($existing['product_name'])) {
+            $productName = (string)$existing['product_name'];
+        }
+        if (empty($gender) && !empty($existing['gender'])) {
+            $gender = (string)$existing['gender'];
+        }
+        if (empty($size) && !empty($existing['size'])) {
+            $size = (string)$existing['size'];
+        }
+        if (empty($tgUsername) && !empty($existing['tg_username'])) {
+            $tgUsername = (string)$existing['tg_username'];
+        }
+    }
+
+    $fivepostBarcode = $existing['fivepost_barcode'] ?? null;
+    $fivepostOrderId = $existing['fivepost_order_id'] ?? null;
+    $alreadyIn5Post = !empty($existing['fivepost_status']) && $existing['fivepost_status'] === 'CREATED';
+    $alreadyInSheets = !empty($existing['google_sheets_sent']);
+
+    // 2. Обновляем статус оплаты в БД
     $stmt = $pdo->prepare("
         INSERT INTO orders (
             order_id, client_order_id, product_id, product_name, price, gender, size,
@@ -105,16 +145,6 @@ if ($status === 'Completed') {
         ':fivepost_point_type'    => $fivepostType,
         ':transaction_id'         => $transactionId
     ]);
-
-    // Проверяем существующий статус заказа в базе (защита от дублирования вебхуков и order.php)
-    $checkStmt = $pdo->prepare("SELECT fivepost_order_id, fivepost_barcode, fivepost_status, google_sheets_sent FROM orders WHERE order_id = :oid");
-    $checkStmt->execute([':oid' => $orderId]);
-    $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
-
-    $fivepostBarcode = $existing['fivepost_barcode'] ?? null;
-    $fivepostOrderId = $existing['fivepost_order_id'] ?? null;
-    $alreadyIn5Post = !empty($existing['fivepost_status']) && $existing['fivepost_status'] === 'CREATED';
-    $alreadyInSheets = !empty($existing['google_sheets_sent']);
 
     // 2. Создаем C2C-заказ в 5Post ТОЛЬКО если он еще не был создан
     if (!$alreadyIn5Post && !empty($fivepostPointId)) {

@@ -6,7 +6,6 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/../includes/fivepost.php';
 
 $logFile = __DIR__ . '/../logs/5post.log';
-$fpClient = new FivePostClient();
 $envVars = FivePostClient::loadEnv();
 
 $action = $_GET['action'] ?? '';
@@ -14,7 +13,7 @@ $feedbackMsg = null;
 $feedbackType = 'info';
 
 // Обработка действий
-if ($action === 'clear' && checkCsrfToken($_GET['csrf_token'] ?? '')) {
+if ($action === 'clear' && verifyCsrfToken($_GET['csrf_token'] ?? '')) {
     if (file_exists($logFile)) {
         file_put_contents($logFile, '');
     }
@@ -29,11 +28,6 @@ if ($action === 'download') {
         readfile($logFile);
         exit;
     }
-}
-
-$testResult = null;
-if (isset($_POST['test_api_key']) && checkCsrfToken($_POST['csrf_token'] ?? '')) {
-    $testResult = $fpClient->testConnection();
 }
 
 $logContent = file_exists($logFile) ? (string)file_get_contents($logFile) : '';
@@ -69,17 +63,9 @@ $blocks = array_reverse($blocks); // Новые записи сверху
 <div class="page-head">
   <div>
     <h1 class="page-title">Логи 5Post API & Webhooks</h1>
-    <div class="page-subtitle">Сквозной мониторинг всех запросов авторизации, регистрации заказов C2C и ответов шлюза X5</div>
+    <div class="page-subtitle">Сквозной журнал всех запросов авторизации, регистрации заказов C2C и ответов шлюза X5</div>
   </div>
   <div class="head-actions" style="display: flex; gap: 10px; align-items: center;">
-    <form method="POST" style="margin:0;">
-      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-      <button type="submit" name="test_api_key" value="1" class="btn btn-primary btn-sm">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-        Проверить статус API-ключа в 5Post
-      </button>
-    </form>
-
     <a href="logs.php?action=download" class="btn btn-secondary btn-sm" title="Скачать лог-файл целиком">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
       Скачать лог
@@ -97,49 +83,6 @@ $blocks = array_reverse($blocks); // Новые записи сверху
 <?php if (isset($_GET['cleared'])): ?>
   <div class="alert alert-success" style="margin-bottom: 20px; background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; padding:12px 16px; border-radius:8px;">
     ✓ Журнал логов 5Post успешно очищен.
-  </div>
-<?php endif; ?>
-
-<!-- Результат проверки API -->
-<?php if ($testResult !== null): ?>
-  <div class="content-card" style="margin-bottom: 24px; border-left: 4px solid <?= $testResult['is_valid'] ? '#10b981' : '#f59e0b' ?>;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
-      <h3 style="font-size:16px; font-weight:700; margin:0; display:flex; align-items:center; gap:8px;">
-        <?php if ($testResult['is_valid']): ?>
-          <span style="color:#10b981;">●</span> API 5Post подключен успешно (HTTP 200)
-        <?php else: ?>
-          <span style="color:#f59e0b;">●</span> Ответ шлюза X5: HTTP <?= htmlspecialchars((string)$testResult['http_code']) ?>
-        <?php endif; ?>
-      </h3>
-      <span style="font-size:12px; color:var(--text-muted); font-family:monospace;">
-        Время отклика: <?= $testResult['duration_s'] ?> сек
-      </span>
-    </div>
-
-    <div style="font-size:13px; line-height:1.6; margin-bottom: 14px;">
-      <?php if ($testResult['is_valid']): ?>
-        <p style="color:#065f46; margin:0;">
-          <strong>Отлично!</strong> Ключ активен на шлюзе X5 Gravitee. Авторизационный Bearer токен успешно сгенерирован. Все заказы покупателей регистрируются в 5Post в режиме реального времени.
-        </p>
-      <?php elseif ($testResult['http_code'] === 401): ?>
-        <p style="color:#92400e; margin:0;">
-          <strong>Обратите внимание:</strong> Шлюз X5 отклонил ключ с сообщением: <code>"API Key is not valid or is expired / revoked"</code>.<br>
-          Это стандартная ситуация до того, как менеджер 5Post активирует ключ в личном кабинете партнёра. <br>
-          <strong>Как это работает прямо сейчас:</strong> код интернет-магазина полностью готов и отправляет все C2C-заказы в 5Post. При 401 ответе система мягко фиксирует заказ в MariaDB со статусом <code>PENDING_REGISTRATION</code>, формирует трек-код <code>5P-...</code>, передаёт всё в Google Таблицу и покупателю без сбоев. Как только менеджер активирует ключ — заказы сразу получат статус <code>CREATED</code> и официальный штрихкод 5Post.
-        </p>
-      <?php else: ?>
-        <p style="color:#b91c1c; margin:0;">
-          Ошибка соединения: <?= htmlspecialchars($testResult['curl_error'] ?: 'Код ответа ' . $testResult['http_code']) ?>
-        </p>
-      <?php endif; ?>
-    </div>
-
-    <div style="background:#18181b; color:#e4e4e7; border-radius:8px; padding:12px 16px; font-family:monospace; font-size:12px; overflow-x:auto;">
-      <div style="color:#a1a1aa; margin-bottom:4px;"># Запрос:</div>
-      <div>POST <?= htmlspecialchars($testResult['endpoint']) ?></div>
-      <div style="color:#a1a1aa; margin:8px 0 4px;"># Ответ сервера 5Post:</div>
-      <div style="color:<?= $testResult['is_valid'] ? '#4ade80' : '#fbbf24' ?>;"><?= htmlspecialchars($testResult['raw']) ?></div>
-    </div>
   </div>
 <?php endif; ?>
 
