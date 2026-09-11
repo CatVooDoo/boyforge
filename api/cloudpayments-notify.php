@@ -198,13 +198,17 @@ if ($status === 'Completed') {
             CURLOPT_POSTFIELDS     => json_encode($googlePayload, JSON_UNESCAPED_UNICODE),
             CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_POSTREDIR      => 3,
-            CURLOPT_TIMEOUT        => 10,
+            CURLOPT_TIMEOUT        => 15,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_SSL_VERIFYHOST => 0
         ]);
         curl_exec($ch);
+        $gCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+
+        if ($gCode === 200 || $gCode === 302) {
+            $pdo->prepare("UPDATE orders SET google_sheets_sent = 1 WHERE order_id = :oid")->execute([':oid' => $orderId]);
+        }
     }
 }
 

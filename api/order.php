@@ -210,8 +210,7 @@ if (!empty($googleScriptUrl) && strpos($googleScriptUrl, 'script.google.com') !=
         CURLOPT_POSTFIELDS     => json_encode($googlePayload, JSON_UNESCAPED_UNICODE),
         CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
         CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_POSTREDIR      => 3,
-        CURLOPT_TIMEOUT        => 12,
+        CURLOPT_TIMEOUT        => 15,
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_SSL_VERIFYHOST => 0
     ]);
@@ -219,7 +218,7 @@ if (!empty($googleScriptUrl) && strpos($googleScriptUrl, 'script.google.com') !=
     $gHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    if ($gHttpCode === 200) {
+    if ($gHttpCode === 200 || $gHttpCode === 302) {
         $googleSent = true;
         $pdo->prepare("UPDATE orders SET google_sheets_sent = 1 WHERE order_id = :oid")->execute([':oid' => $orderId]);
     }
