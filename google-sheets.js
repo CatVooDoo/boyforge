@@ -84,14 +84,26 @@ function doPost(e) {
     // Получаем текущую дату и время
     var orderDate = data.date || Utilities.formatDate(new Date(), "GMT+3", "dd.MM.yyyy HH:mm:ss");
     
-    // Добавляем строку заказа
-    sheet.appendRow([
+    // Форматируем телефон: экранируем '+', чтобы Google Таблицы не считали номер формулой (=+7...)
+    var rawPhone = (data.phone || "").toString().trim();
+    var safePhone = rawPhone;
+    if (safePhone.charAt(0) === '+') {
+      safePhone = "'" + safePhone;
+    }
+
+    var targetOrderId = (data.orderId || "").toString().trim();
+    var safeBarcode = (data.fivepostBarcode || "—").toString().trim();
+    if (safeBarcode.charAt(0) === '+') {
+      safeBarcode = "'" + safeBarcode;
+    }
+
+    var rowData = [
       orderDate,                                  // A: Дата
-      data.orderId || "—",                        // B: ID Заказа (BOYFORGE)
-      data.fivepostBarcode || "—",                // C: Штрихкод / Трек 5Post
+      targetOrderId || "—",                       // B: ID Заказа (BOYFORGE)
+      safeBarcode,                                // C: Штрихкод / Трек 5Post
       data.status || "Оплачен",                   // D: Статус заказа
       data.fio || "—",                            // E: ФИО получателя
-      data.phone || "—",                          // F: Телефон
+      safePhone || "—",                           // F: Телефон (текстовый формат)
       data.tgUsername || "—",                     // G: Telegram
       data.productName || "Товар BOYFORGE",       // H: Товар
       data.gender || "Мужской",                   // I: Пол
@@ -100,15 +112,38 @@ function doPost(e) {
       data.fivepostPointAddress || "—",           // L: Адрес ПВЗ 5Post
       data.transactionId || "—",                  // M: ID оплаты (CloudPayments)
       data.fivepostOrderId || "—"                 // N: 5Post Order ID (UUID)
-    ]);
+    ];
+
+    // Защита от дублирования: ищем, есть ли уже этот orderId в колонке B
+    var targetRow = 0;
+    if (targetOrderId && targetOrderId !== "—") {
+      var lastRow = sheet.getLastRow();
+      if (lastRow > 1) {
+        var existingIds = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+        for (var i = 0; i < existingIds.length; i++) {
+          if (existingIds[i][0] && existingIds[i][0].toString().trim() === targetOrderId) {
+            targetRow = i + 2; // Нашли существующую строку — обновим её!
+            break;
+          }
+        }
+      }
+    }
+
+    // Если заказ новый — добавляем в конец таблицы
+    if (targetRow === 0) {
+      targetRow = sheet.getLastRow() + 1;
+    }
+
+    // Записываем данные в целевую строку
+    sheet.getRange(targetRow, 1, 1, rowData.length).setValues([rowData]);
+
+    // Устанавливаем текстовый формат для телефонов и штрихкодов
+    sheet.getRange(targetRow, 6).setNumberFormat("@");
+    sheet.getRange(targetRow, 3).setNumberFormat("@").setFontFamily("Courier New").setFontWeight("bold");
+    sheet.getRange(targetRow, 2).setNumberFormat("@").setFontFamily("Courier New");
+    sheet.getRange(targetRow, 1, 1, 14).setVerticalAlignment("middle");
     
-    // Форматируем последнюю строку
-    var lastRow = sheet.getLastRow();
-    sheet.getRange(lastRow, 1, 1, 14).setVerticalAlignment("middle");
-    sheet.getRange(lastRow, 3).setFontFamily("Courier New").setFontWeight("bold"); // Выделяем штрихкод
-    sheet.getRange(lastRow, 2).setFontFamily("Courier New"); // ID заказа
-    
-    return ContentService.createTextOutput(JSON.stringify({ result: "success", row: lastRow }))
+    return ContentService.createTextOutput(JSON.stringify({ result: "success", row: targetRow, updated: targetRow !== sheet.getLastRow() }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ result: "error", error: err.toString() }))

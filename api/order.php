@@ -102,15 +102,23 @@ try {
     error_log("Order DB Insert Error: " . $e->getMessage());
 }
 
+// Проверяем существующий статус заказа (защита от повторных вызовов)
+$checkStmt = $pdo->prepare("SELECT fivepost_order_id, fivepost_barcode, fivepost_status, google_sheets_sent FROM orders WHERE order_id = :oid");
+$checkStmt->execute([':oid' => $orderId]);
+$existingOrder = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+$alreadyIn5Post = !empty($existingOrder['fivepost_status']) && $existingOrder['fivepost_status'] === 'CREATED';
+$alreadyInSheets = !empty($existingOrder['google_sheets_sent']);
+
 $fivepostResult = [
-    'success' => false,
-    'orderId' => null,
-    'barcode' => null,
-    'status'  => 'PENDING'
+    'success' => $alreadyIn5Post,
+    'orderId' => $existingOrder['fivepost_order_id'] ?? null,
+    'barcode' => $existingOrder['fivepost_barcode'] ?? null,
+    'status'  => $alreadyIn5Post ? 'CREATED' : 'PENDING'
 ];
 
-// 2. Если заказ оплачен — формируем C2C-заказ в 5Post строго по Разделу 18.2
-if ($paymentStatus === 'paid') {
+// 2. Если заказ оплачен и еще не создан в 5Post — формируем C2C-заказ строго по Разделу 18.2
+if (!$alreadyIn5Post && $paymentStatus === 'paid') {
     $fpClient = new FivePostClient();
     $c2cResponse = $fpClient->createC2COrder([
         'order_id'          => $orderId,
@@ -180,9 +188,10 @@ if ($paymentStatus === 'paid') {
     }
 }
 
-// 3. Отправка полного пакета данных в Google Таблицу
+// 3. Отправка полного пакета данных в Google Таблицу (только если еще не отправлялся)
 $nowDate = date('d.m.Y H:i:s');
 $pointTypeRu = ($fivepostType === 'POSTAMAT') ? 'Постамат' : (($fivepostType === 'TOBACCO') ? 'Касса' : 'ПВЗ');
+$safePhoneForSheets = (strpos($phone, '+') === 0) ? ("'" . $phone) : $phone;
 
 $googlePayload = [
     'date'                 => $nowDate,
@@ -190,7 +199,7 @@ $googlePayload = [
     'fivepostOrderId'      => $fivepostResult['orderId'] ?? '—',
     'fivepostBarcode'      => $fivepostResult['barcode'] ?? '—',
     'fio'                  => $fio,
-    'phone'                => $phone,
+    'phone'                => $safePhoneForSheets,
     'tgUsername'           => $tgUsername,
     'fivepostPointAddress' => $fivepostAddress . " ({$pointTypeRu})",
     'productName'          => $productName,
@@ -201,8 +210,8 @@ $googlePayload = [
     'status'               => ($paymentStatus === 'paid') ? 'Оплачен, сформирован 5Post C2C' : 'Ожидает оплаты'
 ];
 
-$googleSent = false;
-if (!empty($googleScriptUrl) && strpos($googleScriptUrl, 'script.google.com') !== false) {
+$googleSent = $alreadyInSheets;
+if (!$alreadyInSheets && !empty($googleScriptUrl) && strpos($googleScriptUrl, 'script.google.com') !== false) {
     $ch = curl_init($googleScriptUrl);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,

@@ -106,11 +106,18 @@ if ($status === 'Completed') {
         ':transaction_id'         => $transactionId
     ]);
 
-    // 2. Создаем C2C-заказ в 5Post
-    $fivepostBarcode = null;
-    $fivepostOrderId = null;
+    // Проверяем существующий статус заказа в базе (защита от дублирования вебхуков и order.php)
+    $checkStmt = $pdo->prepare("SELECT fivepost_order_id, fivepost_barcode, fivepost_status, google_sheets_sent FROM orders WHERE order_id = :oid");
+    $checkStmt->execute([':oid' => $orderId]);
+    $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!empty($fivepostPointId)) {
+    $fivepostBarcode = $existing['fivepost_barcode'] ?? null;
+    $fivepostOrderId = $existing['fivepost_order_id'] ?? null;
+    $alreadyIn5Post = !empty($existing['fivepost_status']) && $existing['fivepost_status'] === 'CREATED';
+    $alreadyInSheets = !empty($existing['google_sheets_sent']);
+
+    // 2. Создаем C2C-заказ в 5Post ТОЛЬКО если он еще не был создан
+    if (!$alreadyIn5Post && !empty($fivepostPointId)) {
         $c2cRes = $fpClient->createC2COrder([
             'order_id'          => $orderId,
             'client_order_id'   => $orderId,
@@ -169,10 +176,11 @@ if ($status === 'Completed') {
         }
     }
 
-    // 3. Отправка в Google Таблицу
-    if (!empty($googleScriptUrl) && strpos($googleScriptUrl, 'script.google.com') !== false) {
+    // 3. Отправка в Google Таблицу (только если еще не отправлялся)
+    if (!$alreadyInSheets && !empty($googleScriptUrl) && strpos($googleScriptUrl, 'script.google.com') !== false) {
         $nowDate = date('d.m.Y H:i:s');
         $pointTypeRu = ($fivepostType === 'POSTAMAT') ? 'Постамат' : (($fivepostType === 'TOBACCO') ? 'Касса' : 'ПВЗ');
+        $safePhoneForSheets = (strpos($phone, '+') === 0) ? ("'" . $phone) : $phone;
 
         $googlePayload = [
             'date'                 => $nowDate,
@@ -180,7 +188,7 @@ if ($status === 'Completed') {
             'fivepostOrderId'      => $fivepostOrderId ?: '—',
             'fivepostBarcode'      => $fivepostBarcode ?: '—',
             'fio'                  => $fio,
-            'phone'                => $phone,
+            'phone'                => $safePhoneForSheets,
             'tgUsername'           => $tgUsername,
             'fivepostPointAddress' => $fivepostAddress . " ({$pointTypeRu})",
             'productName'          => $productName,
