@@ -314,6 +314,7 @@ $fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a
       </div>
       <div class="footer-bottom">
         <span>© <span id="year">2026</span> BOYFORGE. Все права защищены</span>
+        <a href="policy.php">Политика обработки персональных данных</a>
         <a href="privacy.php">Политика конфиденциальности</a>
         <a href="terms.php">Пользовательское соглашение</a>
         <a href="offer.php">Публичная оферта</a>
@@ -361,8 +362,8 @@ $fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a
             </div>
             <div class="ozon-fields-grid">
               <div class="ozon-field">
-                <label for="orderTg">Ваш Telegram (@username) <span style="color:#ef4444;">*</span></label>
-                <input type="text" id="orderTg" class="ozon-input" placeholder="@username" required autocomplete="off">
+                <label for="orderTg">Ваш Telegram (@username)</label>
+                <input type="text" id="orderTg" class="ozon-input" placeholder="@username" autocomplete="off">
               </div>
               <div class="ozon-field">
                 <label for="orderPhone">Номер телефона <span style="color:#ef4444;">*</span></label>
@@ -386,12 +387,8 @@ $fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a
 
             <!-- Карточка уже выбранного пункта выдачи -->
             <div class="fivepost-selected-card" id="fivepostSelectedCard" style="display:none;">
-              <div class="fivepost-selected-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              </div>
               <div class="fivepost-selected-details">
                 <div class="fivepost-selected-header">
-                  <span class="fivepost-selected-badge" id="fivepostPointTypeBadge">Постамат</span>
                   <strong class="fivepost-selected-name" id="fivepostPointNameDisplay">Пятёрочка</strong>
                 </div>
                 <div class="fivepost-selected-address" id="fivepostPointAddressDisplay">г. Пенза, ул. Примерная, д. 1</div>
@@ -423,10 +420,20 @@ $fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a
 
           <div style="margin-top:16px;">
             <p class="ozon-status-msg order-status-msg" id="orderFormStatus"></p>
-            <button type="submit" class="btn-primary btn-block" id="orderConfirmBtn" style="margin-top:8px;">
+            <button type="submit" class="btn-primary btn-block" id="orderConfirmBtn">
               Оплатить онлайн картой / СБП
             </button>
-            <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:8px; font-size:11px; color:#9ca3af;">
+
+            <div class="order-agree-wrap">
+              <label class="order-agree-label" for="orderPolicyAgree">
+                <input type="checkbox" id="orderPolicyAgree" class="order-agree-checkbox" required>
+                <span class="order-agree-text">
+                  Нажимая кнопку, Вы соглашаетесь с <a href="terms.php" target="_blank" rel="noopener">Правилами</a> и <a href="policy.php" target="_blank" rel="noopener">политикой конфиденциальности</a> Компании.
+                </span>
+              </label>
+            </div>
+
+            <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:10px; font-size:11px; color:#9ca3af;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
               <span>Безопасная оплата через <strong>CloudPayments</strong> · Карты РФ, СБП, Mir Pay</span>
             </div>
