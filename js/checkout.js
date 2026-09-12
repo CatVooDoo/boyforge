@@ -477,6 +477,15 @@
       });
     }
 
+    const policyAgreeInput = document.getElementById("orderPolicyAgree");
+    if (policyAgreeInput) {
+      policyAgreeInput.addEventListener("change", function () {
+        if (this.checked && statusMsg && statusMsg.textContent.includes("согласие")) {
+          showStatus("", null);
+        }
+      });
+    }
+
     // Открытие модального окна
     function openModal() {
       const state = getProductState();
@@ -628,6 +637,14 @@
               }, 100);
             }
           }
+          return;
+        }
+
+        // Проверка согласия с правилами и политикой конфиденциальности
+        const policyAgreeCheckbox = document.getElementById("orderPolicyAgree");
+        if (policyAgreeCheckbox && !policyAgreeCheckbox.checked) {
+          showStatus("Пожалуйста, подтвердите согласие с Правилами и политикой конфиденциальности", "error");
+          policyAgreeCheckbox.focus();
           return;
         }
 

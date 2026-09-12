@@ -268,6 +268,7 @@ try {
       </div>
       <div class="footer-bottom">
         <span>© <span id="year">2026</span> BOYFORGE. Все права защищены</span>
+        <a href="policy.php">Политика обработки персональных данных</a>
         <a href="privacy.php">Политика конфиденциальности</a>
         <a href="terms.php">Пользовательское соглашение</a>
         <a href="offer.php">Публичная оферта</a>
