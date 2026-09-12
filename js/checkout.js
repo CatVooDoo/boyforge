@@ -133,7 +133,7 @@
       customPinLayout = ymaps.templateLayoutFactory.createClass(
         '<div class="bf-map-pin fivepost-pin" title="$[properties.hintContent]">' +
           '<div class="bf-pin-body">' +
-            '<img src="/images/pyaterochka-pin.png" alt="Пятёрочка" class="bf-pin-img" width="36" height="36" onerror="this.src=\'/free-png.ru-53.png\'">' +
+            '<img src="/images/pyaterochka.png" alt="Пятёрочка" class="bf-pin-img" width="36" height="36">' +
           '</div>' +
           '<div class="bf-pin-tail"></div>' +
         '</div>'
@@ -143,19 +143,17 @@
 
     function createPointPlacemark(point, pinLayout) {
       const isPostamat = (point.type === "POSTAMAT");
-      const badgeText = isPostamat ? "Постамат" : "Касса";
       const titleName = point.name || (isPostamat ? "Постамат 5Post" : "Касса «Пятёрочка»");
       const fullAddr = point.full_address || point.street || "";
 
       const balloonHtml = `
         <div class="bf-balloon">
           <div class="bf-balloon-header">
-            <span class="bf-balloon-badge">${badgeText}</span>
             <strong class="bf-balloon-name">${escapeHtml(titleName)}</strong>
           </div>
           <div class="bf-balloon-address">${escapeHtml(fullAddr)}</div>
-          ${point.work_hours ? `<div class="bf-balloon-extra">🕒 ${escapeHtml(point.work_hours)}</div>` : ''}
-          ${point.additional ? `<div class="bf-balloon-extra">ℹ️ ${escapeHtml(point.additional)}</div>` : ''}
+          ${point.work_hours ? `<div class="bf-balloon-extra">${escapeHtml(point.work_hours)}</div>` : ''}
+          ${point.additional ? `<div class="bf-balloon-extra">${escapeHtml(point.additional)}</div>` : ''}
           <button type="button" class="bf-balloon-select-btn" data-point-id="${escapeHtml(point.id)}">Выбрать эту точку</button>
         </div>
       `;
@@ -455,11 +453,13 @@
       });
     }
 
-    // Telegram-маска: автодобавление @
+    // Telegram-маска: автодобавление @ (если заполнено)
     if (tgInput) {
       tgInput.addEventListener("blur", function () {
         let v = this.value.trim();
-        if (v && v[0] !== "@") {
+        if (v === "@") {
+          this.value = "";
+        } else if (v && v[0] !== "@") {
           this.value = "@" + v;
         }
       });
@@ -563,7 +563,7 @@
             <div><span>Товар:</span> ${order.productName} (${order.gender}, размер ${order.size})</div>
             <div><span>Сумма:</span> <strong>${order.price}</strong> <span style="color:#10b981; font-weight:600;">(Оплачено)</span></div>
             ${order.fio ? `<div><span>ФИО получателя:</span> <strong>${escapeHtml(order.fio)}</strong></div>` : ''}
-            <div><span>Telegram:</span> <strong>${order.tgUsername}</strong></div>
+            ${order.tgUsername ? `<div><span>Telegram:</span> <strong>${escapeHtml(order.tgUsername)}</strong></div>` : ''}
             <div><span>Телефон:</span> ${order.phone}</div>
             ${order.fivepostPointAddress ? `<div><span>Доставка 5Post:</span> <strong>${order.fivepostPointAddress}</strong> (${pointTypeRu})</div>` : ''}
             ${order.transactionId ? `<div><span>ID транзакции:</span> #${order.transactionId}</div>` : ''}
@@ -600,19 +600,21 @@
           return;
         }
 
-        if (!tg) {
-          showStatus("Укажите ваш @username в Telegram", "error");
-          tgInput?.focus();
-          return;
-        }
-        if (tg[0] !== "@") {
-          tg = "@" + tg;
-          if (tgInput) tgInput.value = tg;
-        }
-        if (tg.length < 2) {
-          showStatus("Введите корректный ник в Telegram (например, @username)", "error");
-          tgInput?.focus();
-          return;
+        if (tg) {
+          if (tg === "@") {
+            tg = "";
+            if (tgInput) tgInput.value = "";
+          } else {
+            if (tg[0] !== "@") {
+              tg = "@" + tg;
+              if (tgInput) tgInput.value = tg;
+            }
+            if (tg.length < 2) {
+              showStatus("Введите корректный ник в Telegram (например, @username)", "error");
+              tgInput?.focus();
+              return;
+            }
+          }
         }
 
         if (!phone || phone.length < 16) {

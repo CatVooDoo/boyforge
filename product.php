@@ -362,8 +362,8 @@ $fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a
             </div>
             <div class="ozon-fields-grid">
               <div class="ozon-field">
-                <label for="orderTg">Ваш Telegram (@username) <span style="color:#ef4444;">*</span></label>
-                <input type="text" id="orderTg" class="ozon-input" placeholder="@username" required autocomplete="off">
+                <label for="orderTg">Ваш Telegram (@username)</label>
+                <input type="text" id="orderTg" class="ozon-input" placeholder="@username" autocomplete="off">
               </div>
               <div class="ozon-field">
                 <label for="orderPhone">Номер телефона <span style="color:#ef4444;">*</span></label>
@@ -387,12 +387,8 @@ $fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a
 
             <!-- Карточка уже выбранного пункта выдачи -->
             <div class="fivepost-selected-card" id="fivepostSelectedCard" style="display:none;">
-              <div class="fivepost-selected-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              </div>
               <div class="fivepost-selected-details">
                 <div class="fivepost-selected-header">
-                  <span class="fivepost-selected-badge" id="fivepostPointTypeBadge">Постамат</span>
                   <strong class="fivepost-selected-name" id="fivepostPointNameDisplay">Пятёрочка</strong>
                 </div>
                 <div class="fivepost-selected-address" id="fivepostPointAddressDisplay">г. Пенза, ул. Примерная, д. 1</div>

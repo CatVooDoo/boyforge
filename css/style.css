@@ -3029,7 +3029,10 @@ body:not(.home){
   font-size:13px; font-weight:600; color:#1f2937; line-height:1.4; margin-bottom:4px;
 }
 .bf-balloon-extra{
-  font-size:11px; color:#6b7280; line-height:1.4; margin-bottom:10px;
+  font-size:11px; color:#6b7280; line-height:1.4; margin-bottom:4px;
+}
+.bf-balloon-extra:last-of-type{
+  margin-bottom:10px;
 }
 .bf-balloon-select-btn{
   width:100%; background:#000000; color:#ffffff; border:none;
