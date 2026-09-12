@@ -62,8 +62,20 @@ if (empty($fio) || empty($phone) || empty($fivepostPointId)) {
     exit;
 }
 
-// 1. Сохранение/обновление заказа в базе данных MariaDB
+// 1. Блокировка на уровне MariaDB для предотвращения одновременных гонок запросов (GET_LOCK)
+$lockName = 'bf_order_' . md5($orderId);
+$lockAcquired = false;
+
 try {
+    $lockStmt = $pdo->prepare("SELECT GET_LOCK(:lock_name, 15)");
+    $lockStmt->execute([':lock_name' => $lockName]);
+    $lockAcquired = ((int)$lockStmt->fetchColumn()) === 1;
+} catch (Throwable $e) {
+    // В случае сбоя блокировки продолжаем выполнение
+}
+
+try {
+    // Сохранение/обновление заказа в базе данных MariaDB
     $stmt = $pdo->prepare("
         INSERT INTO orders (
             order_id, client_order_id, product_id, product_name, price, gender, size,
@@ -76,7 +88,7 @@ try {
         )
         ON DUPLICATE KEY UPDATE
             payment_status = VALUES(payment_status),
-            payment_transaction_id = VALUES(payment_transaction_id),
+            payment_transaction_id = COALESCE(NULLIF(VALUES(payment_transaction_id), ''), payment_transaction_id),
             updated_at = NOW()
     ");
 
@@ -98,138 +110,148 @@ try {
         ':payment_status'         => $paymentStatus,
         ':payment_transaction_id' => $transactionId
     ]);
-} catch (Throwable $e) {
-    error_log("Order DB Insert Error: " . $e->getMessage());
-}
 
-// Проверяем существующий статус заказа (защита от повторных вызовов)
-$checkStmt = $pdo->prepare("SELECT fivepost_order_id, fivepost_barcode, fivepost_status, google_sheets_sent FROM orders WHERE order_id = :oid");
-$checkStmt->execute([':oid' => $orderId]);
-$existingOrder = $checkStmt->fetch(PDO::FETCH_ASSOC);
+    // Проверяем существующий статус заказа (защита от повторных вызовов)
+    $checkStmt = $pdo->prepare("SELECT fivepost_order_id, fivepost_barcode, fivepost_status, google_sheets_sent, payment_transaction_id FROM orders WHERE order_id = :oid");
+    $checkStmt->execute([':oid' => $orderId]);
+    $existingOrder = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-$alreadyIn5Post = !empty($existingOrder['fivepost_status']) && $existingOrder['fivepost_status'] === 'CREATED';
-$alreadyInSheets = !empty($existingOrder['google_sheets_sent']);
-
-$fivepostResult = [
-    'success' => $alreadyIn5Post,
-    'orderId' => $existingOrder['fivepost_order_id'] ?? null,
-    'barcode' => $existingOrder['fivepost_barcode'] ?? null,
-    'status'  => $alreadyIn5Post ? 'CREATED' : 'PENDING'
-];
-
-// 2. Если заказ оплачен и еще не создан в 5Post — формируем C2C-заказ строго по Разделу 18.2
-if (!$alreadyIn5Post && $paymentStatus === 'paid') {
-    $fpClient = new FivePostClient();
-    $c2cResponse = $fpClient->createC2COrder([
-        'order_id'          => $orderId,
-        'client_order_id'   => $orderId,
-        'fivepost_point_id' => $fivepostPointId,
-        'fio'               => $fio,
-        'phone'             => $phone,
-        'product_name'      => $productName,
-        'product_id'        => $productId,
-        'price'             => $numPrice,
-        'weight_g'          => 350
-    ]);
-
-    if (!empty($c2cResponse['success'])) {
-        $fivepostResult['success'] = true;
-        $fivepostResult['orderId'] = $c2cResponse['orderId'];
-        $fivepostResult['barcode'] = $c2cResponse['barcode'];
-        $fivepostResult['status']  = 'CREATED';
-
-        // Обновляем заказ в MariaDB
-        $upd = $pdo->prepare("
-            UPDATE orders SET 
-                fivepost_order_id = :f_oid,
-                fivepost_cargo_id = :f_cid,
-                fivepost_barcode  = :f_bc,
-                fivepost_status   = 'CREATED',
-                fivepost_http_code = :hcode,
-                fivepost_request_payload = :payload,
-                fivepost_raw_response = :raw
-            WHERE order_id = :oid
-        ");
-        $upd->execute([
-            ':f_oid'   => $c2cResponse['orderId'],
-            ':f_cid'   => $c2cResponse['cargoId'],
-            ':f_bc'    => $c2cResponse['barcode'],
-            ':hcode'   => (int)($c2cResponse['http_code'] ?? 200),
-            ':payload' => json_encode($c2cResponse['payload'] ?? [], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
-            ':raw'     => is_string($c2cResponse['raw']) ? $c2cResponse['raw'] : json_encode($c2cResponse['raw'], JSON_UNESCAPED_UNICODE),
-            ':oid'     => $orderId
-        ]);
-    } else {
-        // Если API ключ 5Post еще на модерации / выдал ошибку:
-        // фиксируем ошибку в БД, формируем системный трек-номер, чтобы не блокировать отправку в Google Таблицу
-        $errText = $c2cResponse['error'] ?? '5Post API Error';
-        $fallbackBarcode = '5P-' . strtoupper(substr(md5($orderId), 0, 10));
-        $fivepostResult['status']    = 'PENDING_REGISTRATION';
-        $fivepostResult['barcode']   = $fallbackBarcode;
-        $fivepostResult['error']     = $errText;
-        $fivepostResult['http_code'] = (int)($c2cResponse['http_code'] ?? 0);
-
-        $upd = $pdo->prepare("
-            UPDATE orders SET 
-                fivepost_barcode         = :f_bc,
-                fivepost_status          = 'PENDING_REGISTRATION',
-                fivepost_http_code       = :hcode,
-                fivepost_request_payload = :payload,
-                fivepost_raw_response    = :raw
-            WHERE order_id = :oid
-        ");
-        $upd->execute([
-            ':f_bc'    => $fallbackBarcode,
-            ':hcode'   => (int)($c2cResponse['http_code'] ?? 0),
-            ':payload' => json_encode($c2cResponse['payload'] ?? [], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
-            ':raw'     => is_string($c2cResponse['raw'] ?? null) ? $c2cResponse['raw'] : json_encode($c2cResponse, JSON_UNESCAPED_UNICODE),
-            ':oid'     => $orderId
-        ]);
+    $alreadyIn5Post = !empty($existingOrder['fivepost_status']) && in_array($existingOrder['fivepost_status'], ['CREATED', 'PROCESSING']);
+    $alreadyInSheets = !empty($existingOrder['google_sheets_sent']);
+    if (empty($transactionId) && !empty($existingOrder['payment_transaction_id'])) {
+        $transactionId = (string)$existingOrder['payment_transaction_id'];
     }
-}
 
-// 3. Отправка полного пакета данных в Google Таблицу (только если еще не отправлялся)
-$nowDate = date('d.m.Y H:i:s');
-$pointTypeRu = ($fivepostType === 'POSTAMAT') ? 'Постамат' : (($fivepostType === 'TOBACCO') ? 'Касса' : 'ПВЗ');
-$safePhoneForSheets = (strpos($phone, '+') === 0) ? ("'" . $phone) : $phone;
+    $fivepostResult = [
+        'success' => !empty($existingOrder['fivepost_status']) && $existingOrder['fivepost_status'] === 'CREATED',
+        'orderId' => $existingOrder['fivepost_order_id'] ?? null,
+        'barcode' => $existingOrder['fivepost_barcode'] ?? null,
+        'status'  => $existingOrder['fivepost_status'] ?? 'PENDING'
+    ];
 
-$googlePayload = [
-    'date'                 => $nowDate,
-    'orderId'              => $orderId,
-    'fivepostOrderId'      => $fivepostResult['orderId'] ?? '—',
-    'fivepostBarcode'      => $fivepostResult['barcode'] ?? '—',
-    'fio'                  => $fio,
-    'phone'                => $safePhoneForSheets,
-    'tgUsername'           => $tgUsername,
-    'fivepostPointAddress' => $fivepostAddress . " ({$pointTypeRu})",
-    'productName'          => $productName,
-    'gender'               => $gender,
-    'size'                 => $size,
-    'price'                => number_format($numPrice, 0, '', ' ') . ' ₽',
-    'transactionId'        => $transactionId ? "#{$transactionId}" : '—',
-    'status'               => ($paymentStatus === 'paid') ? 'Оплачен, сформирован 5Post C2C' : 'Ожидает оплаты'
-];
+    // 2. Если заказ оплачен и еще не создан в 5Post — формируем C2C-заказ строго по Разделу 18.2
+    if (!$alreadyIn5Post && $paymentStatus === 'paid') {
+        $pdo->prepare("UPDATE orders SET fivepost_status = 'PROCESSING' WHERE order_id = :oid AND (fivepost_status IS NULL OR fivepost_status = 'PENDING')")->execute([':oid' => $orderId]);
 
-$googleSent = $alreadyInSheets;
-if (!$alreadyInSheets && !empty($googleScriptUrl) && strpos($googleScriptUrl, 'script.google.com') !== false) {
-    $ch = curl_init($googleScriptUrl);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => json_encode($googlePayload, JSON_UNESCAPED_UNICODE),
-        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_TIMEOUT        => 15,
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => 0
-    ]);
-    $gResponse = curl_exec($ch);
-    $gHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+        $fpClient = new FivePostClient();
+        $c2cResponse = $fpClient->createC2COrder([
+            'order_id'          => $orderId,
+            'client_order_id'   => $orderId,
+            'sender_cargo_id'   => $orderId . '-1',
+            'fivepost_point_id' => $fivepostPointId,
+            'fio'               => $fio,
+            'phone'             => $phone,
+            'product_name'      => $productName,
+            'product_id'        => $productId,
+            'price'             => $numPrice,
+            'weight_g'          => 350
+        ]);
 
-    if ($gHttpCode === 200 || $gHttpCode === 302) {
-        $googleSent = true;
-        $pdo->prepare("UPDATE orders SET google_sheets_sent = 1 WHERE order_id = :oid")->execute([':oid' => $orderId]);
+        if (!empty($c2cResponse['success'])) {
+            $fivepostResult['success'] = true;
+            $fivepostResult['orderId'] = $c2cResponse['orderId'];
+            $fivepostResult['barcode'] = $c2cResponse['barcode'];
+            $fivepostResult['status']  = 'CREATED';
+
+            // Обновляем заказ в MariaDB
+            $upd = $pdo->prepare("
+                UPDATE orders SET 
+                    fivepost_order_id = :f_oid,
+                    fivepost_cargo_id = :f_cid,
+                    fivepost_barcode  = :f_bc,
+                    fivepost_status   = 'CREATED',
+                    fivepost_http_code = :hcode,
+                    fivepost_request_payload = :payload,
+                    fivepost_raw_response = :raw
+                WHERE order_id = :oid
+            ");
+            $upd->execute([
+                ':f_oid'   => $c2cResponse['orderId'],
+                ':f_cid'   => $c2cResponse['cargoId'],
+                ':f_bc'    => $c2cResponse['barcode'],
+                ':hcode'   => (int)($c2cResponse['http_code'] ?? 200),
+                ':payload' => json_encode($c2cResponse['payload'] ?? [], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+                ':raw'     => is_string($c2cResponse['raw']) ? $c2cResponse['raw'] : json_encode($c2cResponse['raw'], JSON_UNESCAPED_UNICODE),
+                ':oid'     => $orderId
+            ]);
+        } else {
+            // Если API ключ 5Post еще на модерации / выдал ошибку:
+            // фиксируем ошибку в БД, формируем системный трек-номер, чтобы не блокировать отправку в Google Таблицу
+            $errText = $c2cResponse['error'] ?? '5Post API Error';
+            $fallbackBarcode = '5P-' . strtoupper(substr(md5($orderId), 0, 10));
+            $fivepostResult['status']    = 'PENDING_REGISTRATION';
+            $fivepostResult['barcode']   = $fallbackBarcode;
+            $fivepostResult['error']     = $errText;
+            $fivepostResult['http_code'] = (int)($c2cResponse['http_code'] ?? 0);
+
+            $upd = $pdo->prepare("
+                UPDATE orders SET 
+                    fivepost_barcode         = :f_bc,
+                    fivepost_status          = 'PENDING_REGISTRATION',
+                    fivepost_http_code       = :hcode,
+                    fivepost_request_payload = :payload,
+                    fivepost_raw_response    = :raw
+                WHERE order_id = :oid
+            ");
+            $upd->execute([
+                ':f_bc'    => $fallbackBarcode,
+                ':hcode'   => (int)($c2cResponse['http_code'] ?? 0),
+                ':payload' => json_encode($c2cResponse['payload'] ?? [], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+                ':raw'     => is_string($c2cResponse['raw'] ?? null) ? $c2cResponse['raw'] : json_encode($c2cResponse, JSON_UNESCAPED_UNICODE),
+                ':oid'     => $orderId
+            ]);
+        }
+    }
+
+    // 3. Отправка полного пакета данных в Google Таблицу (только если еще не отправлялся)
+    $nowDate = date('d.m.Y H:i:s');
+    $pointTypeRu = ($fivepostType === 'POSTAMAT') ? 'Постамат' : (($fivepostType === 'TOBACCO') ? 'Касса' : 'ПВЗ');
+    $safePhoneForSheets = (strpos($phone, '+') === 0) ? ("'" . $phone) : $phone;
+
+    $googlePayload = [
+        'date'                 => $nowDate,
+        'orderId'              => $orderId,
+        'fivepostOrderId'      => $fivepostResult['orderId'] ?? '—',
+        'fivepostBarcode'      => $fivepostResult['barcode'] ?? '—',
+        'fio'                  => $fio,
+        'phone'                => $safePhoneForSheets,
+        'tgUsername'           => $tgUsername,
+        'fivepostPointAddress' => $fivepostAddress . " ({$pointTypeRu})",
+        'productName'          => $productName,
+        'gender'               => $gender,
+        'size'                 => $size,
+        'price'                => number_format($numPrice, 0, '', ' ') . ' ₽',
+        'transactionId'        => $transactionId ? "#{$transactionId}" : '—',
+        'status'               => ($paymentStatus === 'paid') ? 'Оплачен, сформирован 5Post C2C' : 'Ожидает оплаты'
+    ];
+
+    $googleSent = $alreadyInSheets;
+    if (!$alreadyInSheets && !empty($googleScriptUrl) && strpos($googleScriptUrl, 'script.google.com') !== false) {
+        $ch = curl_init($googleScriptUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => json_encode($googlePayload, JSON_UNESCAPED_UNICODE),
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0
+        ]);
+        $gResponse = curl_exec($ch);
+        $gHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($gHttpCode === 200 || $gHttpCode === 302) {
+            $googleSent = true;
+            $pdo->prepare("UPDATE orders SET google_sheets_sent = 1 WHERE order_id = :oid")->execute([':oid' => $orderId]);
+        }
+    }
+} finally {
+    if ($lockAcquired) {
+        try {
+            $pdo->prepare("SELECT RELEASE_LOCK(:lock_name)")->execute([':lock_name' => $lockName]);
+        } catch (Throwable $e) {}
     }
 }
 
