@@ -552,6 +552,35 @@ h1,h2,h3,h4,h5,h6{ font-weight:700; line-height:1.12; }
   line-height:1.2;
 }
 
+.product-actions .btn-primary{
+  position:relative;
+  overflow:hidden;
+  z-index:1;
+  border:1.5px solid var(--black);
+  background:var(--black);
+  color:var(--white);
+  transition:color var(--transition), transform var(--transition);
+}
+.product-actions .btn-primary::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:var(--white);
+  transform:scaleX(0);
+  transform-origin:left;
+  transition:transform var(--transition);
+  z-index:-1;
+}
+.product-actions .btn-primary:hover{
+  background:var(--black);
+  color:var(--black);
+  transform:translateY(-2px);
+  box-shadow:none;
+}
+.product-actions .btn-primary:hover::before{
+  transform:scaleX(1);
+}
+
 .btn-ozon{
   display:inline-flex; align-items:center; justify-content:center; gap:12px;
   background:#005BFF; color:#ffffff; padding:20px; border-radius:var(--radius-sm);
