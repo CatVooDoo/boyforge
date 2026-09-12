@@ -2972,46 +2972,36 @@ body:not(.home){
 }
 .bf-clear-btn:hover{ color:#111; }
 
-.bf-city-chips{
-  display:flex; gap:6px; flex-wrap:wrap; align-items:center;
-}
-.bf-city-chip{
-  background:#f3f4f6; color:#374151; font-size:11px; font-weight:700;
-  padding:4px 12px; border-radius:20px; border:1px solid #e5e7eb;
-  cursor:pointer; transition:all .2s;
-}
-.bf-city-chip:hover{ background:#e5e7eb; }
-.bf-city-chip.active{
-  background:#000000; color:#ffffff; border-color:#000000;
-}
-
 .bf-custom-map{
   width:100%; height:340px; position:relative; background:#e5e7eb;
 }
 
-/* Кастомный маркер BOYFORGE на карте */
+/* Кастомный маркер «Пятёрочка» на карте */
 .bf-map-pin{
-  position:relative; width:34px; height:42px;
-  transform:translate(-17px, -42px); cursor:pointer;
+  position:relative; width:36px; height:44px;
+  transform:translate(-18px, -44px); cursor:pointer;
   transition:transform .2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .bf-map-pin:hover{
-  transform:translate(-17px, -46px) scale(1.1);
+  transform:translate(-18px, -48px) scale(1.15);
   z-index:9999 !important;
 }
 .bf-pin-body{
-  width:34px; height:34px; background:#000000; color:#ffffff;
-  border:2.5px solid #ffffff; border-radius:50%;
+  width:36px; height:36px; background:#ffffff;
+  border:2px solid #ffffff; border-radius:50%;
   display:flex; align-items:center; justify-content:center;
-  font-family:'Unbounded', sans-serif, system-ui;
-  font-size:10px; font-weight:900; letter-spacing:-0.5px;
-  box-shadow:0 6px 16px rgba(0,0,0,0.4);
+  box-shadow:0 2px 6px rgba(0,0,0,0.2);
+  overflow:hidden;
+}
+.bf-pin-body img{
+  display:block; width:100%; height:100%; object-fit:contain;
+  pointer-events:none;
 }
 .bf-pin-tail{
   position:absolute; bottom:2px; left:50%;
   transform:translateX(-50%); width:0; height:0;
   border-left:5px solid transparent; border-right:5px solid transparent;
-  border-top:8px solid #000000;
+  border-top:8px solid #ee2d24;
 }
 
 /* Балун точки на карте */

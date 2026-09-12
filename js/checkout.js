@@ -34,7 +34,6 @@
 
     const searchInput = document.getElementById("fivepostCitySearch");
     const clearSearchBtn = document.getElementById("fivepostCityClear");
-    const chipsContainer = document.getElementById("fivepostCityChips");
     const mapLoader = document.getElementById("fivepostMapLoader");
 
     const badgeEl = document.getElementById("fivepostPointTypeBadge");
@@ -48,6 +47,16 @@
     let currentCity = "Пенза";
     let customPinLayout = null;
     let mapInitialized = false;
+    const renderedPointIds = new Set();
+    let boundsDebounceTimer = null;
+    let isProgrammaticMove = false;
+
+    function setProgrammaticMove() {
+      isProgrammaticMove = true;
+      setTimeout(function () {
+        isProgrammaticMove = false;
+      }, 700);
+    }
 
     function escapeHtml(str) {
       if (!str) return "";
@@ -122,17 +131,58 @@
     function createCustomPinLayout() {
       if (customPinLayout || typeof ymaps === "undefined") return customPinLayout;
       customPinLayout = ymaps.templateLayoutFactory.createClass(
-        '<div class="bf-map-pin" title="$[properties.hintContent]">' +
-          '<div class="bf-pin-body">BF</div>' +
+        '<div class="bf-map-pin fivepost-pin" title="$[properties.hintContent]">' +
+          '<div class="bf-pin-body">' +
+            '<img src="/images/pyaterochka-pin.png" alt="Пятёрочка" class="bf-pin-img" width="36" height="36" onerror="this.src=\'/free-png.ru-53.png\'">' +
+          '</div>' +
           '<div class="bf-pin-tail"></div>' +
         '</div>'
       );
       return customPinLayout;
     }
 
-    function renderMarkers(points) {
+    function createPointPlacemark(point, pinLayout) {
+      const isPostamat = (point.type === "POSTAMAT");
+      const badgeText = isPostamat ? "Постамат" : "Касса";
+      const titleName = point.name || (isPostamat ? "Постамат 5Post" : "Касса «Пятёрочка»");
+      const fullAddr = point.full_address || point.street || "";
+
+      const balloonHtml = `
+        <div class="bf-balloon">
+          <div class="bf-balloon-header">
+            <span class="bf-balloon-badge">${badgeText}</span>
+            <strong class="bf-balloon-name">${escapeHtml(titleName)}</strong>
+          </div>
+          <div class="bf-balloon-address">${escapeHtml(fullAddr)}</div>
+          ${point.work_hours ? `<div class="bf-balloon-extra">🕒 ${escapeHtml(point.work_hours)}</div>` : ''}
+          ${point.additional ? `<div class="bf-balloon-extra">ℹ️ ${escapeHtml(point.additional)}</div>` : ''}
+          <button type="button" class="bf-balloon-select-btn" data-point-id="${escapeHtml(point.id)}">Выбрать эту точку</button>
+        </div>
+      `;
+
+      return new ymaps.Placemark([point.lat, point.lng], {
+        hintContent: (point.name ? point.name + " · " : "") + fullAddr,
+        balloonContent: balloonHtml
+      }, {
+        iconLayout: pinLayout,
+        iconOffset: [0, 0],
+        iconShape: {
+          type: "Rectangle",
+          coordinates: [[-18, -44], [18, 0]]
+        },
+        hideIconOnBalloonOpen: false,
+        balloonOffset: [0, -44],
+        balloonCloseButton: true,
+        balloonAutoPan: true
+      });
+    }
+
+    function renderMarkers(points, adjustViewport) {
+      if (typeof adjustViewport === "undefined") adjustViewport = true;
       if (!pointsCollection || !yandexMap) return;
       pointsCollection.removeAll();
+      renderedPointIds.clear();
+      currentPoints = [];
 
       if (!points || points.length === 0) {
         return;
@@ -142,79 +192,70 @@
 
       points.forEach(function (point) {
         if (!point.lat || !point.lng) return;
-
-        const isPostamat = (point.type === "POSTAMAT");
-        const badgeText = isPostamat ? "Постамат" : "Касса";
-        const titleName = point.name || (isPostamat ? "Постамат 5Post" : "Касса «Пятёрочка»");
-        const fullAddr = point.full_address || point.street || "";
-
-        const balloonHtml = `
-          <div class="bf-balloon">
-            <div class="bf-balloon-header">
-              <span class="bf-balloon-badge">${badgeText}</span>
-              <strong class="bf-balloon-name">${escapeHtml(titleName)}</strong>
-            </div>
-            <div class="bf-balloon-address">${escapeHtml(fullAddr)}</div>
-            ${point.work_hours ? `<div class="bf-balloon-extra">🕒 ${escapeHtml(point.work_hours)}</div>` : ''}
-            ${point.additional ? `<div class="bf-balloon-extra">ℹ️ ${escapeHtml(point.additional)}</div>` : ''}
-            <button type="button" class="bf-balloon-select-btn" data-point-id="${escapeHtml(point.id)}">Выбрать эту точку</button>
-          </div>
-        `;
-
-        const placemark = new ymaps.Placemark([point.lat, point.lng], {
-          hintContent: (point.name ? point.name + " · " : "") + fullAddr,
-          balloonContent: balloonHtml
-        }, {
-          iconLayout: pinLayout,
-          iconOffset: [0, 0],
-          iconShape: {
-            type: "Rectangle",
-            coordinates: [[-17, -42], [17, 0]]
-          },
-          hideIconOnBalloonOpen: false,
-          balloonOffset: [0, -42],
-          balloonCloseButton: true,
-          balloonAutoPan: true
-        });
-
-        pointsCollection.add(placemark);
+        renderedPointIds.add(String(point.id));
+        currentPoints.push(point);
+        pointsCollection.add(createPointPlacemark(point, pinLayout));
       });
 
-      if (points.length === 1) {
-        yandexMap.setCenter([points[0].lat, points[0].lng], 15, { checkZoomRange: true });
-      } else if (points.length > 1) {
-        const bounds = pointsCollection.getBounds();
-        if (bounds) {
-          yandexMap.setBounds(bounds, { checkZoomRange: true, zoomMargin: 40 });
+      if (adjustViewport) {
+        setProgrammaticMove();
+        if (points.length === 1) {
+          yandexMap.setCenter([points[0].lat, points[0].lng], 15, { checkZoomRange: true });
+        } else if (points.length > 1) {
+          const bounds = pointsCollection.getBounds();
+          if (bounds) {
+            yandexMap.setBounds(bounds, { checkZoomRange: true, zoomMargin: 40 });
+          }
         }
       }
     }
 
-    function renderChips(cities, activeCity) {
-      if (!chipsContainer) return;
-      chipsContainer.innerHTML = "";
-      cities.forEach(function (cityName) {
-        const chip = document.createElement("span");
-        const isActive = (cityName === activeCity);
-        chip.className = "bf-city-chip" + (isActive ? " active" : "");
-        chip.textContent = "г. " + cityName;
-        chip.setAttribute("data-city", cityName);
-        chip.addEventListener("click", function () {
-          document.querySelectorAll(".bf-city-chip").forEach(function (c) { c.classList.remove("active"); });
-          chip.classList.add("active");
-          currentCity = cityName;
-          if (searchInput) searchInput.value = "";
-          if (clearSearchBtn) clearSearchBtn.style.display = "none";
-          loadPoints(cityName, "", false);
-        });
-        chipsContainer.appendChild(chip);
+    function appendMarkers(newPoints) {
+      if (!pointsCollection || !yandexMap || !newPoints || newPoints.length === 0) return;
+      const pinLayout = createCustomPinLayout();
+
+      newPoints.forEach(function (point) {
+        if (!point.lat || !point.lng) return;
+        const strId = String(point.id);
+        if (renderedPointIds.has(strId)) return;
+
+        renderedPointIds.add(strId);
+        currentPoints.push(point);
+        pointsCollection.add(createPointPlacemark(point, pinLayout));
       });
+    }
+
+    function loadPointsByBounds() {
+      if (!yandexMap || !mapInitialized) return;
+      const bounds = yandexMap.getBounds();
+      if (!bounds) return;
+      const zoom = yandexMap.getZoom();
+      if (zoom < 8) return;
+
+      const latMin = Math.min(bounds[0][0], bounds[1][0]);
+      const latMax = Math.max(bounds[0][0], bounds[1][0]);
+      const lngMin = Math.min(bounds[0][1], bounds[1][1]);
+      const lngMax = Math.max(bounds[0][1], bounds[1][1]);
+
+      const boundsParam = latMin.toFixed(6) + "," + lngMin.toFixed(6) + "," + latMax.toFixed(6) + "," + lngMax.toFixed(6);
+      const url = "/api/fivepost-points.php?bounds=" + encodeURIComponent(boundsParam) + "&zoom=" + zoom;
+
+      fetch(url)
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data && data.success && Array.isArray(data.points)) {
+            appendMarkers(data.points);
+          }
+        })
+        .catch(function (err) {
+          console.warn("Ошибка подгрузки точек по границам карты:", err);
+        });
     }
 
     function loadPoints(city, search, isInitial) {
       if (isInitial && mapLoader) mapLoader.style.display = "flex";
 
-      let url = "api/fivepost-points.php?";
+      let url = "/api/fivepost-points.php?";
       if (city) url += "city=" + encodeURIComponent(city) + "&";
       if (search) url += "search=" + encodeURIComponent(search);
 
@@ -228,9 +269,6 @@
             if (data.city) {
               currentCity = data.city;
             }
-            if (data.cities && chipsContainer) {
-              renderChips(data.cities, currentCity);
-            }
 
             if (data.points.length === 0) {
               showStatus("В населённом пункте «" + (data.city || search) + "» пунктов 5Post нет (сеть действует в магазинах «Пятёрочка» и «Перекрёсток»). Выберите другой город или оформите доставку CDEK.", "info");
@@ -238,6 +276,7 @@
                 ymaps.geocode(data.city || search).then(function (res) {
                   const firstGeo = res.geoObjects.get(0);
                   if (firstGeo) {
+                    setProgrammaticMove();
                     yandexMap.setCenter(firstGeo.geometry.getCoordinates(), 11, { checkZoomRange: true });
                   }
                 }).catch(function () {});
@@ -249,6 +288,7 @@
         })
         .catch(function (err) {
           console.error("Ошибка загрузки точек 5Post:", err);
+          showStatus("Не удалось загрузить точки выдачи. Проверьте интернет-соединение и попробуйте снова.", "error");
         })
         .finally(function () {
           if (mapLoader) mapLoader.style.display = "none";
@@ -263,7 +303,7 @@
           try {
             yandexMap.container.fitToViewport();
           } catch (e) {}
-        }, 120);
+        }, 300);
         return;
       }
 
@@ -285,13 +325,56 @@
           yandexMap.geoObjects.add(pointsCollection);
           mapInitialized = true;
 
-          loadPoints(currentCity, "", true);
+          // Подгрузка точек при перемещении / зуме карты пользователем (скролл/листание)
+          yandexMap.events.add("boundschange", function () {
+            if (isProgrammaticMove) return;
+            clearTimeout(boundsDebounceTimer);
+            boundsDebounceTimer = setTimeout(function () {
+              loadPointsByBounds();
+            }, 300);
+          });
+
+          // Определение города пользователя по геолокации
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              function (pos) {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                setProgrammaticMove();
+                yandexMap.setCenter([lat, lng], 12, { checkZoomRange: true });
+                // Reverse geocode to find city name
+                if (typeof ymaps !== "undefined" && ymaps.geocode) {
+                  ymaps.geocode([lat, lng]).then(function (res) {
+                    const firstGeo = res.geoObjects.get(0);
+                    if (firstGeo) {
+                      const locality = firstGeo.getLocalities();
+                      if (locality && locality.length > 0) {
+                        currentCity = locality[0];
+                      }
+                    }
+                    loadPoints(currentCity, "", true);
+                  }).catch(function () {
+                    loadPoints(currentCity, "", true);
+                  });
+                } else {
+                  loadPoints(currentCity, "", true);
+                }
+              },
+              function () {
+                // Geolocation denied or unavailable, use default
+                loadPoints(currentCity, "", true);
+              },
+              { timeout: 4000, maximumAge: 300000 }
+            );
+          } else {
+            loadPoints(currentCity, "", true);
+          }
 
           setTimeout(function () {
             try {
               yandexMap.container.fitToViewport();
             } catch (e) {}
-          }, 200);
+          }, 350);
         });
       }
 
@@ -304,7 +387,7 @@
           if (typeof ymaps !== "undefined") {
             clearInterval(checkInterval);
             setupYandexMap();
-          } else if (attempts > 30) {
+          } else if (attempts > 50) {
             clearInterval(checkInterval);
             if (mapLoader) {
               mapLoader.innerHTML = `<span style="color:#ef4444; font-size:12px;">Не удалось загрузить Яндекс.Карты. Проверьте соединение.</span>`;
@@ -343,7 +426,7 @@
         searchDebounceTimer = setTimeout(function () {
           // Ищем по городу или улице без мерцания загрузчика
           loadPoints("", val, false);
-        }, 200);
+        }, 400);
       });
     }
 
@@ -630,7 +713,7 @@
             transactionId: txId
           });
 
-          fetch("api/order.php", {
+          fetch("/api/order.php", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(finalPayload)

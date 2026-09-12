@@ -124,6 +124,7 @@ echo "Успешно записано $inserted реальных боевых т
 $cacheStmt = $pdo->prepare("
     INSERT INTO fivepost_cache (city, points_count, last_synced_at, ttl_seconds, status, error_msg)
     VALUES (:city, :count, NOW(), 432000, 'fresh', NULL)
+    ON DUPLICATE KEY UPDATE points_count = VALUES(points_count), last_synced_at = NOW()
 ");
 $pdo->beginTransaction();
 foreach ($cityCounts as $cName => $cnt) {

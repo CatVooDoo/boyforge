@@ -409,9 +409,6 @@ $fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a
                   <input type="text" id="fivepostCitySearch" class="ozon-input bf-city-search-input" placeholder="Поиск по городу или улице (например, Пенза, Победы…)" autocomplete="off">
                   <button type="button" id="fivepostCityClear" class="bf-clear-btn" style="display:none;" aria-label="Очистить">&times;</button>
                 </div>
-                <div class="bf-city-chips" id="fivepostCityChips">
-                  <span class="bf-city-chip active" data-city="Пенза">г. Пенза</span>
-                </div>
               </div>
 
               <!-- Контейнер интерактивной Яндекс.Карты -->
@@ -448,7 +445,7 @@ $fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a
   <?php
     $yandexApiKey = $env['YANDEX_MAPS_API_KEY'] ?? getenv('YANDEX_MAPS_API_KEY') ?: '3612542e-8832-4f60-879c-72b492b06944';
   ?>
-  <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=<?= htmlspecialchars($yandexApiKey) ?>"></script>
+  <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=<?= htmlspecialchars($yandexApiKey) ?>" defer></script>
   <script src="js/product.js?v=<?= filemtime(__DIR__ . '/js/product.js') ?>"></script>
   <script src="js/main.js?v=23"></script>
   <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>

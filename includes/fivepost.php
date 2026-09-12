@@ -103,8 +103,8 @@ class FivePostClient {
                 'X-Gravitee-Api-Key: ' . $this->apiKey
             ],
             CURLOPT_POSTFIELDS     => 'subject=OpenAPI&audience=A122019!',
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => 0
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2
         ]);
 
         $startTime = microtime(true);
@@ -124,9 +124,13 @@ class FivePostClient {
         if ($httpCode === 200 && is_string($response)) {
             $json = json_decode($response, true);
             if (!empty($json['jwt'])) {
+                // Decode JWT exp claim for accurate cache TTL
+                $jwtParts = explode('.', $json['jwt']);
+                $jwtPayload = (count($jwtParts) >= 2) ? json_decode(base64_decode(strtr($jwtParts[1], '-_', '+/')), true) : null;
+                $expiresAt = (!empty($jwtPayload['exp'])) ? (int)$jwtPayload['exp'] - 60 : time() + 3000; // 60s safety margin
                 @file_put_contents($cacheFile, json_encode([
                     'jwt' => $json['jwt'],
-                    'expires_at' => time() + 3000
+                    'expires_at' => $expiresAt
                 ]));
                 @chmod($cacheFile, 0666);
                 return $json['jwt'];
@@ -154,8 +158,8 @@ class FivePostClient {
                 'X-Gravitee-Api-Key: ' . $this->apiKey
             ],
             CURLOPT_POSTFIELDS     => 'subject=OpenAPI&audience=A122019!',
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => 0
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2
         ]);
         $response = curl_exec($ch);
         $duration = round(microtime(true) - $startTime, 3);
@@ -218,8 +222,8 @@ class FivePostClient {
                 'Accept: application/json'
             ],
             CURLOPT_POSTFIELDS     => json_encode($payload),
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => 0
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2
         ]);
 
         $response = curl_exec($ch);
@@ -269,10 +273,13 @@ class FivePostClient {
         $itemPrice = (float)($order['price'] ?? 3200);
         $weightGrams = (int)($order['weight_g'] ?? 350);
         $weightMg = $weightGrams * 1000;
+        $heightMm = (int)($order['height_mm'] ?? 50);
+        $lengthMm = (int)($order['length_mm'] ?? 300);
+        $widthMm  = (int)($order['width_mm'] ?? 250);
         $cargoData = [
-            'height'        => 50,
-            'length'        => 300,
-            'width'         => 250,
+            'height'        => $heightMm,
+            'length'        => $lengthMm,
+            'width'         => $widthMm,
             'weight'        => $weightMg,
             'price'         => $itemPrice,
             'productValues' => [
@@ -280,7 +287,7 @@ class FivePostClient {
                     'name'       => $productName,
                     'price'      => $itemPrice,
                     'value'      => 1,
-                    'vat'        => 0,
+                    'vat'        => -1,
                     'vendorCode' => (string)($order['product_id'] ?? 'BF-ITEM')
                 ]
             ]
@@ -316,6 +323,21 @@ class FivePostClient {
 
         if ($receiverEmail) {
             $payload['receiverClientEmail'] = $receiverEmail;
+        }
+
+        // Валидация UUID точки выдачи (receiverLocation)
+        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $receiverLocation)) {
+            $err = 'Некорректный UUID точки выдачи 5Post: ' . $receiverLocation;
+            $this->log('CREATE_C2C_ORDER_ABORTED', [
+                'Reason'  => $err,
+                'OrderId' => $senderOrderId
+            ]);
+            return [
+                'success' => false,
+                'error'   => $err,
+                'payload' => $payload,
+                'raw'     => json_encode(['error' => $err], JSON_UNESCAPED_UNICODE)
+            ];
         }
 
         // 1. Попытка получить JWT токен
@@ -363,8 +385,8 @@ class FivePostClient {
                 'Accept-Language: ru'
             ],
             CURLOPT_POSTFIELDS     => json_encode($payload, JSON_UNESCAPED_UNICODE),
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => 0
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2
         ]);
 
         $startTime = microtime(true);
@@ -422,7 +444,15 @@ class FivePostClient {
             }
             $errorMsg = implode('; ', $errParts);
         } elseif (is_array($json) && !empty($json['message'])) {
-            $errorMsg = is_array($json['message']) ? json_encode($json['message'], JSON_UNESCAPED_UNICODE) : (string)$json['message'];
+            if (is_array($json['message'])) {
+                $msgParts = [];
+                foreach ($json['message'] as $m) {
+                    $msgParts[] = ($m['name'] ?? '?') . ': ' . ($m['message'] ?? '');
+                }
+                $errorMsg = implode('; ', $msgParts);
+            } else {
+                $errorMsg = (string)$json['message'];
+            }
         }
 
         return [
@@ -457,8 +487,8 @@ class FivePostClient {
                 'Authorization: Bearer ' . $jwt,
                 'Content-Type: application/json'
             ],
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => 0
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2
         ]);
 
         $response = curl_exec($ch);

@@ -10,6 +10,8 @@ require_once __DIR__ . '/../includes/fivepost.php';
 $city   = isset($_GET['city']) ? trim((string)$_GET['city']) : '';
 $search = isset($_GET['search']) ? trim((string)$_GET['search']) : '';
 $action = isset($_GET['action']) ? trim((string)$_GET['action']) : '';
+$bounds = isset($_GET['bounds']) ? trim((string)$_GET['bounds']) : '';
+$zoom   = isset($_GET['zoom']) ? (int)$_GET['zoom'] : 0;
 
 function getCityAliases(): array {
     return [
@@ -115,23 +117,75 @@ function getRussianStem(string $word): string {
 }
 
 try {
+    // Автоматическая проверка таблицы и автовосстановление при очистке
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS fivepost_points (
+            id VARCHAR(64) PRIMARY KEY,
+            mdm_code VARCHAR(32) NULL,
+            name VARCHAR(255) NOT NULL,
+            partner_name VARCHAR(100) DEFAULT '5Post',
+            type VARCHAR(50) DEFAULT 'POSTAMAT',
+            city VARCHAR(100) NOT NULL,
+            street VARCHAR(255) NULL,
+            house VARCHAR(50) NULL,
+            full_address TEXT NOT NULL,
+            lat DECIMAL(10, 7) NOT NULL,
+            lng DECIMAL(10, 7) NOT NULL,
+            work_hours TEXT NULL,
+            additional TEXT NULL,
+            phone VARCHAR(50) NULL,
+            cash_allowed TINYINT(1) DEFAULT 1,
+            card_allowed TINYINT(1) DEFAULT 1,
+            is_active TINYINT(1) DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_city (city),
+            INDEX idx_active (is_active),
+            INDEX idx_coords (lat, lng)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    $chk = $pdo->query("SELECT 1 FROM fivepost_points LIMIT 1");
+    if ($chk === false || $chk->fetchColumn() === false) {
+        $importScript = __DIR__ . '/../includes/import_real_5post_points.php';
+        if (file_exists($importScript)) {
+            @ob_start();
+            include $importScript;
+            @ob_end_clean();
+        }
+    }
+
     $client = new FivePostClient();
 
     // Синхронизация с API 5Post (Раздел 18.5)
     if ($action === 'sync') {
-        $res = $client->fetchPickupPoints(null, 1000);
-        if (!empty($res['success']) && !empty($res['data'])) {
-            $upsertStmt = $pdo->prepare("
-                INSERT INTO fivepost_points 
-                (id, mdm_code, name, partner_name, type, city, street, house, full_address, lat, lng, work_hours, additional, phone, cash_allowed, card_allowed, is_active, updated_at)
-                VALUES (:id, :mdm, :name, :partner_name, :type, :city, :street, :house, :full_address, :lat, :lng, :work_hours, :additional, :phone, :cash, :card, 1, NOW())
-                ON DUPLICATE KEY UPDATE 
-                    name=VALUES(name), partner_name=VALUES(partner_name), type=VALUES(type),
-                    city=VALUES(city), street=VALUES(street), house=VALUES(house), full_address=VALUES(full_address),
-                    lat=VALUES(lat), lng=VALUES(lng), work_hours=VALUES(work_hours),
-                    additional=VALUES(additional), phone=VALUES(phone), is_active=1, updated_at=NOW()
-            ");
-            $saved = 0;
+        $pageToken = null;
+        $totalSaved = 0;
+        $pageCount = 0;
+        $maxPages = 50; // Safety limit
+
+        $upsertStmt = $pdo->prepare("
+            INSERT INTO fivepost_points 
+            (id, mdm_code, name, partner_name, type, city, street, house, full_address, lat, lng, work_hours, additional, phone, cash_allowed, card_allowed, is_active, updated_at)
+            VALUES (:id, :mdm, :name, :partner_name, :type, :city, :street, :house, :full_address, :lat, :lng, :work_hours, :additional, :phone, :cash, :card, 1, NOW())
+            ON DUPLICATE KEY UPDATE 
+                name=VALUES(name), partner_name=VALUES(partner_name), type=VALUES(type),
+                city=VALUES(city), street=VALUES(street), house=VALUES(house), full_address=VALUES(full_address),
+                lat=VALUES(lat), lng=VALUES(lng), work_hours=VALUES(work_hours),
+                additional=VALUES(additional), phone=VALUES(phone), is_active=1, updated_at=NOW()
+        ");
+
+        do {
+            $pageCount++;
+            $res = $client->fetchPickupPoints($pageToken, 1000);
+            if (empty($res['success']) || empty($res['data'])) {
+                if ($totalSaved === 0) {
+                    echo json_encode(['success' => false, 'error' => $res['error'] ?? 'API sync failed'], JSON_UNESCAPED_UNICODE);
+                    exit;
+                }
+                break;
+            }
+
             foreach ($res['data'] as $p) {
                 $pointId = $p['id'] ?? null;
                 if (!$pointId) continue;
@@ -162,14 +216,14 @@ try {
                     ':cash'         => !empty($p['cashAllowed']) ? 1 : 0,
                     ':card'         => !empty($p['cardAllowed']) ? 1 : 0
                 ]);
-                $saved++;
+                $totalSaved++;
             }
-            echo json_encode(['success' => true, 'points_synced' => $saved], JSON_UNESCAPED_UNICODE);
-            exit;
-        } else {
-            echo json_encode(['success' => false, 'error' => $res['error'] ?? 'API sync failed'], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
+
+            $pageToken = $res['nextPageToken'] ?? null;
+        } while (!empty($pageToken) && $pageCount < $maxPages);
+
+        echo json_encode(['success' => true, 'points_synced' => $totalSaved, 'pages' => $pageCount], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
     // Экшен списка городов
@@ -207,6 +261,59 @@ try {
 
     if (!empty($targetCity) && isset($aliases[mb_strtolower($targetCity)])) {
         $targetCity = $aliases[mb_strtolower($targetCity)];
+    }
+
+    // Если передан параметр bounds (координаты видимой области карты)
+    $parsedBounds = null;
+    if (!empty($bounds)) {
+        $parts = explode(',', $bounds);
+        if (count($parts) === 4) {
+            $f = array_map('floatval', $parts);
+            $latMin = min($f[0], $f[2]);
+            $latMax = max($f[0], $f[2]);
+            $lngMin = min($f[1], $f[3]);
+            $lngMax = max($f[1], $f[3]);
+            if ($latMin >= -90 && $latMax <= 90 && $lngMin >= -180 && $lngMax <= 180) {
+                $parsedBounds = [
+                    'latMin' => $latMin,
+                    'latMax' => $latMax,
+                    'lngMin' => $lngMin,
+                    'lngMax' => $lngMax
+                ];
+            }
+        }
+    }
+
+    // Если запрос исключительно по видимой области карты (пользователь листает карту)
+    if ($parsedBounds !== null && empty($city) && empty($search)) {
+        $sql = "SELECT id, mdm_code, name, partner_name, type, city, street, house, full_address, lat, lng, work_hours, additional, phone 
+                FROM fivepost_points 
+                WHERE is_active = 1 
+                  AND lat BETWEEN :lat_min AND :lat_max 
+                  AND lng BETWEEN :lng_min AND :lng_max 
+                LIMIT 300";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':lat_min' => $parsedBounds['latMin'],
+            ':lat_max' => $parsedBounds['latMax'],
+            ':lng_min' => $parsedBounds['lngMin'],
+            ':lng_max' => $parsedBounds['lngMax']
+        ]);
+        $points = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($points as &$pt) {
+            $pt['lat'] = (float)$pt['lat'];
+            $pt['lng'] = (float)$pt['lng'];
+        }
+        unset($pt);
+
+        echo json_encode([
+            'success'   => true,
+            'count'     => count($points),
+            'hasPoints' => count($points) > 0,
+            'points'    => $points
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
     // Формируем запрос
