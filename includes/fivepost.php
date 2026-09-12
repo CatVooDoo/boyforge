@@ -292,10 +292,8 @@ class FivePostClient {
                 ]
             ]
         ];
-
-        if (!empty($order['sender_cargo_id'])) {
-            $cargoData['senderCargoId'] = (string)$order['sender_cargo_id'];
-        }
+        $senderCargoId = !empty($order['sender_cargo_id']) ? (string)$order['sender_cargo_id'] : ($senderOrderId . '-1');
+        $cargoData['senderCargoId'] = $senderCargoId;
 
         // Структура JSON строго по Разделу 18.2 документации
         $payload = [
@@ -416,8 +414,11 @@ class FivePostClient {
 
         $json = json_decode((string)$response, true);
 
-        // Успешный ответ по 18.2
-        if ($httpCode === 200 && is_array($json) && !empty($json['created'])) {
+        // Успешный ответ или распознавание существующего заказа (идемпотентность по 18.2)
+        $isCreated = !empty($json['created']);
+        $hasExistingOrderData = !empty($json['orderId']) && !empty($json['cargoes'][0]['barcode']);
+
+        if (($httpCode === 200 || $httpCode === 400 || $httpCode === 409) && is_array($json) && ($isCreated || $hasExistingOrderData)) {
             $fivepostOrderId = $json['orderId'] ?? null;
             $cargoData = $json['cargoes'][0] ?? [];
             $fivepostBarcode = $cargoData['barcode'] ?? null;
@@ -425,7 +426,7 @@ class FivePostClient {
 
             return [
                 'success'         => true,
-                'http_code'       => 200,
+                'http_code'       => $httpCode,
                 'orderId'         => $fivepostOrderId,
                 'barcode'         => $fivepostBarcode,
                 'cargoId'         => $fivepostCargoId,

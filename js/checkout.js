@@ -701,12 +701,28 @@
           data: orderPayload
         };
 
+        let isOrderProcessed = false;
+
         function handleSuccess(options) {
+          if (isOrderProcessed) {
+            return;
+          }
+          isOrderProcessed = true;
+
           showStatus("Оплата принята! Сохраняем заказ...", "success");
 
-          const txId = (options && (options.transactionId || options.TransactionId || (options.data && options.data.transactionId)))
-            ? String(options.transactionId || options.TransactionId || options.data.transactionId)
-            : "";
+          let txId = "";
+          if (options) {
+            if (options.data && options.data.transactionId) {
+              txId = String(options.data.transactionId);
+            } else if (options.data && options.data.TransactionId) {
+              txId = String(options.data.TransactionId);
+            } else if (options.transactionId) {
+              txId = String(options.transactionId);
+            } else if (options.TransactionId) {
+              txId = String(options.TransactionId);
+            }
+          }
 
           const finalPayload = Object.assign({}, orderPayload, {
             paymentStatus: "paid",
@@ -750,31 +766,35 @@
         }
 
         if (typeof widget.start === "function") {
-          widget.start(paymentOptions, {
-            onSuccess: handleSuccess,
-            onFail: handleFail,
-            onComplete: handleComplete
-          }).then(function (result) {
-            if (result && (result.status === "success" || result.type === "payment")) {
-              handleSuccess(result);
-            } else if (result && result.type === "cancel") {
-              handleComplete();
-            } else if (result && result.status === "fail") {
-              handleFail(result.message || "");
-            }
-          }).catch(function () {
-            widget.pay("charge", paymentOptions, {
-              onSuccess: handleSuccess,
-              onFail: handleFail,
-              onComplete: handleComplete
+          widget.start(paymentOptions)
+            .then(function (result) {
+              if (result && (result.status === "success" || result.type === "payment")) {
+                handleSuccess(result);
+              } else if (result && result.type === "cancel") {
+                handleComplete();
+              } else if (result && (result.status === "fail" || result.type === "error")) {
+                handleFail(result.message || "");
+              }
+            })
+            .catch(function (err) {
+              if (typeof widget.pay === "function") {
+                widget.pay("charge", paymentOptions, {
+                  onSuccess: handleSuccess,
+                  onFail: handleFail,
+                  onComplete: handleComplete
+                });
+              } else {
+                handleFail(err && err.message ? err.message : "Ошибка запуска оплаты");
+              }
             });
-          });
-        } else {
+        } else if (typeof widget.pay === "function") {
           widget.pay("charge", paymentOptions, {
             onSuccess: handleSuccess,
             onFail: handleFail,
             onComplete: handleComplete
           });
+        } else if (typeof widget.charge === "function") {
+          widget.charge(paymentOptions, handleSuccess, handleFail);
         }
       });
     }
