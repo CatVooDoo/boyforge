@@ -3,7 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/db.php';
 
 try {
-    $popStmt = $pdo->query("SELECT * FROM products WHERE is_active = 1 ORDER BY sort_order ASC, id ASC LIMIT 4");
+    $popStmt = $pdo->query("SELECT * FROM products WHERE is_active = 1 AND is_popular = 1 ORDER BY sort_order ASC, id ASC");
     $popularProducts = $popStmt->fetchAll();
 } catch (Exception $e) {
     $popularProducts = [];

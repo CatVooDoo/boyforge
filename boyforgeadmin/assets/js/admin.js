@@ -42,10 +42,12 @@ document.addEventListener("DOMContentLoaded", function () {
       const name = (row.getAttribute("data-name") || "").toLowerCase();
       const rowCat = row.getAttribute("data-cat") || "";
       const rowStatus = row.getAttribute("data-status") || "";
+      const rowPopular = row.getAttribute("data-popular") || "0";
 
       const matchesQuery = !query || name.includes(query);
       const matchesCat = cat === "all" || rowCat === cat;
-      const matchesStatus = status === "all" || rowStatus === status;
+      const matchesStatus = status === "all" || 
+                            (status === "popular" ? rowPopular === "1" : rowStatus === status);
 
       if (matchesQuery && matchesCat && matchesStatus) {
         row.style.display = "";
@@ -80,6 +82,39 @@ document.addEventListener("DOMContentLoaded", function () {
               row.setAttribute("data-status", isChecked ? "active" : "inactive");
             }
             showToast(data.message || "Статус товара обновлен", "success");
+          } else {
+            showToast(data.error || "Ошибка при обновлении статуса", "error");
+            this.checked = !this.checked;
+          }
+        })
+        .catch(() => {
+          showToast("Ошибка сети при отправке запроса", "error");
+          this.checked = !this.checked;
+        });
+    });
+  });
+
+  // Popular Toggle
+  document.querySelectorAll(".popular-switch-input").forEach((toggle) => {
+    toggle.addEventListener("change", function () {
+      const id = this.getAttribute("data-id");
+      const isChecked = this.checked ? 1 : 0;
+      const row = this.closest(".product-row");
+
+      fetch("api.php?action=toggle_popular", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: `id=${encodeURIComponent(id)}&popular=${isChecked}&csrf_token=${encodeURIComponent(csrfToken)}`,
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            if (row) {
+              row.setAttribute("data-popular", isChecked ? "1" : "0");
+            }
+            showToast(data.message || "Статус популярной позиции обновлен", "success");
           } else {
             showToast(data.error || "Ошибка при обновлении статуса", "error");
             this.checked = !this.checked;
