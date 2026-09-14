@@ -99,6 +99,16 @@
       }, 2500);
     }
 
+    function flagSizeError() {
+      const sizesWrap = document.querySelector(".sizes");
+      if (!sizesWrap) return;
+      sizesWrap.classList.add("size-error");
+      sizesWrap.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(function () {
+        sizesWrap.classList.remove("size-error");
+      }, 2500);
+    }
+
     // Обработка выбора точки 5Post на карте
     function handleSelect5PostPoint(point) {
       if (!point) return;
@@ -493,6 +503,10 @@
         flagGenderError();
         return;
       }
+      if (!state.size) {
+        flagSizeError();
+        return;
+      }
 
       const nameEl = document.getElementById("orderModalProdName") || document.getElementById("ozonModalProdName");
       const priceEl = document.getElementById("orderModalProdPrice") || document.getElementById("ozonModalProdPrice");
@@ -683,8 +697,20 @@
         }
         showStatus("Подключение к безопасному шлюзу CloudPayments...", "info");
 
+        const publicId = (typeof window.CLOUDPAYMENTS_PUBLIC_ID === "string" && window.CLOUDPAYMENTS_PUBLIC_ID.trim())
+          ? window.CLOUDPAYMENTS_PUBLIC_ID.trim()
+          : "";
+
+        if (!publicId) {
+          showStatus("Ошибка: не настроен Public ID платёжной системы в .env", "error");
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Оплатить " + state.price + " онлайн";
+          }
+          return;
+        }
+
         const widget = new cp.CloudPayments();
-        const publicId = "pk_899737976b42eb267df76db653d6e";
         const cleanPhone = "+" + phone.replace(/\D/g, "");
 
         const paymentOptions = {

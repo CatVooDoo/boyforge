@@ -199,7 +199,7 @@ $fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a
           </div>
           <div class="sizes">
             <button type="button">S</button>
-            <button type="button" class="active">M</button>
+            <button type="button">M</button>
             <button type="button">L</button>
             <button type="button">XL</button>
             <button type="button">2XL</button>
@@ -252,7 +252,7 @@ $fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a
       </div>
 
       <!-- ПОХОЖИЕ ТОВАРЫ (вывод из БД) -->
-      <?php if (!empty($relatedProducts)): ?>
+      <?php /* if (!empty($relatedProducts)): ?>
         <div style="margin-top: 70px; padding-top: 40px; border-top: 1px solid var(--border);">
           <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Похожие товары</h2>
           <div class="grid-4" id="relatedGrid">
@@ -287,7 +287,7 @@ $fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a
             <?php endforeach; ?>
           </div>
         </div>
-      <?php endif; ?>
+      <?php endif; */ ?>
 
     <?php endif; ?>
   </main>
@@ -451,7 +451,11 @@ $fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a
 
   <?php
     $yandexApiKey = $env['YANDEX_MAPS_API_KEY'] ?? getenv('YANDEX_MAPS_API_KEY') ?: '3612542e-8832-4f60-879c-72b492b06944';
+    $cpPublicId   = $env['CLOUDPAYMENTS_PUBLIC_ID'] ?? getenv('CLOUDPAYMENTS_PUBLIC_ID') ?: '';
   ?>
+  <script>
+    window.CLOUDPAYMENTS_PUBLIC_ID = <?= json_encode($cpPublicId, JSON_UNESCAPED_UNICODE) ?>;
+  </script>
   <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=<?= htmlspecialchars($yandexApiKey) ?>" defer></script>
   <script src="js/product.js?v=<?= filemtime(__DIR__ . '/js/product.js') ?>"></script>
   <script src="js/main.js?v=23"></script>

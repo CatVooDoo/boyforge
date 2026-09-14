@@ -536,6 +536,15 @@ h1,h2,h3,h4,h5,h6{ font-weight:700; line-height:1.12; }
   75%{ transform:translateX(4px); }
 }
 
+.sizes.size-error button{
+  border-color:#e02424;
+  color:#e02424;
+  animation:genderShake .4s ease;
+}
+.sizes.size-error button.active{
+  background:var(--black); color:var(--white); border-color:var(--black);
+}
+
 .product-actions{ margin-bottom:38px; display:flex; flex-direction:column; gap:12px; }
 .product-actions .btn-primary,
 .product-actions .btn-outline{

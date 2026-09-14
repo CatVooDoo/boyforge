@@ -314,6 +314,7 @@
         btn.addEventListener("click", function () {
           sizesWrap.querySelectorAll("button").forEach(function (x) { x.classList.remove("active"); });
           btn.classList.add("active");
+          sizesWrap.classList.remove("size-error");
           refreshHref();
         });
       });
@@ -345,23 +346,36 @@
       }, 2500);
     }
 
+    function flagSizeError() {
+      if (!sizesWrap) return;
+      sizesWrap.classList.add("size-error");
+      sizesWrap.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(function () {
+        sizesWrap.classList.remove("size-error");
+      }, 2500);
+    }
+
     function refreshHref() {
       if (orderBtn) orderBtn.href = buildOrderHref();
     }
 
-    // старт: пол не выбран — размеры скрыты
     renderSizes(getGender());
     refreshHref();
 
     if (orderBtn) {
       orderBtn.addEventListener("click", function (e) {
         if (!getGender()) {
-          e.preventDefault();          // не пускаем в Telegram
-          flagGenderError();           // подсветка красным
+          e.preventDefault();
+          flagGenderError();
           if (gendersWrap) gendersWrap.scrollIntoView({ behavior: "smooth", block: "center" });
           return;
         }
-        refreshHref();                 // финальный href с полом и размером
+        if (!getSize()) {
+          e.preventDefault();
+          flagSizeError();
+          return;
+        }
+        refreshHref();
 
         // Отправка данных заказа в фоновом режиме на backend (для Google Таблицы)
         try {
