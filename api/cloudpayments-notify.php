@@ -7,7 +7,7 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/fivepost.php';
 
 $envVars = FivePostClient::loadEnv();
-$apiSecret = $envVars['CLOUDPAYMENTS_API_SECRET'] ?? 'c0a9234eb56f475d09c62f83484f768c';
+$apiSecret = $envVars['CLOUDPAYMENTS_API_SECRET'] ?? '';
 $googleScriptUrl = $envVars['GOOGLE_SCRIPT_URL'] ?? 'https://script.google.com/macros/s/AKfycbwEX5yOenoxiIpkFlt0BGHbV4SPmJiWIrzIFU-0t8R-4lN59vMuTnhMhlAP6ImemV59Fw/exec';
 
 $rawBody = file_get_contents('php://input');

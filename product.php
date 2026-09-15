@@ -452,9 +452,11 @@ $fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a
   <?php
     $yandexApiKey = $env['YANDEX_MAPS_API_KEY'] ?? getenv('YANDEX_MAPS_API_KEY') ?: '3612542e-8832-4f60-879c-72b492b06944';
     $cpPublicId   = $env['CLOUDPAYMENTS_PUBLIC_ID'] ?? getenv('CLOUDPAYMENTS_PUBLIC_ID') ?: '';
+    $cpTaxation   = $env['CLOUDPAYMENTS_TAXATION_SYSTEM'] ?? getenv('CLOUDPAYMENTS_TAXATION_SYSTEM') ?: '1';
   ?>
   <script>
     window.CLOUDPAYMENTS_PUBLIC_ID = <?= json_encode($cpPublicId, JSON_UNESCAPED_UNICODE) ?>;
+    window.CLOUDPAYMENTS_TAXATION_SYSTEM = <?= json_encode((int)$cpTaxation) ?>;
   </script>
   <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=<?= htmlspecialchars($yandexApiKey) ?>" defer></script>
   <script src="js/product.js?v=<?= filemtime(__DIR__ . '/js/product.js') ?>"></script>

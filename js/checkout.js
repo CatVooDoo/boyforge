@@ -713,6 +713,35 @@
         const widget = new cp.CloudPayments();
         const cleanPhone = "+" + phone.replace(/\D/g, "");
 
+        const taxationSystem = (typeof window.CLOUDPAYMENTS_TAXATION_SYSTEM === "number")
+          ? window.CLOUDPAYMENTS_TAXATION_SYSTEM
+          : 1;
+
+        const customerReceipt = {
+          Items: [
+            {
+              label: state.name + " (" + state.gender + ", " + state.size + ")",
+              price: numPrice,
+              quantity: 1.0,
+              amount: numPrice,
+              vat: 0,
+              method: 4,
+              object: 1
+            }
+          ],
+          taxationSystem: taxationSystem,
+          phone: cleanPhone,
+          amounts: {
+            electronic: numPrice
+          }
+        };
+
+        const paymentData = Object.assign({}, orderPayload, {
+          CloudPayments: {
+            CustomerReceipt: customerReceipt
+          }
+        });
+
         const paymentOptions = {
           publicTerminalId: publicId,
           publicId: publicId,
@@ -743,7 +772,7 @@
             phone: cleanPhone
           },
           metadata: orderPayload,
-          data: orderPayload
+          data: paymentData
         };
 
         let isOrderProcessed = false;
