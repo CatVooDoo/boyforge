@@ -33,6 +33,8 @@ build/
 .env
 .env.local
 .env.*.local
+opencode.json
+opencode.jsonc
 
 # Temporary
 *.tmp
