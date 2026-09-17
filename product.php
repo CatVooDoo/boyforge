@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/db.php';
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -63,20 +64,7 @@ if ($found) {
     ];
 }
 
-$env = [];
-$envFile = __DIR__ . '/.env';
-if (file_exists($envFile)) {
-    $envLines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($envLines as $envLine) {
-        $envLine = trim($envLine);
-        if ($envLine === '' || $envLine[0] === '#') continue;
-        if (strpos($envLine, '=') !== false) {
-            list($k, $v) = explode('=', $envLine, 2);
-            $env[trim($k)] = trim($v, " \t\n\r\0\x0B\"'");
-        }
-    }
-}
-$fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a';
+$fivepostApiKey = env_get('5POST_API_KEY');
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -450,9 +438,9 @@ $fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a
   <?php endif; ?>
 
   <?php
-    $yandexApiKey = $env['YANDEX_MAPS_API_KEY'] ?? getenv('YANDEX_MAPS_API_KEY') ?: '3612542e-8832-4f60-879c-72b492b06944';
-    $cpPublicId   = $env['CLOUDPAYMENTS_PUBLIC_ID'] ?? getenv('CLOUDPAYMENTS_PUBLIC_ID') ?: '';
-    $cpTaxation   = $env['CLOUDPAYMENTS_TAXATION_SYSTEM'] ?? getenv('CLOUDPAYMENTS_TAXATION_SYSTEM') ?: '1';
+    $yandexApiKey = env_get('YANDEX_MAPS_API_KEY') ?: '';
+    $cpPublicId   = env_get('CLOUDPAYMENTS_PUBLIC_ID');
+    $cpTaxation   = env_get('CLOUDPAYMENTS_TAXATION_SYSTEM') ?: '1';
   ?>
   <script>
     window.CLOUDPAYMENTS_PUBLIC_ID = <?= json_encode($cpPublicId, JSON_UNESCAPED_UNICODE) ?>;
