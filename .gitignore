@@ -50,3 +50,6 @@ build/
 *.mp4
 *.webm
 *.mov
+
+# Open Server Panel
+.osp/
