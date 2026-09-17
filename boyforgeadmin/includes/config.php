@@ -25,11 +25,11 @@ if (file_exists($envFile)) {
 
 define('BOYFORGE_ADMIN_PASS', $env['ADMIN_PASSWORD'] ?? 'boyforge2026');
 
-$dbHost = $env['DB_HOST'] ?? getenv('DB_HOST') ?: 'mariadb';
-$dbPort = $env['DB_PORT'] ?? getenv('DB_PORT') ?: '3306';
-$dbName = $env['DB_DATABASE'] ?? getenv('DB_DATABASE') ?: 'boyforge';
-$dbUser = $env['DB_USERNAME'] ?? getenv('DB_USERNAME') ?: 'boyforge';
-$dbPass = $env['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?: 'f8a582d157';
+$dbHost = $env['DB_HOST'] ?? getenv('DB_HOST') ?: '';
+$dbPort = $env['DB_PORT'] ?? getenv('DB_PORT') ?: '';
+$dbName = $env['DB_DATABASE'] ?? getenv('DB_DATABASE') ?: '';
+$dbUser = $env['DB_USERNAME'] ?? getenv('DB_USERNAME') ?: '';
+$dbPass = $env['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?: '';
 
 try {
     $dsn = "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4";
