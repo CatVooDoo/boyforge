@@ -58,6 +58,7 @@ function initDatabase(PDO $pdo): void {
         specs JSON NULL,
         tg_link VARCHAR(500) NULL,
         is_active TINYINT(1) NOT NULL DEFAULT 1,
+        is_popular TINYINT(1) NOT NULL DEFAULT 0,
         sort_order INT NOT NULL DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -99,6 +100,7 @@ function initDatabase(PDO $pdo): void {
                 'specs' => $baseSpecs,
                 'tg_link' => 'https://telegram.me/theboyforge?text=' . rawurlencode('Здравствуйте! Хочу заказать: Братья Святославичи'),
                 'is_active' => 1,
+                'is_popular' => 1,
                 'sort_order' => 1
             ],
             [
@@ -124,6 +126,7 @@ function initDatabase(PDO $pdo): void {
                 'specs' => $baseSpecs,
                 'tg_link' => 'https://telegram.me/theboyforge?text=' . rawurlencode('Здравствуйте! Хочу заказать: Врёшь Кривжа'),
                 'is_active' => 1,
+                'is_popular' => 1,
                 'sort_order' => 2
             ],
             [
@@ -149,6 +152,7 @@ function initDatabase(PDO $pdo): void {
                 'specs' => $baseSpecs,
                 'tg_link' => 'https://telegram.me/theboyforge?text=' . rawurlencode('Здравствуйте! Хочу заказать: Варяга меч кормит'),
                 'is_active' => 1,
+                'is_popular' => 1,
                 'sort_order' => 3
             ],
             [
@@ -171,12 +175,13 @@ function initDatabase(PDO $pdo): void {
                 'specs' => $baseSpecs,
                 'tg_link' => 'https://telegram.me/theboyforge?text=' . rawurlencode('Здравствуйте! Хочу заказать: Рано меня похоронили'),
                 'is_active' => 1,
+                'is_popular' => 1,
                 'sort_order' => 4
             ]
         ];
 
-        $stmt = $pdo->prepare("INSERT INTO products (id, cat_id, cat, name, price, price_numeric, img, imgs, sub, tags, description, specs, tg_link, is_active, sort_order)
-            VALUES (:id, :cat_id, :cat, :name, :price, :price_numeric, :img, :imgs, :sub, :tags, :description, :specs, :tg_link, :is_active, :sort_order)");
+        $stmt = $pdo->prepare("INSERT INTO products (id, cat_id, cat, name, price, price_numeric, img, imgs, sub, tags, description, specs, tg_link, is_active, is_popular, sort_order)
+            VALUES (:id, :cat_id, :cat, :name, :price, :price_numeric, :img, :imgs, :sub, :tags, :description, :specs, :tg_link, :is_active, :is_popular, :sort_order)");
 
         foreach ($initialProducts as $p) {
             $stmt->execute($p);
@@ -211,6 +216,37 @@ function initDatabase(PDO $pdo): void {
             $stmtCat->execute($c);
         }
     }
+
+    $sqlTags = "CREATE TABLE IF NOT EXISTS tags (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+
+    $pdo->exec($sqlTags);
+
+    $tagsCount = (int)$pdo->query("SELECT COUNT(*) FROM tags")->fetchColumn();
+    if ($tagsCount === 0) {
+        $initialTags = ['Новая коллекция', 'Хит', 'S–3XL', 'Оверсайз', 'Лимитированный тираж'];
+        $stmtTag = $pdo->prepare("INSERT IGNORE INTO tags (name) VALUES (:name)");
+        foreach ($initialTags as $t) {
+            $stmtTag->execute([':name' => $t]);
+        }
+
+        // Import existing tags from products if any
+        $existingProductTags = $pdo->query("SELECT tags FROM products WHERE tags IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($existingProductTags as $tJson) {
+            $parsed = json_decode((string)$tJson, true);
+            if (is_array($parsed)) {
+                foreach ($parsed as $singleTag) {
+                    $singleTag = trim((string)$singleTag);
+                    if ($singleTag !== '') {
+                        $stmtTag->execute([':name' => $singleTag]);
+                    }
+                }
+            }
+        }
+    }
 }
 
 initDatabase($pdo);
@@ -227,6 +263,10 @@ function verifyCsrfToken(?string $token): bool {
         return false;
     }
     return hash_equals($_SESSION['boyforge_csrf_token'], $token);
+}
+
+function checkCsrfToken(?string $token): bool {
+    return verifyCsrfToken($token);
 }
 
 function isAdminLoggedIn(): bool {

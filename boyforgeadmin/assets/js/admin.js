@@ -42,10 +42,12 @@ document.addEventListener("DOMContentLoaded", function () {
       const name = (row.getAttribute("data-name") || "").toLowerCase();
       const rowCat = row.getAttribute("data-cat") || "";
       const rowStatus = row.getAttribute("data-status") || "";
+      const rowPopular = row.getAttribute("data-popular") || "0";
 
       const matchesQuery = !query || name.includes(query);
       const matchesCat = cat === "all" || rowCat === cat;
-      const matchesStatus = status === "all" || rowStatus === status;
+      const matchesStatus = status === "all" || 
+                            (status === "popular" ? rowPopular === "1" : rowStatus === status);
 
       if (matchesQuery && matchesCat && matchesStatus) {
         row.style.display = "";
@@ -80,6 +82,39 @@ document.addEventListener("DOMContentLoaded", function () {
               row.setAttribute("data-status", isChecked ? "active" : "inactive");
             }
             showToast(data.message || "Статус товара обновлен", "success");
+          } else {
+            showToast(data.error || "Ошибка при обновлении статуса", "error");
+            this.checked = !this.checked;
+          }
+        })
+        .catch(() => {
+          showToast("Ошибка сети при отправке запроса", "error");
+          this.checked = !this.checked;
+        });
+    });
+  });
+
+  // Popular Toggle
+  document.querySelectorAll(".popular-switch-input").forEach((toggle) => {
+    toggle.addEventListener("change", function () {
+      const id = this.getAttribute("data-id");
+      const isChecked = this.checked ? 1 : 0;
+      const row = this.closest(".product-row");
+
+      fetch("api.php?action=toggle_popular", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: `id=${encodeURIComponent(id)}&popular=${isChecked}&csrf_token=${encodeURIComponent(csrfToken)}`,
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            if (row) {
+              row.setAttribute("data-popular", isChecked ? "1" : "0");
+            }
+            showToast(data.message || "Статус популярной позиции обновлен", "success");
           } else {
             showToast(data.error || "Ошибка при обновлении статуса", "error");
             this.checked = !this.checked;
@@ -360,6 +395,125 @@ document.addEventListener("DOMContentLoaded", function () {
       const specsHidden = document.getElementById("specsHiddenInput");
       if (specsHidden) {
         specsHidden.value = JSON.stringify(specs);
+      }
+    });
+  }
+
+  // Badges / Tags Management (edit.php)
+  const tagsContainer = document.getElementById("tagsContainer");
+  const customTagInput = document.getElementById("custom_tag");
+  const btnAddCustomTag = document.getElementById("btnAddCustomTag");
+
+  function addBadgeItem(tagName, checked = true) {
+    tagName = tagName.trim();
+    if (!tagName || !tagsContainer) return;
+
+    // Check if tag already exists in the container (case-insensitive)
+    const existing = Array.from(tagsContainer.querySelectorAll(".badge-checkbox-item")).find(
+      (item) => (item.getAttribute("data-tag") || "").toLowerCase() === tagName.toLowerCase()
+    );
+
+    if (existing) {
+      const cb = existing.querySelector('input[type="checkbox"]');
+      if (cb) {
+        cb.checked = true;
+      }
+      existing.style.outline = "2px solid #000";
+      setTimeout(() => { existing.style.outline = ""; }, 1000);
+      return;
+    }
+
+    // Create new badge element
+    const label = document.createElement("label");
+    label.className = "badge-checkbox-item";
+    label.setAttribute("data-tag", tagName);
+    label.innerHTML = `
+      <input type="checkbox" name="tags[]" value="${escapeHtml(tagName)}" ${checked ? "checked" : ""}>
+      <span class="badge-tag-text">${escapeHtml(tagName)}</span>
+      <button type="button" class="badge-delete-btn" title="Удалить бейдж из общего списка" data-tag="${escapeHtml(tagName)}" aria-label="Удалить">&times;</button>
+    `;
+
+    bindBadgeDelete(label.querySelector(".badge-delete-btn"));
+    tagsContainer.appendChild(label);
+
+    // Save to database via API
+    const formData = new FormData();
+    formData.append("csrf_token", csrfToken);
+    formData.append("name", tagName);
+
+    fetch("api.php?action=save_tag", {
+      method: "POST",
+      body: formData,
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          showToast(`Бейдж «${tagName}» сохранен в базе`, "success");
+        }
+      })
+      .catch(() => {});
+  }
+
+  function bindBadgeDelete(btn) {
+    if (!btn) return;
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const tagName = this.getAttribute("data-tag") || "";
+      if (!tagName) return;
+
+      if (!confirm(`Удалить бейдж «${tagName}» из общего списка? Он перестанет отображаться для выбора у всех товаров.`)) {
+        return;
+      }
+
+      const itemLabel = this.closest(".badge-checkbox-item");
+
+      const formData = new FormData();
+      formData.append("csrf_token", csrfToken);
+      formData.append("name", tagName);
+
+      fetch("api.php?action=delete_tag", {
+        method: "POST",
+        body: formData,
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            itemLabel?.remove();
+            showToast(data.message || `Бейдж «${tagName}» удален`, "success");
+          } else {
+            showToast(data.error || "Ошибка при удалении бейджа", "error");
+          }
+        })
+        .catch(() => {
+          showToast("Сетевая ошибка при удалении", "error");
+        });
+    });
+  }
+
+  if (tagsContainer) {
+    tagsContainer.querySelectorAll(".badge-delete-btn").forEach(bindBadgeDelete);
+  }
+
+  if (btnAddCustomTag && customTagInput) {
+    btnAddCustomTag.addEventListener("click", function (e) {
+      e.preventDefault();
+      const val = customTagInput.value.trim();
+      if (val) {
+        addBadgeItem(val, true);
+        customTagInput.value = "";
+      }
+    });
+
+    customTagInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const val = this.value.trim();
+        if (val) {
+          addBadgeItem(val, true);
+          this.value = "";
+        }
       }
     });
   }

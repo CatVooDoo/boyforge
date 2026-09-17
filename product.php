@@ -62,6 +62,21 @@ if ($found) {
         'tg' => $tgBase
     ];
 }
+
+$env = [];
+$envFile = __DIR__ . '/.env';
+if (file_exists($envFile)) {
+    $envLines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($envLines as $envLine) {
+        $envLine = trim($envLine);
+        if ($envLine === '' || $envLine[0] === '#') continue;
+        if (strpos($envLine, '=') !== false) {
+            list($k, $v) = explode('=', $envLine, 2);
+            $env[trim($k)] = trim($v, " \t\n\r\0\x0B\"'");
+        }
+    }
+}
+$fivepostApiKey = $env['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a';
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -184,7 +199,7 @@ if ($found) {
           </div>
           <div class="sizes">
             <button type="button">S</button>
-            <button type="button" class="active">M</button>
+            <button type="button">M</button>
             <button type="button">L</button>
             <button type="button">XL</button>
             <button type="button">2XL</button>
@@ -237,21 +252,31 @@ if ($found) {
       </div>
 
       <!-- ПОХОЖИЕ ТОВАРЫ (вывод из БД) -->
-      <?php if (!empty($relatedProducts)): ?>
+      <?php /* if (!empty($relatedProducts)): ?>
         <div style="margin-top: 70px; padding-top: 40px; border-top: 1px solid var(--border);">
           <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Похожие товары</h2>
           <div class="grid-4" id="relatedGrid">
             <?php foreach ($relatedProducts as $r): ?>
               <?php
                 $rTags = json_decode($r['tags'] ?? '[]', true) ?: [];
+                $rBadges = [];
+                foreach ($rTags as $t) {
+                    $t = trim((string)$t);
+                    if ($t === '' || preg_match('/^[A-Za-z0-9]+[–\-][A-Za-z0-9]+$/u', $t)) continue;
+                    $rBadges[] = $t;
+                }
                 $rName = htmlspecialchars($r['name']);
               ?>
               <a href="product.php?id=<?= (int)$r['id'] ?>" class="card">
                 <div class="card-img">
                   <img src="<?= htmlspecialchars($r['img']) ?>" alt="<?= $rName ?>" loading="lazy"
                        onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','<?= addslashes($rName) ?>');">
-                  <?php if (in_array('Хит', $rTags, true)): ?>
-                    <span class="badge-hit">хит</span>
+                  <?php if (!empty($rBadges)): ?>
+                    <div class="card-badges">
+                      <?php foreach (array_slice($rBadges, 0, 2) as $badgeItem): ?>
+                        <span class="card-badge"><?= htmlspecialchars($badgeItem) ?></span>
+                      <?php endforeach; ?>
+                    </div>
                   <?php endif; ?>
                 </div>
                 <div class="card-info">
@@ -262,7 +287,7 @@ if ($found) {
             <?php endforeach; ?>
           </div>
         </div>
-      <?php endif; ?>
+      <?php endif; */ ?>
 
     <?php endif; ?>
   </main>
@@ -289,6 +314,7 @@ if ($found) {
       </div>
       <div class="footer-bottom">
         <span>© <span id="year">2026</span> BOYFORGE. Все права защищены</span>
+        <a href="policy.php">Политика обработки персональных данных</a>
         <a href="privacy.php">Политика конфиденциальности</a>
         <a href="terms.php">Пользовательское соглашение</a>
         <a href="offer.php">Публичная оферта</a>
@@ -313,6 +339,7 @@ if ($found) {
       </div>
 
       <div class="order-modal-body ozon-modal-body">
+        <!-- Мини-превью выбранного товара -->
         <div class="ozon-prod-summary">
           <img class="ozon-prod-thumb" id="orderModalProdImg" src="" alt="Товар">
           <div class="ozon-prod-info">
@@ -326,26 +353,87 @@ if ($found) {
         </div>
 
         <form id="orderForm" novalidate>
+          <!-- 1. Контактные данные -->
           <div class="ozon-section">
-            <div class="ozon-section-title">Контактные данные покупателя</div>
+            <div class="ozon-section-title">1. Контактные данные покупателя</div>
+            <div class="ozon-field">
+              <label for="orderFio">ФИО получателя <span style="color:#ef4444;">*</span></label>
+              <input type="text" id="orderFio" class="ozon-input" placeholder="Иванов Иван Иванович" required autocomplete="name">
+            </div>
             <div class="ozon-fields-grid">
               <div class="ozon-field">
                 <label for="orderTg">Ваш Telegram (@username)</label>
-                <input type="text" id="orderTg" class="ozon-input" placeholder="@username" required autocomplete="off">
+                <input type="text" id="orderTg" class="ozon-input" placeholder="@username" autocomplete="off">
               </div>
               <div class="ozon-field">
-                <label for="orderPhone">Номер телефона</label>
+                <label for="orderPhone">Номер телефона <span style="color:#ef4444;">*</span></label>
                 <input type="tel" id="orderPhone" class="ozon-input" placeholder="+7 (999) 000-00-00" required autocomplete="tel">
               </div>
             </div>
           </div>
 
-          <div style="margin-top:20px;">
+          <!-- 2. Пункт выдачи 5Post -->
+          <div class="ozon-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div class="ozon-section-title">2. Доставка 5Post (Пятёрочка / Перекрёсток)</div>
+            </div>
+
+            <!-- Скрытые поля для данных выбранной точки 5Post -->
+            <input type="hidden" id="fivepostPointId" name="fivepostPointId" value="">
+            <input type="hidden" id="fivepostPointName" name="fivepostPointName" value="">
+            <input type="hidden" id="fivepostPointAddress" name="fivepostPointAddress" value="">
+            <input type="hidden" id="fivepostPointType" name="fivepostPointType" value="">
+            <input type="hidden" id="fivepostPointDetails" name="fivepostPointDetails" value="">
+
+            <!-- Карточка уже выбранного пункта выдачи -->
+            <div class="fivepost-selected-card" id="fivepostSelectedCard" style="display:none;">
+              <div class="fivepost-selected-details">
+                <div class="fivepost-selected-header">
+                  <strong class="fivepost-selected-name" id="fivepostPointNameDisplay">Пятёрочка</strong>
+                </div>
+                <div class="fivepost-selected-address" id="fivepostPointAddressDisplay">г. Пенза, ул. Примерная, д. 1</div>
+                <div class="fivepost-selected-extra" id="fivepostPointExtraDisplay">Выдача заказа 5Post</div>
+              </div>
+              <button type="button" class="fivepost-change-btn" id="fivepostChangeBtn">Изменить</button>
+            </div>
+
+            <!-- Блок карты и поиска по городам -->
+            <div class="fivepost-map-wrapper" id="fivepostMapWrapper">
+              <!-- Поиск по городам и улицам -->
+              <div class="bf-city-search-wrap">
+                <div class="bf-city-search-box">
+                  <svg class="bf-search-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  <input type="text" id="fivepostCitySearch" class="ozon-input bf-city-search-input" placeholder="Поиск по городу или улице (например, Пенза, Победы…)" autocomplete="off">
+                  <button type="button" id="fivepostCityClear" class="bf-clear-btn" style="display:none;" aria-label="Очистить">&times;</button>
+                </div>
+              </div>
+
+              <!-- Контейнер интерактивной Яндекс.Карты -->
+              <div id="fivepostCustomMap" class="bf-custom-map">
+                <div class="fivepost-map-loader" id="fivepostMapLoader">
+                  <div class="fivepost-spinner"></div>
+                  <span>Загрузка карты и точек выдачи…</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:16px;">
             <p class="ozon-status-msg order-status-msg" id="orderFormStatus"></p>
-            <button type="submit" class="btn-primary btn-block" id="orderConfirmBtn" style="margin-top:8px;">
+            <button type="submit" class="btn-primary btn-block" id="orderConfirmBtn">
               Оплатить онлайн картой / СБП
             </button>
-            <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:8px; font-size:11px; color:#9ca3af;">
+
+            <div class="order-agree-wrap">
+              <label class="order-agree-label" for="orderPolicyAgree">
+                <input type="checkbox" id="orderPolicyAgree" class="order-agree-checkbox" required>
+                <span class="order-agree-text">
+                  Нажимая кнопку, Вы соглашаетесь с <a href="terms.php" target="_blank" rel="noopener">Правилами</a> и <a href="policy.php" target="_blank" rel="noopener">политикой конфиденциальности</a> Компании.
+                </span>
+              </label>
+            </div>
+
+            <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:10px; font-size:11px; color:#9ca3af;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
               <span>Безопасная оплата через <strong>CloudPayments</strong> · Карты РФ, СБП, Mir Pay</span>
             </div>
@@ -361,9 +449,19 @@ if ($found) {
     </script>
   <?php endif; ?>
 
+  <?php
+    $yandexApiKey = $env['YANDEX_MAPS_API_KEY'] ?? getenv('YANDEX_MAPS_API_KEY') ?: '3612542e-8832-4f60-879c-72b492b06944';
+    $cpPublicId   = $env['CLOUDPAYMENTS_PUBLIC_ID'] ?? getenv('CLOUDPAYMENTS_PUBLIC_ID') ?: '';
+    $cpTaxation   = $env['CLOUDPAYMENTS_TAXATION_SYSTEM'] ?? getenv('CLOUDPAYMENTS_TAXATION_SYSTEM') ?: '1';
+  ?>
+  <script>
+    window.CLOUDPAYMENTS_PUBLIC_ID = <?= json_encode($cpPublicId, JSON_UNESCAPED_UNICODE) ?>;
+    window.CLOUDPAYMENTS_TAXATION_SYSTEM = <?= json_encode((int)$cpTaxation) ?>;
+  </script>
+  <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=<?= htmlspecialchars($yandexApiKey) ?>" defer></script>
   <script src="js/product.js?v=<?= filemtime(__DIR__ . '/js/product.js') ?>"></script>
   <script src="js/main.js?v=23"></script>
   <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>
-  <script src="js/checkout.js?v=1"></script>
+  <script src="js/checkout.js?v=<?= filemtime(__DIR__ . '/js/checkout.js') ?>"></script>
 </body>
 </html>

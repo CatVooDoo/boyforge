@@ -314,6 +314,7 @@
         btn.addEventListener("click", function () {
           sizesWrap.querySelectorAll("button").forEach(function (x) { x.classList.remove("active"); });
           btn.classList.add("active");
+          sizesWrap.classList.remove("size-error");
           refreshHref();
         });
       });
@@ -345,23 +346,36 @@
       }, 2500);
     }
 
+    function flagSizeError() {
+      if (!sizesWrap) return;
+      sizesWrap.classList.add("size-error");
+      sizesWrap.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(function () {
+        sizesWrap.classList.remove("size-error");
+      }, 2500);
+    }
+
     function refreshHref() {
       if (orderBtn) orderBtn.href = buildOrderHref();
     }
 
-    // старт: пол не выбран — размеры скрыты
     renderSizes(getGender());
     refreshHref();
 
     if (orderBtn) {
       orderBtn.addEventListener("click", function (e) {
         if (!getGender()) {
-          e.preventDefault();          // не пускаем в Telegram
-          flagGenderError();           // подсветка красным
+          e.preventDefault();
+          flagGenderError();
           if (gendersWrap) gendersWrap.scrollIntoView({ behavior: "smooth", block: "center" });
           return;
         }
-        refreshHref();                 // финальный href с полом и размером
+        if (!getSize()) {
+          e.preventDefault();
+          flagSizeError();
+          return;
+        }
+        refreshHref();
 
         // Отправка данных заказа в фоновом режиме на backend (для Google Таблицы)
         try {
@@ -407,13 +421,27 @@
     var related = window.getRelated ? window.getRelated(p.id, 4) : [];
     if (relatedGrid && related.length) {
       relatedGrid.innerHTML = related.map(function (r) {
-        var hit = (r.tags || []).indexOf("Хит") !== -1 ? '<span class="badge-hit">хит</span>' : "";
+        var rTags = r.tags || [];
+        var rBadges = [];
+        for (var i = 0; i < rTags.length; i++) {
+          var t = String(rTags[i]).trim();
+          if (!t || /^[A-Za-z0-9]+[–\-][A-Za-z0-9]+$/.test(t)) continue;
+          rBadges.push(t);
+        }
+        var badgesHtml = "";
+        if (rBadges.length > 0) {
+          badgesHtml = '<div class="card-badges">';
+          for (var j = 0; j < Math.min(rBadges.length, 2); j++) {
+            badgesHtml += '<span class="card-badge">' + esc(rBadges[j]) + '</span>';
+          }
+          badgesHtml += '</div>';
+        }
         return (
           '<a href="product.php?id=' + r.id + '" class="card">' +
           '<div class="card-img">' +
           '<img src="' + esc(r.img) + '" alt="' + esc(r.name) + '" loading="lazy" ' +
           "onerror=\"this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','" + esc(r.name).replace(/'/g, "") + "');\">" +
-          hit + "</div>" +
+          badgesHtml + "</div>" +
           '<div class="card-info">' +
           '<div class="card-title">' + esc(r.name) + "</div>" +
           '<div class="card-price">' + esc(r.price) + "</div>" +

@@ -62,11 +62,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Tags
         $selectedTags = $_POST['tags'] ?? [];
         if (!is_array($selectedTags)) $selectedTags = [];
+        $selectedTags = array_values(array_filter(array_map('trim', $selectedTags)));
+
         $customTag = trim((string)($_POST['custom_tag'] ?? ''));
         if ($customTag !== '' && !in_array($customTag, $selectedTags, true)) {
             $selectedTags[] = $customTag;
         }
-        $tagsJson = json_encode(array_values($selectedTags), JSON_UNESCAPED_UNICODE);
+
+        if (!empty($selectedTags)) {
+            $stmtTag = $pdo->prepare("INSERT IGNORE INTO tags (name) VALUES (:name)");
+            foreach ($selectedTags as $st) {
+                if ($st !== '') {
+                    $stmtTag->execute([':name' => $st]);
+                }
+            }
+        }
+
+        $tagsJson = json_encode(array_values(array_unique($selectedTags)), JSON_UNESCAPED_UNICODE);
 
         // Main image
         $img = trim((string)($_POST['img'] ?? ''));
@@ -337,27 +349,31 @@ $allCategories = $pdo->query("SELECT * FROM categories ORDER BY sort_order ASC, 
       <input type="text" id="sub" name="sub" class="form-input" value="<?= $subVal ?>" placeholder="Футболка · 95% хлопок / 5% эластан">
     </div>
 
-    <div class="form-grid-2">
-      <div class="form-group">
-        <label class="form-label">Бейджи / Теги</label>
-        <div style="display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px;">
-          <?php
-            $presetTags = ['Новая коллекция', 'Хит', 'S–3XL', 'Оверсайз', 'Лимитированный тираж'];
-            foreach ($presetTags as $pt):
-              $checked = in_array($pt, $currentTags, true);
-          ?>
-            <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
-              <input type="checkbox" name="tags[]" value="<?= htmlspecialchars($pt) ?>" <?= $checked ? 'checked' : '' ?>>
-              <span><?= htmlspecialchars($pt) ?></span>
-            </label>
-          <?php endforeach; ?>
-        </div>
+    <div class="form-group" style="margin-top: 6px;">
+      <label class="form-label">Бейджи / Теги</label>
+      <div class="tags-badge-container" id="tagsContainer">
+        <?php
+          $dbTags = $pdo->query("SELECT name FROM tags ORDER BY id ASC")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+          $allAvailableTags = array_values(array_unique(array_merge($dbTags, $currentTags)));
+          foreach ($allAvailableTags as $pt):
+            $checked = in_array($pt, $currentTags, true);
+        ?>
+          <label class="badge-checkbox-item" data-tag="<?= htmlspecialchars($pt) ?>">
+            <input type="checkbox" name="tags[]" value="<?= htmlspecialchars($pt) ?>" <?= $checked ? 'checked' : '' ?>>
+            <span class="badge-tag-text"><?= htmlspecialchars($pt) ?></span>
+            <button type="button" class="badge-delete-btn" title="Удалить бейдж из общего списка" data-tag="<?= htmlspecialchars($pt) ?>" aria-label="Удалить">&times;</button>
+          </label>
+        <?php endforeach; ?>
       </div>
 
-      <div class="form-group">
-        <label for="custom_tag" class="form-label">Свой бейдж (опционально)</label>
-        <input type="text" id="custom_tag" name="custom_tag" class="form-input" placeholder="Добавить свой бейдж...">
+      <div class="tag-add-wrapper">
+        <input type="text" id="custom_tag" name="custom_tag" class="form-input" placeholder="Название нового бейджа...">
+        <button type="button" class="btn btn-secondary" id="btnAddCustomTag">
+          <?= renderSvgIcon('plus') ?>
+          <span>Добавить бейдж</span>
+        </button>
       </div>
+      <div class="form-help">Выбранные бейджи будут отображаться на карточке товара. Добавленный бейдж сохранится в базе и будет доступен для выбора у всех товаров.</div>
     </div>
 
     <div class="form-group" style="margin-top: 10px;">

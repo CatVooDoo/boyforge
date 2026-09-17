@@ -99,6 +99,7 @@ foreach ($products as $p) {
       <option value="all">Любой статус</option>
       <option value="active">Активные</option>
       <option value="inactive">Скрытые</option>
+      <option value="popular">Популярные (на главной)</option>
     </select>
   </div>
 </div>
@@ -114,13 +115,14 @@ foreach ($products as $p) {
           <th>Цена</th>
           <th>Бейджи</th>
           <th style="text-align: center; width: 90px;">На сайте</th>
+          <th style="text-align: center; width: 150px;" title="Популярная позиция — если выбран, то выводим на главной">Популярная позиция</th>
           <th style="text-align: right; width: 140px;">Действия</th>
         </tr>
       </thead>
       <tbody id="productsTableBody">
         <?php if (empty($products)): ?>
           <tr>
-            <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
               Товары ещё не добавлены. Нажмите «Добавить товар», чтобы создать первую позицию.
             </td>
           </tr>
@@ -133,6 +135,7 @@ foreach ($products as $p) {
               $cat = htmlspecialchars($p['cat'] ?: 'Футболка');
               $price = htmlspecialchars($p['price'] ?: '0 ₽');
               $isActive = (int)$p['is_active'] === 1;
+              $isPopular = (int)($p['is_popular'] ?? 0) === 1;
               $statusAttr = $isActive ? 'active' : 'inactive';
               
               $img = $p['img'] ?? '';
@@ -144,7 +147,7 @@ foreach ($products as $p) {
               $tags = json_decode($p['tags'] ?? '[]', true);
               if (!is_array($tags)) $tags = [];
             ?>
-            <tr class="product-row" data-id="<?= $id ?>" data-name="<?= $name ?>" data-cat="<?= $cat ?>" data-status="<?= $statusAttr ?>">
+            <tr class="product-row" data-id="<?= $id ?>" data-name="<?= $name ?>" data-cat="<?= $cat ?>" data-status="<?= $statusAttr ?>" data-popular="<?= $isPopular ? '1' : '0' ?>">
               <td>
                 <?php if ($imgSrc !== ''): ?>
                   <img src="<?= htmlspecialchars($imgSrc) ?>" alt="<?= $name ?>" class="product-thumb" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'product-thumb-placeholder\'>IMG</div>';">
@@ -181,8 +184,15 @@ foreach ($products as $p) {
               </td>
 
               <td style="text-align: center;">
-                <label class="switch-label">
+                <label class="switch-label" title="Отображать на сайте">
                   <input type="checkbox" class="status-switch-input" data-id="<?= $id ?>" <?= $isActive ? 'checked' : '' ?>>
+                  <span class="slider"></span>
+                </label>
+              </td>
+
+              <td style="text-align: center;">
+                <label class="switch-label" title="Популярная позиция: если выбран то выводим на главной">
+                  <input type="checkbox" class="popular-switch-input" data-id="<?= $id ?>" <?= $isPopular ? 'checked' : '' ?>>
                   <span class="slider"></span>
                 </label>
               </td>

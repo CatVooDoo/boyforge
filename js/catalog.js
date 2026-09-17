@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 /* catalog.js — рендер карточек под BOYFORGE-разметку (.card, .catalog-grid, .chip)
    Порядок загрузки: products.js -> catalog.js */
@@ -34,17 +34,22 @@
       return parseInt(String(p.price).replace(/\D/g, ""), 10) || 0;
     }
 
-    // формирует бейджи из тегов (поддержка: Хит, Новая коллекция, Новинка)
+    // формирует бейджи из тегов (поддержка любых бейджей)
     function badgesHTML(p) {
       var tags = p.tags || [];
       var out = "";
-      if (tags.indexOf("Хит") !== -1) {
-        out += '<span class="badge-hit">хит</span>';
+      var displayBadges = [];
+      for (var i = 0; i < tags.length; i++) {
+        var t = String(tags[i]).trim();
+        if (!t || /^[A-Za-z0-9]+[–\-][A-Za-z0-9]+$/.test(t)) continue;
+        displayBadges.push(t);
       }
-      if (tags.indexOf("Новая коллекция") !== -1) {
-        out += '<span class="badge-new-collection">новая коллекция</span>';
-      } else if (tags.indexOf("Новинка") !== -1 || tags.indexOf("Новая") !== -1) {
-        out += '<span class="badge-new">новинка</span>';
+      if (displayBadges.length > 0) {
+        out += '<div class="card-badges">';
+        for (var j = 0; j < Math.min(displayBadges.length, 2); j++) {
+          out += '<span class="card-badge">' + esc(displayBadges[j]) + '</span>';
+        }
+        out += '</div>';
       }
       return out;
     }

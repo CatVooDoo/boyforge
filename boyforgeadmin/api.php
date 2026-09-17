@@ -42,6 +42,24 @@ switch ($action) {
         ], JSON_UNESCAPED_UNICODE);
         exit;
 
+    case 'toggle_popular':
+        $id = (int)($_POST['id'] ?? 0);
+        $popular = (int)($_POST['popular'] ?? 0) === 1 ? 1 : 0;
+
+        if ($id <= 0) {
+            echo json_encode(['success' => false, 'error' => 'Неверный идентификатор товара'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("UPDATE products SET is_popular = :popular WHERE id = :id");
+        $stmt->execute([':popular' => $popular, ':id' => $id]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => $popular === 1 ? 'Товар добавлен в популярные на главной' : 'Товар убран из популярных'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+
     case 'delete':
         $id = (int)($_POST['id'] ?? 0);
         if ($id <= 0) {
@@ -79,8 +97,8 @@ switch ($action) {
         $newName = $orig['name'] . ' (Копия)';
         $newTg = 'https://telegram.me/theboyforge?text=' . rawurlencode('Здравствуйте! Хочу заказать: ' . $newName);
 
-        $insertStmt = $pdo->prepare("INSERT INTO products (cat_id, cat, name, price, price_numeric, img, imgs, sub, tags, description, specs, tg_link, is_active, sort_order)
-            VALUES (:cat_id, :cat, :name, :price, :price_numeric, :img, :imgs, :sub, :tags, :description, :specs, :tg_link, 0, :sort_order)");
+        $insertStmt = $pdo->prepare("INSERT INTO products (cat_id, cat, name, price, price_numeric, img, imgs, sub, tags, description, specs, tg_link, is_active, is_popular, sort_order)
+            VALUES (:cat_id, :cat, :name, :price, :price_numeric, :img, :imgs, :sub, :tags, :description, :specs, :tg_link, 0, 0, :sort_order)");
 
         $insertStmt->execute([
             ':cat_id' => $orig['cat_id'],
@@ -201,6 +219,44 @@ switch ($action) {
         echo json_encode([
             'success' => true,
             'message' => $status === 1 ? 'Категория активирована' : 'Категория скрыта'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+
+    case 'save_tag':
+        $name = trim((string)($_POST['name'] ?? ''));
+        if ($name === '') {
+            echo json_encode(['success' => false, 'error' => 'Укажите название бейджа'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        if (mb_strlen($name) > 64) {
+            echo json_encode(['success' => false, 'error' => 'Название бейджа слишком длинное (макс. 64 символа)'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("INSERT IGNORE INTO tags (name) VALUES (:name)");
+        $stmt->execute([':name' => $name]);
+
+        echo json_encode([
+            'success' => true,
+            'tag' => $name,
+            'message' => "Бейдж «{$name}» сохранен в базе"
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+
+    case 'delete_tag':
+        $name = trim((string)($_POST['name'] ?? ''));
+        if ($name === '') {
+            echo json_encode(['success' => false, 'error' => 'Укажите название бейджа'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("DELETE FROM tags WHERE name = :name");
+        $stmt->execute([':name' => $name]);
+
+        echo json_encode([
+            'success' => true,
+            'tag' => $name,
+            'message' => "Бейдж «{$name}» удален из общего списка"
         ], JSON_UNESCAPED_UNICODE);
         exit;
 
