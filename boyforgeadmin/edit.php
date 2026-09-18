@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once dirname(__DIR__) . '/includes/helpers.php';
 
 requireAdminAuth();
 
@@ -138,12 +139,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Укажите название товара.';
         }
 
+        $slugInput = trim((string)($_POST['slug'] ?? ''));
+
         if ($error === '') {
+            if ($slugInput === '') {
+                $slug = generateSlug($name, 'products', $isEdit ? $id : null, $pdo);
+            } else {
+                $slug = generateSlug($slugInput, 'products', $isEdit ? $id : null, $pdo);
+            }
+
             if ($isEdit) {
                 $sql = "UPDATE products SET
                     cat_id = :cat_id,
                     cat = :cat,
                     name = :name,
+                    slug = :slug,
                     price = :price,
                     price_numeric = :price_numeric,
                     img = :img,
@@ -162,6 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':cat_id' => $catId,
                     ':cat' => $cat,
                     ':name' => $name,
+                    ':slug' => $slug,
                     ':price' => $price,
                     ':price_numeric' => $priceNumeric,
                     ':img' => $img,
@@ -177,15 +188,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
             } else {
                 $sql = "INSERT INTO products 
-                    (cat_id, cat, name, price, price_numeric, img, imgs, sub, tags, description, specs, tg_link, is_active, sort_order)
+                    (cat_id, cat, name, slug, price, price_numeric, img, imgs, sub, tags, description, specs, tg_link, is_active, sort_order)
                     VALUES 
-                    (:cat_id, :cat, :name, :price, :price_numeric, :img, :imgs, :sub, :tags, :description, :specs, :tg_link, :is_active, :sort_order)";
+                    (:cat_id, :cat, :name, :slug, :price, :price_numeric, :img, :imgs, :sub, :tags, :description, :specs, :tg_link, :is_active, :sort_order)";
 
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([
                     ':cat_id' => $catId,
                     ':cat' => $cat,
                     ':name' => $name,
+                    ':slug' => $slug,
                     ':price' => $price,
                     ':price_numeric' => $priceNumeric,
                     ':img' => $img,
@@ -221,6 +233,7 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'saved') {
 
 // Prepare values for form
 $nameVal = htmlspecialchars($product['name'] ?? '');
+$slugVal = htmlspecialchars($product['slug'] ?? '');
 $catVal = htmlspecialchars($product['cat'] ?? 'Футболка');
 $catIdVal = htmlspecialchars($product['cat_id'] ?? 'tshirt');
 $priceVal = htmlspecialchars($product['price'] ?? '3 200 ₽');
@@ -303,6 +316,15 @@ require_once __DIR__ . '/includes/header.php';
     <div class="form-group">
       <label for="name" class="form-label">Название товара *</label>
       <input type="text" id="name" name="name" class="form-input" value="<?= $nameVal ?>" placeholder="Например: Футболка «Братья Святославичи»" required>
+    </div>
+
+    <div class="form-group">
+      <label for="slug" class="form-label">URL (slug)</label>
+      <input type="text" id="slug" name="slug" value="<?= $slugVal ?>" 
+             placeholder="auto-generated-from-name" class="form-input">
+      <small class="form-help">
+          Оставьте пустым для автогенерации из названия. Допустимы только латинские буквы, цифры и дефисы.
+      </small>
     </div>
 
 <?php
@@ -536,5 +558,51 @@ $allCategories = $pdo->query("SELECT * FROM categories ORDER BY sort_order ASC, 
     </a>
   </div>
 </form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.getElementById('name');
+    const slugInput = document.getElementById('slug');
+    
+    if (!nameInput || !slugInput) return;
+    
+    let slugManuallyEdited = slugInput.value.trim() !== '';
+    
+    slugInput.addEventListener('input', function() {
+        slugManuallyEdited = this.value.trim() !== '';
+    });
+    
+    nameInput.addEventListener('input', function() {
+        if (slugManuallyEdited) return;
+        
+        // Simple transliteration (Russian to Latin)
+        const transliteration = {
+            'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i',
+            'й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t',
+            'у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'',
+            'э':'e','ю':'yu','я':'ya'
+        };
+        
+        let text = this.value.toLowerCase();
+        let slug = '';
+        
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            if (transliteration[char] !== undefined) {
+                slug += transliteration[char];
+            } else if (/[a-z0-9]/.test(char)) {
+                slug += char;
+            } else {
+                slug += '-';
+            }
+        }
+        
+        // Remove duplicate dashes and trim
+        slug = slug.replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+        
+        slugInput.value = slug;
+    });
+});
+</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
