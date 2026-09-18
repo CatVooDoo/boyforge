@@ -6,9 +6,8 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/fivepost.php';
 
-$envVars = FivePostClient::loadEnv();
-$apiSecret = $envVars['CLOUDPAYMENTS_API_SECRET'] ?? '';
-$googleScriptUrl = $envVars['GOOGLE_SCRIPT_URL'] ?? 'https://script.google.com/macros/s/AKfycbwEX5yOenoxiIpkFlt0BGHbV4SPmJiWIrzIFU-0t8R-4lN59vMuTnhMhlAP6ImemV59Fw/exec';
+$apiSecret = env_get('CLOUDPAYMENTS_API_SECRET');
+$googleScriptUrl = env_get('GOOGLE_SCRIPT_URL');
 
 $rawBody = file_get_contents('php://input');
 

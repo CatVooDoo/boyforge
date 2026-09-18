@@ -23,8 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/fivepost.php';
 
-$envVars = FivePostClient::loadEnv();
-$googleScriptUrl = $envVars['GOOGLE_SCRIPT_URL'] ?? 'https://script.google.com/macros/s/AKfycbwEX5yOenoxiIpkFlt0BGHbV4SPmJiWIrzIFU-0t8R-4lN59vMuTnhMhlAP6ImemV59Fw/exec';
+$googleScriptUrl = env_get('GOOGLE_SCRIPT_URL');
 
 $rawInput = file_get_contents('php://input');
 $inputData = json_decode($rawInput, true);

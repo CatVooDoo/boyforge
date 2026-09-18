@@ -15,38 +15,19 @@ class FivePostClient {
     private string $logFile;
 
     public function __construct(?string $apiKey = null, ?string $env = null) {
-        $envVars = self::loadEnv();
-        $this->apiKey = $apiKey ?: ($envVars['5POST_API_KEY'] ?? '5cdc4b25-4fd6-40ac-b7f7-d4d55cbfcc6a');
-        $this->env = $env ?: ($envVars['5POST_ENV'] ?? 'prod');
+        require_once __DIR__ . '/bootstrap.php';
+        $this->apiKey = $apiKey ?: env_get('5POST_API_KEY');
+        $this->env = $env ?: (env_get('5POST_ENV') ?: 'prod');
         
         $this->baseUrl = ($this->env === 'preprod') 
             ? 'https://api-preprod-omni.x5.ru' 
             : 'https://api-omni.x5.ru';
 
-        $this->senderEmail = $envVars['5POST_SENDER_EMAIL'] ?? 'theboyforge@yandex.ru';
-        $this->senderPhone = $envVars['5POST_SENDER_PHONE'] ?? '+79991234567';
+        $this->senderEmail = env_get('5POST_SENDER_EMAIL') ?: 'theboyforge@yandex.ru';
+        $this->senderPhone = env_get('5POST_SENDER_PHONE') ?: '+79991234567';
         $this->logFile = __DIR__ . '/../logs/5post.log';
     }
 
-    public static function loadEnv(): array {
-        static $cached = null;
-        if ($cached !== null) return $cached;
-        $envFile = __DIR__ . '/../.env';
-        $res = [];
-        if (file_exists($envFile)) {
-            $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            foreach ($lines as $line) {
-                $line = trim($line);
-                if ($line === '' || $line[0] === '#') continue;
-                if (strpos($line, '=') !== false) {
-                    list($k, $v) = explode('=', $line, 2);
-                    $res[trim($k)] = trim($v, " \t\n\r\0\x0B\"'");
-                }
-            }
-        }
-        $cached = $res;
-        return $res;
-    }
 
     /**
      * Запись подробного лога с разделителями
