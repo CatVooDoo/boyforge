@@ -72,17 +72,13 @@
     function getProductState() {
       const gActive = document.querySelector("#genders button.active");
       const sActive = document.querySelector(".sizes button.active");
-      const prodNameEl = document.getElementById("prodName");
-      const prodPriceEl = document.getElementById("prodPrice");
+      const main = document.querySelector("main.container");
       const mainImgEl = document.getElementById("galleryMain");
 
-      const params = new URLSearchParams(window.location.search);
-      const prodId = params.get("id") || "1";
-
       return {
-        id: prodId,
-        name: prodNameEl ? prodNameEl.textContent.trim() : "Товар BOYFORGE",
-        price: prodPriceEl ? prodPriceEl.textContent.trim() : "3 200 ₽",
+        id: main ? main.dataset.productId : "",
+        name: main ? main.dataset.productName : "Товар BOYFORGE",
+        price: main ? main.dataset.productPrice : "3 200 ₽",
         gender: gActive ? (gActive.getAttribute("data-gender") || gActive.textContent.trim()) : "",
         size: sActive ? sActive.textContent.trim() : "",
         img: mainImgEl ? mainImgEl.src : ""
@@ -697,9 +693,7 @@
         }
         showStatus("Подключение к безопасному шлюзу CloudPayments...", "info");
 
-        const publicId = (typeof window.CLOUDPAYMENTS_PUBLIC_ID === "string" && window.CLOUDPAYMENTS_PUBLIC_ID.trim())
-          ? window.CLOUDPAYMENTS_PUBLIC_ID.trim()
-          : "";
+        const publicId = document.body.dataset.cpPublicId || "";
 
         if (!publicId) {
           showStatus("Ошибка: не настроен Public ID платёжной системы в .env", "error");
@@ -713,9 +707,7 @@
         const widget = new cp.CloudPayments();
         const cleanPhone = "+" + phone.replace(/\D/g, "");
 
-        const taxationSystem = (typeof window.CLOUDPAYMENTS_TAXATION_SYSTEM === "number")
-          ? window.CLOUDPAYMENTS_TAXATION_SYSTEM
-          : 1;
+        const taxationSystem = parseInt(document.body.dataset.cpTaxation, 10) || 1;
 
         const customerReceipt = {
           Items: [

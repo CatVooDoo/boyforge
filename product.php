@@ -48,20 +48,7 @@ if ($found) {
     $relatedProducts = $relStmt->fetchAll();
 
     // Подготавливаем объект для клиента (галерея, выбор размера и заказ)
-    $clientProduct = [
-        'id' => (int)$product['id'],
-        'catId' => $product['cat_id'],
-        'cat' => $product['cat'],
-        'name' => $product['name'],
-        'price' => $product['price'],
-        'img' => $product['img'],
-        'imgs' => $imgs,
-        'sub' => $product['sub'],
-        'tags' => json_decode($product['tags'] ?? '[]', true) ?: [],
-        'desc' => $product['description'],
-        'specs' => $specs,
-        'tg' => $tgBase
-    ];
+    // (Убрано в рамках рефакторинга: передаем через data-* атрибуты)
 }
 
 $pageTitle = $found ? $pName . ' · BOYFORGE' : 'Товар не найден · BOYFORGE';
@@ -70,7 +57,13 @@ $bodyClass = 'page-product';
 require __DIR__ . '/includes/components/header.php';
 ?>
 
-  <main class="container">
+  <main class="container"
+    <?php if ($found): ?>
+      data-product-id="<?= (int)$product['id'] ?>"
+      data-product-name="<?= htmlspecialchars($product['name']) ?>"
+      data-product-price="<?= htmlspecialchars($product['price']) ?>"
+      data-product-tg-base="<?= htmlspecialchars($tgBase) ?>"
+    <?php endif; ?>>
     <?php if (!$found): ?>
       <!-- Товар не найден -->
       <div class="empty-state" style="padding:120px 20px">
@@ -147,7 +140,10 @@ require __DIR__ . '/includes/components/header.php';
             <button type="button" class="btn-primary btn-block" id="orderModalBtn">
               Оформить заказ с доставкой
             </button>
-            <a href="<?= htmlspecialchars($tgBase) ?>" class="btn-outline btn-block" id="orderBtn" target="_blank" rel="noopener">
+            <a href="<?= htmlspecialchars($tgBase) ?>" 
+               class="btn-outline btn-block" id="orderBtn" 
+               data-tg-base="<?= htmlspecialchars($tgBase) ?>"
+               target="_blank" rel="noopener">
               Заказать в Telegram
             </a>
           </div>
@@ -353,21 +349,11 @@ require __DIR__ . '/includes/components/header.php';
     </div>
   </div>
 
-  <?php if ($found): ?>
-    <script>
-      window.PRODUCT_DATA = <?= json_encode($clientProduct, JSON_UNESCAPED_UNICODE) ?>;
-    </script>
-  <?php endif; ?>
-
   <?php
     $yandexApiKey = env_get('YANDEX_MAPS_API_KEY') ?: '';
     $cpPublicId   = env_get('CLOUDPAYMENTS_PUBLIC_ID');
     $cpTaxation   = env_get('CLOUDPAYMENTS_TAXATION_SYSTEM') ?: '1';
   ?>
-  <script>
-    window.CLOUDPAYMENTS_PUBLIC_ID = <?= json_encode($cpPublicId, JSON_UNESCAPED_UNICODE) ?>;
-    window.CLOUDPAYMENTS_TAXATION_SYSTEM = <?= json_encode((int)$cpTaxation) ?>;
-  </script>
   <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=<?= htmlspecialchars($yandexApiKey) ?>" defer></script>
   <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>
   <?php require __DIR__ . '/includes/components/footer.php'; ?>
