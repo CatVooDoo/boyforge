@@ -64,61 +64,11 @@ if ($found) {
     ];
 }
 
-$fivepostApiKey = env_get('5POST_API_KEY');
+$pageTitle = $found ? $pName . ' · BOYFORGE' : 'Товар не найден · BOYFORGE';
+$bodyClass = 'page-product';
+
+require __DIR__ . '/includes/components/header.php';
 ?>
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title id="metaTitle"><?= $found ? $pName . ' · BOYFORGE' : 'Товар не найден · BOYFORGE' ?></title>
-  <link rel="icon" href="images/favicon.png" type="image/png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=<?= filemtime(__DIR__ . '/css/style.css') ?>">
-</head>
-<body class="page-product">
-
-  <!-- ===== HEADER ===== -->
-  <header class="site-header">
-    <div class="container header-inner">
-      <a href="index.php" class="logo-photo" aria-label="BOYFORGE — на главную">
-        <img class="logo-dark" src="images/logo.png" alt="BOYFORGE"
-             onerror="this.replaceWith(document.createTextNode('BOYFORGE'))">
-      </a>
-      <button class="burger" aria-label="Открыть меню" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-  </header>
-
-  <!-- ===== SIDE MENU ===== -->
-  <div class="menu-overlay overlay" hidden></div>
-  <nav class="mobile-menu" aria-hidden="true" aria-label="Основное меню">
-    <button class="menu-close" aria-label="Закрыть меню">&times;</button>
-
-    <div class="menu-group">
-      <a href="index.php">Главная</a>
-      <a href="catalog.php">Каталог</a>
-    </div>
-
-    <span class="menu-divider" aria-hidden="true"></span>
-
-    <div class="menu-group">
-      <a href="delivery.php">Доставка</a>
-      <a href="payment.php">Оплата</a>
-      <a href="returns.php">Возврат</a>
-    </div>
-
-    <span class="menu-divider" aria-hidden="true"></span>
-
-    <div class="menu-group">
-      <a href="about.php">О бренде</a>
-      <a href="reviews.php">Отзывы</a>
-      <a href="contacts.php">Контакты</a>
-    </div>
-  </nav>
 
   <main class="container">
     <?php if (!$found): ?>
@@ -280,35 +230,7 @@ $fivepostApiKey = env_get('5POST_API_KEY');
     <?php endif; ?>
   </main>
 
-  <!-- ===== FOOTER ===== -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div class="footer-col">
-          <h4>Компания</h4>
-          <a href="about.php">О бренде</a>
-          <a href="contacts.php">Контакты</a>
-        </div>
-        <div class="footer-col">
-          <h4>Помощь</h4>
-          <a href="delivery.php">Доставка</a>
-          <a href="payment.php">Оплата</a>
-          <a href="returns.php">Возврат товара</a>
-        </div>
-        <div class="footer-col">
-          <h4>Мы в соцсетях</h4>
-          <a href="https://t.me/theboyforge" target="_blank" rel="noopener">Telegram</a>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span>© <span id="year">2026</span> BOYFORGE. Все права защищены</span>
-        <a href="policy.php">Политика обработки персональных данных</a>
-        <a href="privacy.php">Политика конфиденциальности</a>
-        <a href="terms.php">Пользовательское соглашение</a>
-        <a href="offer.php">Публичная оферта</a>
-      </div>
-    </div>
-  </footer>
+  
 
   <!-- модалка увеличенного фото товара -->
   <div class="pv-modal" id="pvModal" aria-hidden="true">
@@ -447,9 +369,6 @@ $fivepostApiKey = env_get('5POST_API_KEY');
     window.CLOUDPAYMENTS_TAXATION_SYSTEM = <?= json_encode((int)$cpTaxation) ?>;
   </script>
   <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=<?= htmlspecialchars($yandexApiKey) ?>" defer></script>
-  <script src="js/product.js?v=<?= filemtime(__DIR__ . '/js/product.js') ?>"></script>
-  <script src="js/main.js?v=23"></script>
   <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>
-  <script src="js/checkout.js?v=<?= filemtime(__DIR__ . '/js/checkout.js') ?>"></script>
-</body>
-</html>
+  <?php require __DIR__ . '/includes/components/footer.php'; ?>
+
