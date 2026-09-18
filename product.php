@@ -186,12 +186,18 @@ require __DIR__ . '/includes/components/header.php';
       </div>
 
       <!-- ПОХОЖИЕ ТОВАРЫ (вывод из БД) -->
-      <?php /* if (!empty($relatedProducts)): ?>
-        <div style="margin-top: 70px; padding-top: 40px; border-top: 1px solid var(--border);">
-          <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Похожие товары</h2>
-          <div class="grid-4" id="relatedGrid">
+      <?php if (!empty($relatedProducts)): ?>
+        <section class="container related-section">
+          <div class="related-head">
+            <h2 class="related-title">Похожие товары</h2>
+          </div>
+          <div class="grid-4 related-grid" id="relatedGrid">
             <?php foreach ($relatedProducts as $r): ?>
               <?php
+                $rId = (int)$r['id'];
+                $rName = htmlspecialchars($r['name']);
+                $rPrice = htmlspecialchars($r['price']);
+                $rImg = htmlspecialchars($r['img'] ?: '');
                 $rTags = json_decode($r['tags'] ?? '[]', true) ?: [];
                 $rBadges = [];
                 foreach ($rTags as $t) {
@@ -199,11 +205,10 @@ require __DIR__ . '/includes/components/header.php';
                     if ($t === '' || preg_match('/^[A-Za-z0-9]+[–\-][A-Za-z0-9]+$/u', $t)) continue;
                     $rBadges[] = $t;
                 }
-                $rName = htmlspecialchars($r['name']);
               ?>
-              <a href="product.php?id=<?= (int)$r['id'] ?>" class="card">
+              <a href="product.php?id=<?= $rId ?>" class="card card-in related-card">
                 <div class="card-img">
-                  <img src="<?= htmlspecialchars($r['img']) ?>" alt="<?= $rName ?>" loading="lazy"
+                  <img src="<?= $rImg ?>" alt="<?= $rName ?>" loading="lazy"
                        onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','<?= addslashes($rName) ?>');">
                   <?php if (!empty($rBadges)): ?>
                     <div class="card-badges">
@@ -215,13 +220,13 @@ require __DIR__ . '/includes/components/header.php';
                 </div>
                 <div class="card-info">
                   <div class="card-title"><?= $rName ?></div>
-                  <div class="card-price"><?= htmlspecialchars($r['price']) ?></div>
+                  <div class="card-price"><?= $rPrice ?></div>
                 </div>
               </a>
             <?php endforeach; ?>
           </div>
-        </div>
-      <?php endif; */ ?>
+        </section>
+      <?php endif; ?>
 
     <?php endif; ?>
   </main>
