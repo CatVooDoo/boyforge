@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/../bootstrap.php';
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -39,7 +40,7 @@ declare(strict_types=1);
   <!-- ===== HEADER ===== -->
   <header class="site-header">
     <div class="container header-inner">
-      <a href="index.php" class="logo-photo" aria-label="BOYFORGE — на главную">
+      <a href="/" class="logo-photo" aria-label="BOYFORGE — на главную">
         <img class="logo-dark" src="images/logo.png" alt="BOYFORGE"
              onerror="this.replaceWith(document.createTextNode('BOYFORGE'))">
       </a>
@@ -55,23 +56,23 @@ declare(strict_types=1);
     <button class="menu-close" aria-label="Закрыть меню">&times;</button>
 
     <div class="menu-group">
-      <a href="index.php">Главная</a>
-      <a href="catalog.php">Каталог</a>
+      <a href="/">Главная</a>
+      <a href="/catalog">Каталог</a>
     </div>
 
     <span class="menu-divider" aria-hidden="true"></span>
 
     <div class="menu-group">
-      <a href="delivery.php">Доставка</a>
-      <a href="payment.php">Оплата</a>
-      <a href="returns.php">Возврат</a>
+      <a href="/delivery">Доставка</a>
+      <a href="/payment">Оплата</a>
+      <a href="/returns">Возврат</a>
     </div>
 
     <span class="menu-divider" aria-hidden="true"></span>
 
     <div class="menu-group">
-      <a href="about.php">О бренде</a>
-      <a href="reviews.php">Отзывы</a>
-      <a href="contacts.php">Контакты</a>
+      <a href="/about">О бренде</a>
+      <a href="/reviews">Отзывы</a>
+      <a href="/contacts">Контакты</a>
     </div>
   </nav>

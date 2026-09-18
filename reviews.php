@@ -20,7 +20,7 @@ require __DIR__ . '/includes/components/header.php';
     <!-- хлебные крошки -->
     <div class="container">
       <nav class="breadcrumbs" aria-label="Хлебные крошки">
-        <a href="index.php">Главная</a> <span>/</span> <span>Отзывы</span>
+        <a href="/">Главная</a> <span>/</span> <span>Отзывы</span>
       </nav>
     </div>
 

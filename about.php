@@ -25,7 +25,7 @@ require __DIR__ . '/includes/components/header.php';
     <!-- хлебные крошки -->
     <div class="container">
       <nav class="breadcrumbs" aria-label="Хлебные крошки">
-        <a href="index.php">Главная</a> <span>/</span> <span>О бренде</span>
+        <a href="/">Главная</a> <span>/</span> <span>О бренде</span>
       </nav>
     </div>
 
@@ -129,7 +129,7 @@ require __DIR__ . '/includes/components/header.php';
         <div class="brand-intro reveal">
           <div class="mini-head"><h2>Загляните в кузницу</h2></div>
           <p>Выберите вещь, которая станет любимой.</p>
-          <a href="catalog.php" class="btn-outline">Перейти в каталог</a>
+          <a href="/catalog" class="btn-outline">Перейти в каталог</a>
         </div>
       </div>
     </section>

@@ -10,7 +10,7 @@ require __DIR__ . '/includes/components/header.php';
 <main>
     <div class="container">
       <nav class="breadcrumbs" aria-label="Хлебные крошки">
-        <a href="index.php">Главная</a> <span>/</span> <span>Контакты</span>
+        <a href="/">Главная</a> <span>/</span> <span>Контакты</span>
       </nav>
     </div>
 

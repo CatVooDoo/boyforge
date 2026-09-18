@@ -2,9 +2,26 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
-require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/router.php';
 
+// Обрабатываем старые URL (301 редирект если нужно)
+handleLegacyUrls();
+
+$route = parseRoute();
+if ($route['type'] === '404') {
+    show404();
+}
+
+$slug = $_GET['slug'] ?? null;
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+
+// Если есть slug, получаем ID товара
+if ($slug && !$id) {
+    $stmt = $pdo->prepare("SELECT id FROM products WHERE slug = :slug AND is_active = 1 LIMIT 1");
+    $stmt->execute([':slug' => $slug]);
+    $productRow = $stmt->fetch(PDO::FETCH_ASSOC);
+    $id = $productRow ? (int)$productRow['id'] : 0;
+}
 $product = null;
 
 if ($id > 0) {
@@ -69,13 +86,13 @@ require __DIR__ . '/includes/components/header.php';
       <div class="empty-state" style="padding:120px 20px">
         <div class="empty-title">Товар не найден</div>
         <p class="empty-sub">Возможно, позиция была снята с публикации или ссылка устарела. Загляните в каталог — там актуальные позиции.</p>
-        <a class="btn-outline empty-back" href="catalog.php">В каталог</a>
+        <a class="btn-outline empty-back" href="/catalog">В каталог</a>
       </div>
     <?php else: ?>
 
       <nav class="breadcrumbs" aria-label="Хлебные крошки">
-        <a href="index.php">Главная</a> <span>/</span>
-        <a href="catalog.php">Каталог</a> <span>/</span>
+        <a href="/">Главная</a> <span>/</span>
+        <a href="/catalog">Каталог</a> <span>/</span>
         <span id="crumbName"><?= $pName ?></span>
       </nav>
 
@@ -206,7 +223,7 @@ require __DIR__ . '/includes/components/header.php';
                     $rBadges[] = $t;
                 }
               ?>
-              <a href="product.php?id=<?= $rId ?>" class="card card-in related-card">
+              <a href="<?= productUrl($rId, $r['slug'] ?? null) ?>" class="card card-in related-card">
                 <div class="card-img">
                   <img src="<?= $rImg ?>" alt="<?= $rName ?>" loading="lazy"
                        onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','<?= addslashes($rName) ?>');">
@@ -339,7 +356,7 @@ require __DIR__ . '/includes/components/header.php';
               <label class="order-agree-label" for="orderPolicyAgree">
                 <input type="checkbox" id="orderPolicyAgree" class="order-agree-checkbox" required>
                 <span class="order-agree-text">
-                  Нажимая кнопку, Вы соглашаетесь с <a href="terms.php" target="_blank" rel="noopener">Правилами</a> и <a href="policy.php" target="_blank" rel="noopener">политикой конфиденциальности</a> Компании.
+                  Нажимая кнопку, Вы соглашаетесь с <a href="/terms" target="_blank" rel="noopener">Правилами</a> и <a href="/policy" target="_blank" rel="noopener">политикой конфиденциальности</a> Компании.
                 </span>
               </label>
             </div>

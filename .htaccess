@@ -1,0 +1,49 @@
+# Enable URL rewriting
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Redirect www to non-www (опционально)
+    # RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+    # RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+
+    # Redirect HTTP to HTTPS (опционально)
+    # RewriteCond %{HTTPS} off
+    # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Don't rewrite existing files and directories
+    # We apply these conditions to all rules by chaining them or duplicating them
+    
+    # Route product URLs: /product/slug -> product.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^product/([a-z0-9-]+)/?$ product.php?slug=$1 [L,QSA]
+
+    # Route category URLs: /catalog/slug -> catalog.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^catalog/([a-z0-9-]+)/?$ catalog.php?cat=$1 [L,QSA]
+
+    # Route catalog without category: /catalog -> catalog.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^catalog/?$ catalog.php [L,QSA]
+
+    # Route static pages
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(about|delivery|payment|returns|reviews|contacts|policy|privacy|terms|offer)/?$ $1.php [L,QSA]
+</IfModule>
+
+# Prevent directory listing and disable MultiViews
+Options -Indexes -MultiViews
+
+# Set default charset
+AddDefaultCharset UTF-8
+
+# Security headers (опционально)
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
