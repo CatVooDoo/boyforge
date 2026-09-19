@@ -139,7 +139,7 @@ function ensureHeaders(sheet) {
     "ID Заказа (BOYFORGE)",
     "Штрихкод / Трек 5Post",
     "Статус заказа",
-    "Транзакция CloudPayments",
+    "Транзакция ЮKassa",
     "Товар",
     "Пол",
     "Размер",

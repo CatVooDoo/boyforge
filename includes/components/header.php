@@ -28,14 +28,7 @@ require_once __DIR__ . '/../bootstrap.php';
   <noscript><div><img src="https://mc.yandex.ru/watch/112433225" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
   <!-- /Yandex.Metrika counter -->
 </head>
-<?php
-  // Настройки CloudPayments глобально для всех страниц
-  $headerCpPublicId = env_get('CLOUDPAYMENTS_PUBLIC_ID');
-  $headerCpTaxation = env_get('CLOUDPAYMENTS_TAXATION_SYSTEM') ?: '1';
-?>
-<body class="<?= htmlspecialchars($bodyClass ?? '') ?>"
-      data-cp-public-id="<?= htmlspecialchars((string)$headerCpPublicId) ?>"
-      data-cp-taxation="<?= (int)$headerCpTaxation ?>">
+<body class="<?= htmlspecialchars($bodyClass ?? '') ?>">
 
   <!-- ===== HEADER ===== -->
   <header class="site-header">

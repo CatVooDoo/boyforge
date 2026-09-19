@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * checkout.js — Модуль оформления и онлайн-оплаты заказа через CloudPayments
+ * checkout.js — Модуль оформления и онлайн-оплаты заказа через ЮKassa
  * BOYFORGE
  */
 (function () {
@@ -15,7 +15,7 @@
     const closeBtn = document.getElementById("orderModalClose") || document.getElementById("ozonModalClose");
     const form = document.getElementById("orderForm") || document.getElementById("ozonOrderForm");
     const fioInput = document.getElementById("orderFio");
-    const tgInput = document.getElementById("orderTg") || document.getElementById("ozonTg") || document.getElementById("ozonName");
+    const emailInput = document.getElementById("orderEmail");
     const phoneInput = document.getElementById("orderPhone") || document.getElementById("ozonPhone");
     const submitBtn = document.getElementById("orderConfirmBtn") || document.getElementById("ozonConfirmBtn");
     const statusMsg = document.getElementById("orderFormStatus") || document.getElementById("ozonFormStatus");
@@ -459,17 +459,7 @@
       });
     }
 
-    // Telegram-маска: автодобавление @ (если заполнено)
-    if (tgInput) {
-      tgInput.addEventListener("blur", function () {
-        let v = this.value.trim();
-        if (v === "@") {
-          this.value = "";
-        } else if (v && v[0] !== "@") {
-          this.value = "@" + v;
-        }
-      });
-    }
+    // Убрана Telegram-маска
 
     // Телефонная маска +7 (999) 000-00-00
     if (phoneInput) {
@@ -567,13 +557,13 @@
           <div class="ozon-order-id">Номер заказа: <strong>${orderId}</strong></div>
           ${order.fivepostBarcode ? `<div class="ozon-order-id" style="margin-top:6px; font-size:13px; color:#10b981;">Трек 5Post: <strong>${escapeHtml(order.fivepostBarcode)}</strong></div>` : ''}
           <p class="ozon-success-desc">
-            Спасибо! Платёж через <strong>CloudPayments</strong> успешно проведён. Мы сформировали заказ для отправки через <strong>5Post</strong>.
+            Оплата успешно проведена. Ваш заказ передан в обработку.
           </p>
           <div class="ozon-success-summary">
             <div><span>Товар:</span> ${order.productName} (${order.gender}, размер ${order.size})</div>
             <div><span>Сумма:</span> <strong>${order.price}</strong> <span style="color:#10b981; font-weight:600;">(Оплачено)</span></div>
             ${order.fio ? `<div><span>ФИО получателя:</span> <strong>${escapeHtml(order.fio)}</strong></div>` : ''}
-            ${order.tgUsername ? `<div><span>Telegram:</span> <strong>${escapeHtml(order.tgUsername)}</strong></div>` : ''}
+            ${order.email ? `<div><span>Email:</span> <strong>${escapeHtml(order.email)}</strong></div>` : ''}
             <div><span>Телефон:</span> ${order.phone}</div>
             ${order.fivepostPointAddress ? `<div><span>Доставка 5Post:</span> <strong>${order.fivepostPointAddress}</strong> (${pointTypeRu})</div>` : ''}
             ${order.transactionId ? `<div><span>ID транзакции:</span> #${order.transactionId}</div>` : ''}
@@ -588,13 +578,13 @@
       document.getElementById("orderDoneBtn")?.addEventListener("click", closeModal);
     }
 
-    // Обработка отправки формы и запуск оплаты через CloudPayments
+    // Обработка отправки формы и запуск оплаты через ЮKassa
     if (form) {
       form.addEventListener("submit", function (e) {
         e.preventDefault();
 
         const fio = (fioInput?.value || "").trim();
-        let tg = (tgInput?.value || "").trim();
+        const email = (emailInput?.value || "").trim();
         const phone = (phoneInput?.value || "").trim();
 
         if (!fio || fio.length < 3) {
@@ -610,21 +600,11 @@
           return;
         }
 
-        if (tg) {
-          if (tg === "@") {
-            tg = "";
-            if (tgInput) tgInput.value = "";
-          } else {
-            if (tg[0] !== "@") {
-              tg = "@" + tg;
-              if (tgInput) tgInput.value = tg;
-            }
-            if (tg.length < 2) {
-              showStatus("Введите корректный ник в Telegram (например, @username)", "error");
-              tgInput?.focus();
-              return;
-            }
-          }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || !emailRegex.test(email)) {
+          showStatus("Введите корректный адрес электронной почты", "error");
+          emailInput?.focus();
+          return;
         }
 
         if (!phone || phone.length < 16) {
@@ -672,196 +652,84 @@
           gender: state.gender,
           size: state.size,
           fio: fio,
-          tgUsername: tg,
+          email: email,
           phone: phone,
           fivepostPointId: pointId,
           fivepostPointName: (fivepostNameInput?.value || "").trim(),
           fivepostPointAddress: (fivepostAddrInput?.value || "").trim(),
           fivepostPointType: (fivepostTypeInput?.value || "").trim(),
           fivepostPointDetails: (fivepostDetailsInput?.value || "").trim(),
-          source: "Онлайн-оплата (5Post + CloudPayments)"
+          source: "Онлайн-оплата (5Post + ЮKassa)"
         };
-
-        if (typeof cp === "undefined" || !cp.CloudPayments) {
-          showStatus("Платёжная система CloudPayments загружается. Повторите через 2 секунды...", "error");
-          return;
-        }
 
         if (submitBtn) {
           submitBtn.disabled = true;
-          submitBtn.textContent = "Открытие оплаты…";
+          submitBtn.textContent = "Создание платежа...";
         }
-        showStatus("Подключение к безопасному шлюзу CloudPayments...", "info");
+        showStatus("Соединение с платежным шлюзом...", "info");
 
-        const publicId = document.body.dataset.cpPublicId || "";
-
-        if (!publicId) {
-          showStatus("Ошибка: не настроен Public ID платёжной системы в .env", "error");
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = "Оплатить " + state.price + " онлайн";
-          }
-          return;
-        }
-
-        const widget = new cp.CloudPayments();
-        const cleanPhone = "+" + phone.replace(/\D/g, "");
-
-        const taxationSystem = parseInt(document.body.dataset.cpTaxation, 10) || 1;
-
-        const customerReceipt = {
-          Items: [
-            {
-              label: state.name + " (" + state.gender + ", " + state.size + ")",
-              price: numPrice,
-              quantity: 1.0,
-              amount: numPrice,
-              vat: 0,
-              method: 4,
-              object: 1
-            }
-          ],
-          taxationSystem: taxationSystem,
-          phone: cleanPhone,
-          amounts: {
-            electronic: numPrice
-          }
-        };
-
-        const paymentData = Object.assign({}, orderPayload, {
-          CloudPayments: {
-            CustomerReceipt: customerReceipt
-          }
-        });
-
-        const paymentOptions = {
-          publicTerminalId: publicId,
-          publicId: publicId,
-          description: "Оплата заказа BOYFORGE: " + state.name + " (" + state.gender + ", " + state.size + ")",
-          amount: numPrice,
-          currency: "RUB",
-          culture: "ru-RU",
-          paymentSchema: "Single",
-          skin: "modern",
-          accountId: tg,
-          externalId: orderId,
-          invoiceId: orderId,
-          sbpSupport: true,
-          tinkoffPaySupport: true,
-          sberPaySupport: true,
-          mirPaySupport: true,
-          applePaySupport: true,
-          googlePaySupport: true,
-          restrictedPaymentMethods: [],
-          payer: {
-            name: fio,
-            phone: cleanPhone,
-            Phone: cleanPhone
-          },
-          userInfo: {
-            name: fio,
-            accountId: tg,
-            phone: cleanPhone
-          },
-          metadata: orderPayload,
-          data: paymentData
-        };
-
-        let isOrderProcessed = false;
-
-        function handleSuccess(options) {
-          if (isOrderProcessed) {
-            return;
-          }
-          isOrderProcessed = true;
-
-          showStatus("Оплата принята! Сохраняем заказ...", "success");
-
-          let txId = "";
-          if (options) {
-            if (options.data && options.data.transactionId) {
-              txId = String(options.data.transactionId);
-            } else if (options.data && options.data.TransactionId) {
-              txId = String(options.data.TransactionId);
-            } else if (options.transactionId) {
-              txId = String(options.transactionId);
-            } else if (options.TransactionId) {
-              txId = String(options.TransactionId);
-            }
-          }
-
-          const finalPayload = Object.assign({}, orderPayload, {
-            paymentStatus: "paid",
-            transactionId: txId
-          });
-
-          fetch("/api/order.php", {
+        // Отправка данных на бекенд для создания платежа ЮKassa
+        fetch("/api/yookassa/create.php", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(finalPayload)
-          })
-            .then(res => res.json())
-            .then(data => {
-              if (data && data.fivepost && data.fivepost.barcode) {
-                finalPayload.fivepostBarcode = data.fivepost.barcode;
-                finalPayload.fivepostOrderId = data.fivepost.orderId;
-              }
-              showSuccessScreen(orderId, finalPayload);
-            })
-            .catch(function () {
-              showSuccessScreen(orderId, finalPayload);
-            });
-        }
-
-        function handleFail(reason) {
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = "Оплатить " + state.price + " онлайн";
-          }
-          showStatus("Оплата не была завершена" + (reason ? ": " + reason : ". Попробуйте снова или выберите другой способ."), "error");
-        }
-
-        function handleComplete() {
-          setTimeout(function () {
-            if (submitBtn && submitBtn.disabled && !modal.querySelector(".ozon-success-box, .order-success-box")) {
-              submitBtn.disabled = false;
-              submitBtn.textContent = "Оплатить " + state.price + " онлайн";
-              showStatus("", null);
-            }
-          }, 800);
-        }
-
-        if (typeof widget.start === "function") {
-          widget.start(paymentOptions)
-            .then(function (result) {
-              if (result && (result.status === "success" || result.type === "payment")) {
-                handleSuccess(result);
-              } else if (result && result.type === "cancel") {
-                handleComplete();
-              } else if (result && (result.status === "fail" || result.type === "error")) {
-                handleFail(result.message || "");
-              }
-            })
-            .catch(function (err) {
-              if (typeof widget.pay === "function") {
-                widget.pay("charge", paymentOptions, {
-                  onSuccess: handleSuccess,
-                  onFail: handleFail,
-                  onComplete: handleComplete
+            body: JSON.stringify(orderPayload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.confirmation_token) {
+                // Инициализация виджета ЮKassa
+                const checkout = new window.YooMoneyCheckoutWidget({
+                    confirmation_token: data.confirmation_token,
+                    return_url: window.location.origin + '/payment-success.php',
+                    customization: {
+                        colors: {
+                            control_primary: '#000000',
+                            background: '#F2F3F5'
+                        }
+                    },
+                    error_callback: function(error) {
+                        showStatus("Ошибка виджета оплаты", "error");
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.textContent = "Оплатить онлайн";
+                        }
+                    }
                 });
-              } else {
-                handleFail(err && err.message ? err.message : "Ошибка запуска оплаты");
-              }
-            });
-        } else if (typeof widget.pay === "function") {
-          widget.pay("charge", paymentOptions, {
-            onSuccess: handleSuccess,
-            onFail: handleFail,
-            onComplete: handleComplete
-          });
-        } else if (typeof widget.charge === "function") {
-          widget.charge(paymentOptions, handleSuccess, handleFail);
-        }
+                
+                checkout.on('success', () => {
+                    // Перенаправление на success (обычно виджет сам редиректит на return_url)
+                    window.location.href = '/payment-success.php';
+                    checkout.destroy();
+                });
+                
+                checkout.on('fail', () => {
+                    showStatus("Оплата не прошла", "error");
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = "Оплатить онлайн";
+                    }
+                    checkout.destroy();
+                });
+
+                // Открываем виджет в модалке (встроенный)
+                checkout.render('fivepostMapWrapper'); // Или любой другой контейнер
+                if (fivepostCard) fivepostCard.style.display = "none";
+                if (fivepostMapWrapper) fivepostMapWrapper.style.display = "block";
+                fivepostMapWrapper.innerHTML = ''; // Очищаем контейнер под виджет
+                showStatus("", null);
+                checkout.render('fivepostMapWrapper');
+            } else {
+                throw new Error(data.error || "Ошибка создания платежа");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showStatus(err.message || "Не удалось инициировать оплату", "error");
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Оплатить онлайн";
+            }
+        });
       });
     }
 

@@ -290,8 +290,8 @@ require __DIR__ . '/includes/components/header.php';
             </div>
             <div class="ozon-fields-grid">
               <div class="ozon-field">
-                <label for="orderTg">Ваш Telegram (@username)</label>
-                <input type="text" id="orderTg" class="ozon-input" placeholder="@username" autocomplete="off">
+                <label for="orderEmail">Email <span style="color:#ef4444;">*</span></label>
+                <input type="email" id="orderEmail" class="ozon-input" placeholder="mail@example.com" required autocomplete="email">
               </div>
               <div class="ozon-field">
                 <label for="orderPhone">Номер телефона <span style="color:#ef4444;">*</span></label>
@@ -363,7 +363,7 @@ require __DIR__ . '/includes/components/header.php';
 
             <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:10px; font-size:11px; color:#9ca3af;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-              <span>Безопасная оплата через <strong>CloudPayments</strong> · Карты РФ, СБП, Mir Pay</span>
+              <span>Безопасная оплата через <strong>ЮKassa</strong> · Карты РФ, СБП, Mir Pay, SberPay, Tinkoff</span>
             </div>
           </div>
         </form>
@@ -373,10 +373,8 @@ require __DIR__ . '/includes/components/header.php';
 
   <?php
     $yandexApiKey = env_get('YANDEX_MAPS_API_KEY') ?: '';
-    $cpPublicId   = env_get('CLOUDPAYMENTS_PUBLIC_ID');
-    $cpTaxation   = env_get('CLOUDPAYMENTS_TAXATION_SYSTEM') ?: '1';
   ?>
   <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=<?= htmlspecialchars($yandexApiKey) ?>" defer></script>
-  <script src="https://widget.cloudpayments.ru/bundles/cloudpayments.js"></script>
+  <script src="https://yookassa.ru/checkout-widget/v1/checkout-widget.js"></script>
   <?php require __DIR__ . '/includes/components/footer.php'; ?>
 
