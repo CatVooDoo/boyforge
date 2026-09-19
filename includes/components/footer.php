@@ -38,7 +38,7 @@ declare(strict_types=1);
       window.location.href = url.toString();
     }
   </script>
-  <script src="js/main.js?v=<?= filemtime(__DIR__ . '/../../js/main.js') ?>"></script>
+  <script src="/js/main.js?v=<?= filemtime(__DIR__ . '/../../js/main.js') ?>"></script>
 <?php
 $currentPage = basename($_SERVER['PHP_SELF']);
 if ($currentPage === 'product.php') {

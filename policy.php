@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Политика в отношении обработки персональных данных — BOYFORGE</title>
   <meta name="description" content="Политика в отношении обработки персональных данных интернет-магазина BOYFORGE (ИП Бояров Т. П.).">
-  <link rel="icon" href="images/favicon.png" type="image/png">
+  <link rel="icon" href="/images/favicon.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=28">
+  <link rel="stylesheet" href="/css/style.css?v=28">
 </head>
 <body>
 
@@ -17,7 +17,7 @@
   <header class="site-header">
     <div class="container header-inner">
       <a href="/" class="logo-photo" aria-label="BOYFORGE — на главную">
-        <img class="logo-dark" src="images/logo.png" alt="BOYFORGE"
+        <img class="logo-dark" src="/images/logo.png" alt="BOYFORGE"
              onerror="this.replaceWith(document.createTextNode('BOYFORGE'))">
       </a>
       <button class="burger" aria-label="Открыть меню" aria-expanded="false">

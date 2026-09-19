@@ -125,19 +125,19 @@ require __DIR__ . '/includes/components/header.php';
     <section class="container section">
       <div class="cat-grid">
         <a href="/about" class="cat-tile reveal">
-          <img src="images/tile-about.jpg" alt="О бренде" loading="lazy">
+          <img src="/images/tile-about.jpg" alt="О бренде" loading="lazy">
           <div class="cat-tile-label"><span>О бренде</span></div>
         </a>
         <a href="/delivery" class="cat-tile reveal">
-          <img src="images/tile-delivery.jpg" alt="Доставка" loading="lazy">
+          <img src="/images/tile-delivery.jpg" alt="Доставка" loading="lazy">
           <div class="cat-tile-label"><span>Доставка</span></div>
         </a>
         <a href="/reviews" class="cat-tile reveal">
-          <img src="images/tile-reviews.jpg" alt="Отзывы" loading="lazy">
+          <img src="/images/tile-reviews.jpg" alt="Отзывы" loading="lazy">
           <div class="cat-tile-label"><span>Отзывы</span></div>
         </a>
         <a href="/returns" class="cat-tile reveal">
-          <img src="images/tile-returns.jpg" alt="Возврат" loading="lazy">
+          <img src="/images/tile-returns.jpg" alt="Возврат" loading="lazy">
           <div class="cat-tile-label"><span>Возврат</span></div>
         </a>
       </div>
@@ -152,15 +152,15 @@ require __DIR__ . '/includes/components/header.php';
 
       <div class="gallery-marquee reveal" id="galleryMarquee">
         <div class="gallery-track" id="galleryTrack">
-          <button class="gallery-item" data-src="images/g1.jpg"><img src="images/g1.jpg" alt="Фото 1" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g2.jpg"><img src="images/g2.jpg" alt="Фото 2" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g3.jpg"><img src="images/g3.jpg" alt="Фото 3" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g4.jpg"><img src="images/g4.jpg" alt="Фото 4" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g5.jpg"><img src="images/g5.jpg" alt="Фото 5" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g6.jpg"><img src="images/g6.jpg" alt="Фото 6" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g7.jpg"><img src="images/g7.jpg" alt="Фото 7" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g8.jpg"><img src="images/g8.jpg" alt="Фото 8" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g9.jpg"><img src="images/g9.jpg" alt="Фото 9" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g1.jpg"><img src="/images/g1.jpg" alt="Фото 1" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g2.jpg"><img src="/images/g2.jpg" alt="Фото 2" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g3.jpg"><img src="/images/g3.jpg" alt="Фото 3" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g4.jpg"><img src="/images/g4.jpg" alt="Фото 4" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g5.jpg"><img src="/images/g5.jpg" alt="Фото 5" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g6.jpg"><img src="/images/g6.jpg" alt="Фото 6" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g7.jpg"><img src="/images/g7.jpg" alt="Фото 7" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g8.jpg"><img src="/images/g8.jpg" alt="Фото 8" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g9.jpg"><img src="/images/g9.jpg" alt="Фото 9" loading="lazy"></button>
         </div>
       </div>
     </section>
