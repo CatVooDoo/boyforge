@@ -7,15 +7,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=14">
+  <link rel="stylesheet" href="/css/style.css?v=14">
 </head>
 <body>
 
   <!-- ===== HEADER ===== -->
   <header class="site-header">
     <div class="container header-inner">
-      <a href="index.php" class="logo-photo" aria-label="BOYFORGE — на главную">
-        <img class="logo-dark" src="images/logo.png" alt="BOYFORGE"
+      <a href="/" class="logo-photo" aria-label="BOYFORGE — на главную">
+        <img class="logo-dark" src="/images/logo.png" alt="BOYFORGE"
              onerror="this.replaceWith(document.createTextNode('BOYFORGE'))">
       </a>
       <button class="burger" aria-label="Открыть меню" aria-expanded="false">
@@ -30,31 +30,31 @@
     <button class="menu-close" aria-label="Закрыть меню">&times;</button>
 
     <div class="menu-group">
-      <a href="index.php">Главная</a>
-      <a href="catalog.php">Каталог</a>
+      <a href="/">Главная</a>
+      <a href="/catalog">Каталог</a>
     </div>
 
     <span class="menu-divider" aria-hidden="true"></span>
 
     <div class="menu-group">
-      <a href="delivery.php">Доставка</a>
-      <a href="payment.php">Оплата</a>
-      <a href="returns.php">Возврат</a>
+      <a href="/delivery">Доставка</a>
+      <a href="/payment">Оплата</a>
+      <a href="/returns">Возврат</a>
     </div>
 
     <span class="menu-divider" aria-hidden="true"></span>
 
     <div class="menu-group">
-      <a href="about.php">О бренде</a>
-      <a href="reviews.php">Отзывы</a>
-      <a href="contacts.php">Контакты</a>
+      <a href="/about">О бренде</a>
+      <a href="/reviews">Отзывы</a>
+      <a href="/contacts">Контакты</a>
     </div>
 
   </nav>
 
   <main class="container">
     <nav class="breadcrumbs" aria-label="Хлебные крошки">
-      <a href="index.php">Главная</a> <span>/</span> <span>Пользовательское соглашение</span>
+      <a href="/">Главная</a> <span>/</span> <span>Пользовательское соглашение</span>
     </nav>
 
     <article class="legal">
@@ -91,7 +91,7 @@
       </ul>
       <p>3.3. Настоящее Соглашение регулирует именно порядок использования сайта как интернет-ресурса.</p>
       <p>3.4. Условия продажи товаров, порядок оплаты, доставки, возврата, гарантии и иные условия приобретения товаров регулируются Публичной офертой, размещённой на сайте.</p>
-      <p>3.5. Вопросы сбора, хранения, использования и защиты персональных данных Пользователя регулируются <a href="privacy.php">Политикой конфиденциальности</a>, размещённой на сайте.</p>
+      <p>3.5. Вопросы сбора, хранения, использования и защиты персональных данных Пользователя регулируются <a href="/privacy">Политикой конфиденциальности</a>, размещённой на сайте.</p>
 
       <h2>4. Права и обязанности Пользователя</h2>
       <p>4.1. Пользователь вправе:</p>
@@ -173,7 +173,7 @@
 
       <h2>10. Персональные данные и конфиденциальность</h2>
       <p>10.1. При использовании сайта Пользователь может предоставлять свои персональные данные через формы обратной связи, оформления заказа и иные сервисы сайта.</p>
-      <p>10.2. Обработка персональных данных Пользователя осуществляется в соответствии с <a href="privacy.php">Политикой конфиденциальности</a>, размещённой на сайте https://boyforge.ru.</p>
+      <p>10.2. Обработка персональных данных Пользователя осуществляется в соответствии с <a href="/privacy">Политикой конфиденциальности</a>, размещённой на сайте https://boyforge.ru.</p>
       <p>10.3. Используя сайт и предоставляя свои данные, Пользователь подтверждает, что ознакомился с Политикой конфиденциальности и согласен с её условиями.</p>
 
       <h2>11. Разрешение споров</h2>

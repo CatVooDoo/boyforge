@@ -4,19 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Публичная оферта — BOYFORGE</title>
-  <link rel="icon" href="images/favicon.png" type="image/png">
+  <link rel="icon" href="/images/favicon.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=15">
+  <link rel="stylesheet" href="/css/style.css?v=15">
 </head>
 <body>
 
   <!-- ===== HEADER ===== -->
   <header class="site-header">
     <div class="container header-inner">
-      <a href="index.php" class="logo-photo" aria-label="BOYFORGE — на главную">
-        <img class="logo-dark" src="images/logo.png" alt="BOYFORGE"
+      <a href="/" class="logo-photo" aria-label="BOYFORGE — на главную">
+        <img class="logo-dark" src="/images/logo.png" alt="BOYFORGE"
              onerror="this.replaceWith(document.createTextNode('BOYFORGE'))">
       </a>
       <button class="burger" aria-label="Открыть меню" aria-expanded="false">
@@ -31,31 +31,31 @@
     <button class="menu-close" aria-label="Закрыть меню">&times;</button>
 
     <div class="menu-group">
-      <a href="index.php">Главная</a>
-      <a href="catalog.php">Каталог</a>
+      <a href="/">Главная</a>
+      <a href="/catalog">Каталог</a>
     </div>
 
     <span class="menu-divider" aria-hidden="true"></span>
 
     <div class="menu-group">
-      <a href="delivery.php">Доставка</a>
-      <a href="payment.php">Оплата</a>
-      <a href="returns.php">Возврат</a>
+      <a href="/delivery">Доставка</a>
+      <a href="/payment">Оплата</a>
+      <a href="/returns">Возврат</a>
     </div>
 
     <span class="menu-divider" aria-hidden="true"></span>
 
     <div class="menu-group">
-      <a href="about.php">О бренде</a>
-      <a href="reviews.php">Отзывы</a>
-      <a href="contacts.php">Контакты</a>
+      <a href="/about">О бренде</a>
+      <a href="/reviews">Отзывы</a>
+      <a href="/contacts">Контакты</a>
     </div>
 
   </nav>
 
   <main class="container">
     <nav class="breadcrumbs" aria-label="Хлебные крошки">
-      <a href="index.php">Главная</a> <span>/</span> <span>Публичная оферта</span>
+      <a href="/">Главная</a> <span>/</span> <span>Публичная оферта</span>
     </nav>
 
     <article class="legal">
@@ -107,7 +107,7 @@
       <p>6.4. Продавец освобождается от ответственности при наступлении обстоятельств непреодолимой силы (форс-мажор).</p>
 
       <h2>7. Прочие условия</h2>
-      <p>7.1. Покупатель подтверждает согласие с <a href="privacy.php">Политикой конфиденциальности</a>, размещённой на сайте https://boyforge.ru.</p>
+      <p>7.1. Покупатель подтверждает согласие с <a href="/privacy">Политикой конфиденциальности</a>, размещённой на сайте https://boyforge.ru.</p>
       <p>7.2. Работа сайта и сервисов может быть временно ограничена по техническим причинам.</p>
       <p>7.3. Все споры стороны стараются урегулировать путём переговоров. При недостижении соглашения спор подлежит рассмотрению в судебном порядке по месту регистрации Продавца.</p>
       <p>7.4. Контактные данные для связи: Telegram <a href="https://t.me/theboyforge">https://t.me/theboyforge</a>, e-mail: <a href="mailto:boyforge@bk.ru">boyforge@bk.ru</a>.</p>

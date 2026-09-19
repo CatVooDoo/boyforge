@@ -25,7 +25,7 @@ require __DIR__ . '/includes/components/header.php';
     <!-- хлебные крошки -->
     <div class="container">
       <nav class="breadcrumbs" aria-label="Хлебные крошки">
-        <a href="index.php">Главная</a> <span>/</span> <span>О бренде</span>
+        <a href="/">Главная</a> <span>/</span> <span>О бренде</span>
       </nav>
     </div>
 
@@ -33,7 +33,7 @@ require __DIR__ . '/includes/components/header.php';
     <section class="section story-chapter">
       <div class="container">
         <div class="story-media reveal">
-          <img src="images/story-1891.jpg" alt="Тяжёлый год, 1891" loading="lazy"
+          <img src="/images/story-1891.jpg" alt="Тяжёлый год, 1891" loading="lazy"
                onerror="this.style.opacity='0'">
         </div>
         <div class="story-block reveal">
@@ -49,7 +49,7 @@ require __DIR__ . '/includes/components/header.php';
     <section class="section theme-dark story-chapter">
       <div class="container">
         <div class="story-media reveal">
-          <img src="images/story-plows.jpg" alt="Сломанные плуги" loading="lazy"
+          <img src="/images/story-plows.jpg" alt="Сломанные плуги" loading="lazy"
                onerror="this.style.opacity='0'">
         </div>
         <div class="story-block reveal">
@@ -65,7 +65,7 @@ require __DIR__ . '/includes/components/header.php';
           <p>Мой предок день за днём разогревал металл и возвращал ему форму — чтобы весной земля снова могла быть засеяна.</p>
         </div>
         <div class="story-media story-media--after reveal">
-          <img src="images/story-forge.jpg" alt="Зима в кузнице" loading="lazy"
+          <img src="/images/story-forge.jpg" alt="Зима в кузнице" loading="lazy"
                onerror="this.style.opacity='0'">
         </div>
       </div>
@@ -75,7 +75,7 @@ require __DIR__ . '/includes/components/header.php';
     <section class="section story-chapter">
       <div class="container">
         <div class="story-media reveal">
-          <img src="images/story-1892.jpg" alt="Новая весна, 1892" loading="lazy"
+          <img src="/images/story-1892.jpg" alt="Новая весна, 1892" loading="lazy"
                onerror="this.style.opacity='0'">
         </div>
         <div class="story-block reveal">
@@ -91,7 +91,7 @@ require __DIR__ . '/includes/components/header.php';
     <section class="section theme-dark story-founder">
       <div class="container">
         <div class="story-media reveal">
-          <img src="images/story-founder.jpg" alt="Тимофей Бояров, основатель BOYFORGE" loading="lazy"
+          <img src="/images/story-founder.jpg" alt="Тимофей Бояров, основатель BOYFORGE" loading="lazy"
                onerror="this.style.opacity='0'">
         </div>
         <div class="story-block reveal">
@@ -129,7 +129,7 @@ require __DIR__ . '/includes/components/header.php';
         <div class="brand-intro reveal">
           <div class="mini-head"><h2>Загляните в кузницу</h2></div>
           <p>Выберите вещь, которая станет любимой.</p>
-          <a href="catalog.php" class="btn-outline">Перейти в каталог</a>
+          <a href="/catalog" class="btn-outline">Перейти в каталог</a>
         </div>
       </div>
     </section>

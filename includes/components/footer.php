@@ -7,14 +7,14 @@ declare(strict_types=1);
       <div class="footer-grid">
         <div class="footer-col">
           <h4>Компания</h4>
-          <a href="about.php">О бренде</a>
-          <a href="contacts.php">Контакты</a>
+          <a href="/about">О бренде</a>
+          <a href="/contacts">Контакты</a>
         </div>
         <div class="footer-col">
           <h4>Помощь</h4>
-          <a href="delivery.php">Доставка</a>
-          <a href="payment.php">Оплата</a>
-          <a href="returns.php">Возврат товара</a>
+          <a href="/delivery">Доставка</a>
+          <a href="/payment">Оплата</a>
+          <a href="/returns">Возврат товара</a>
         </div>
         <div class="footer-col">
           <h4>Мы в соцсетях</h4>
@@ -23,10 +23,10 @@ declare(strict_types=1);
       </div>
       <div class="footer-bottom">
         <span>© <span id="year">2026</span> BOYFORGE. Все права защищены</span>
-        <a href="policy.php">Политика обработки персональных данных</a>
-        <a href="privacy.php">Политика конфиденциальности</a>
-        <a href="terms.php">Пользовательское соглашение</a>
-        <a href="offer.php">Публичная оферта</a>
+        <a href="/policy">Политика обработки персональных данных</a>
+        <a href="/privacy">Политика конфиденциальности</a>
+        <a href="/terms">Пользовательское соглашение</a>
+        <a href="/offer">Публичная оферта</a>
       </div>
     </div>
   </footer>
@@ -38,7 +38,7 @@ declare(strict_types=1);
       window.location.href = url.toString();
     }
   </script>
-  <script src="js/main.js?v=<?= filemtime(__DIR__ . '/../../js/main.js') ?>"></script>
+  <script src="/js/main.js?v=<?= filemtime(__DIR__ . '/../../js/main.js') ?>"></script>
 <?php
 $currentPage = basename($_SERVER['PHP_SELF']);
 if ($currentPage === 'product.php') {

@@ -20,7 +20,7 @@ require __DIR__ . '/includes/components/header.php';
     <!-- хлебные крошки -->
     <div class="container">
       <nav class="breadcrumbs" aria-label="Хлебные крошки">
-        <a href="index.php">Главная</a> <span>/</span> <span>Отзывы</span>
+        <a href="/">Главная</a> <span>/</span> <span>Отзывы</span>
       </nav>
     </div>
 
@@ -41,7 +41,7 @@ require __DIR__ . '/includes/components/header.php';
           <button class="rv-card" data-name="Alina" data-item="Варяга меч кормит" data-img="images/review-11.jpg"
                   data-text="Добрый вечер, забрала футболку. Спасибо большое, все довольны 😍😍😍">
             <div class="rv-media">
-              <img src="images/review-11.jpg" alt="Отзыв Alina" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
+              <img src="/images/review-11.jpg" alt="Отзыв Alina" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
               <span class="rv-media-fallback">Р</span>
             </div>
             <p class="rv-text">Добрый вечер, забрала футболку. Спасибо большое, все довольны 😍😍😍</p>
@@ -51,7 +51,7 @@ require __DIR__ . '/includes/components/header.php';
           <button class="rv-card" data-name="Di" data-item="Варяга меч кормит" data-img="images/review-12.jpg"
                   data-text="Добрый вечер, забрали товар, отличное качество, приятная к телу! Обязательно вернусь,повторно за заказом 🥰🙏🏽">
             <div class="rv-media">
-              <img src="images/review-12.jpg" alt="Отзыв Di" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
+              <img src="/images/review-12.jpg" alt="Отзыв Di" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
               <span class="rv-media-fallback">В</span>
             </div>
             <p class="rv-text">Добрый вечер, забрали товар, отличное качество, приятная к телу! Обязательно вернусь,повторно за заказом 🥰🙏🏽</p>
@@ -61,7 +61,7 @@ require __DIR__ . '/includes/components/header.php';
           <button class="rv-card" data-name="Варвара" data-item="Варяга меч кормит" data-img="images/review-13.jpg"
                   data-text="Здравствуйте. футболку получила, презентовала её мужу Рисунок оч понравился и говорит, что качество кайф. Спасибо вам за такую красоту">
             <div class="rv-media">
-              <img src="images/review-13.jpg" alt="Отзыв Варвары" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
+              <img src="/images/review-13.jpg" alt="Отзыв Варвары" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
               <span class="rv-media-fallback">В</span>
             </div>
             <p class="rv-text">Здравствуйте. футболку получила, презентовала её мужу Рисунок оч понравился и говорит, что качество кайф. Спасибо вам за такую красоту</p>
@@ -71,7 +71,7 @@ require __DIR__ . '/includes/components/header.php';
           <button class="rv-card" data-name="Алёна" data-item="Варяга меч кормит" data-img="images/review-13.jpg"
                   data-text="Здравствуйте. Получила футболку, все супер, качество вообще отпад! 😍">
             <div class="rv-media">
-              <img src="images/review-14.jpg" alt="Отзыв Алёны" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
+              <img src="/images/review-14.jpg" alt="Отзыв Алёны" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
               <span class="rv-media-fallback">В</span>
             </div>
             <p class="rv-text">Здравствуйте. Получила футболку, все супер, качество вообще отпад! 😍</p>
@@ -81,7 +81,7 @@ require __DIR__ . '/includes/components/header.php';
           <button class="rv-card" data-name="Валерия" data-item="Князь Владимир III" data-img="images/review-1.jpg"
                   data-text="Наконец-то дошли руки сфоткать подарок и написать вам. Спасибо большое, муж в восторге, так как обожает этот мультик. Сейчас поехал на работу в ней">
             <div class="rv-media">
-              <img src="images/review-1.jpg" alt="Отзыв Валерии" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
+              <img src="/images/review-1.jpg" alt="Отзыв Валерии" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
               <span class="rv-media-fallback">В</span>
             </div>
             <p class="rv-text">Наконец-то дошли руки сфоткать подарок и написать вам. Спасибо большое, муж в восторге, так как обожает этот мультик. Сейчас поехал на работу в ней.</p>
@@ -91,7 +91,7 @@ require __DIR__ . '/includes/components/header.php';
           <button class="rv-card" data-name="svmysoull" data-item="Князь Владимир III" data-img="images/review-2.jpg"
                   data-text="здравствуйте! спасибо вам большое за такие прекрасные толстовки, покупала сестре в подарок, ей очень понравились!!">
             <div class="rv-media">
-              <img src="images/review-2.jpg" alt="Отзыв svmysoull" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
+              <img src="/images/review-2.jpg" alt="Отзыв svmysoull" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
               <span class="rv-media-fallback">А</span>
             </div>
             <p class="rv-text">здравствуйте! спасибо вам большое за такие прекрасные толстовки, покупала сестре в подарок, ей очень понравились!!</p>
@@ -101,7 +101,7 @@ require __DIR__ . '/includes/components/header.php';
           <button class="rv-card" data-name="Кристина" data-item="Князь Владимир II" data-img="images/review-3.jpg"
                   data-text="Здравствуйте 💛 Обещала вам фото, сегодня только первый раз удалось выгулять вещичку! Спасибо большое за отличное качество и прекрасную задумку🙏">
             <div class="rv-media">
-              <img src="images/review-3.jpg" alt="Отзыв Кристина" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
+              <img src="/images/review-3.jpg" alt="Отзыв Кристина" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
               <span class="rv-media-fallback">А</span>
             </div>
             <p class="rv-text">Здравствуйте 💛 Обещала вам фото, сегодня только первый раз удалось выгулять вещичку! Спасибо большое за отличное качество и прекрасную задумку🙏</p>
@@ -111,7 +111,7 @@ require __DIR__ . '/includes/components/header.php';
           <button class="rv-card" data-name="Дарья" data-item="Несколько" data-img="images/review-4.jpg"
                   data-text="Добрый вечер!!! Они супер, часто носим с подругой, даже сфотографировались в них (прикрепляю фото) Очень мягкий, приятный к телу, печать - просто пушка бомба, качество! Спасибо!">
             <div class="rv-media">
-              <img src="images/review-4.jpg" alt="Отзыв Дарьи" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
+              <img src="/images/review-4.jpg" alt="Отзыв Дарьи" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
               <span class="rv-media-fallback">Е</span>
             </div>
             <p class="rv-text">Добрый вечер!!! Они супер, часто носим с подругой, даже сфотографировались в них (прикрепляю фото) Очень мягкий, приятный к телу, печать - просто пушка бомба, качество! Спасибо!</p>
@@ -121,7 +121,7 @@ require __DIR__ . '/includes/components/header.php';
           <button class="rv-card" data-name="сончоус" data-item="Князь Владимир I" data-img="images/review-5.jpg"
                   data-text="Добрый вечер! Свитшот прекрасный! Плотная ткань и теплая подкладка, крепкие швы. Особенно радует принт - и дизайн, и качество супер! На самом деле настоящая находка, все еще очень рада и благодарна, что вы тогда в рекомендациях появились ❤️">
             <div class="rv-media">
-              <img src="images/review-5.jpg" alt="Отзыв сончоус" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
+              <img src="/images/review-5.jpg" alt="Отзыв сончоус" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
               <span class="rv-media-fallback">М</span>
             </div>
             <p class="rv-text">Добрый вечер! Свитшот прекрасный! Плотная ткань и теплая подкладка, крепкие швы. Особенно радует принт - и дизайн, и качество супер! На самом деле настоящая находка, все еще очень рада и благодарна, что вы тогда в рекомендациях появились ❤️</p>
@@ -131,7 +131,7 @@ require __DIR__ . '/includes/components/header.php';
           <button class="rv-card" data-name="Catherine" data-item="Князь Владимир II" data-img="images/review-6.jpg"
                   data-text="Добрый вечер! Я в восторге, это моя любимая вещь в гардеробе. Отдельно хочу поблагодарить за подробную инструкцию, как гладить/ стирать и прочие детали">
             <div class="rv-media">
-              <img src="images/review-6.jpg" alt="Отзыв Catherine" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
+              <img src="/images/review-6.jpg" alt="Отзыв Catherine" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
               <span class="rv-media-fallback">О</span>
             </div>
             <p class="rv-text">Добрый вечер! Я в восторге, это моя любимая вещь в гардеробе. Отдельно хочу поблагодарить за подробную инструкцию, как гладить/ стирать и прочие детали</p>
@@ -141,7 +141,7 @@ require __DIR__ . '/includes/components/header.php';
           <button class="rv-card" data-name="Аня" data-item="Князь Владимир III" data-img="images/review-7.jpg"
                   data-text="здравствуйте! мои хорошие, посылку получила, большое спасибо, исполнили детскую мечту! 😭💔">
             <div class="rv-media">
-              <img src="images/review-7.jpg" alt="Отзыв Ани" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
+              <img src="/images/review-7.jpg" alt="Отзыв Ани" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
               <span class="rv-media-fallback">И</span>
             </div>
             <p class="rv-text">здравствуйте! мои хорошие, посылку получила, большое спасибо, исполнили детскую мечту! 😭💔</p>
@@ -151,7 +151,7 @@ require __DIR__ . '/includes/components/header.php';
           <button class="rv-card" data-name="tmk" data-item="Князь Владимир II" data-img="images/review-8.jpg"
                   data-text="Добрый вечер! Получила свитшот, прекрасно просто все от качества до принта! Молодой человек подарком обеспечен! Спасибо Вам большое!🐈">
             <div class="rv-media">
-              <img src="images/review-8.jpg" alt="Отзыв tmk" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
+              <img src="/images/review-8.jpg" alt="Отзыв tmk" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
               <span class="rv-media-fallback">К</span>
             </div>
             <p class="rv-text">Добрый вечер! Получила свитшот, прекрасно просто все от качества до принта! Молодой человек подарком обеспечен! Спасибо Вам большое!🐈</p>
@@ -161,7 +161,7 @@ require __DIR__ . '/includes/components/header.php';
           <button class="rv-card" data-name="Dr. Villanelle" data-item="Князь Владимир II" data-img="images/review-9.jpg"
                   data-text="Здравствуйте! Приехал свитшот. Мч в восторге, говорит, снимать никогда не будет 😂😂 Мне лично очень понравилась ткань, нравится, приятная на ощупь и  тёплая. Спасибо большое!">
             <div class="rv-media">
-              <img src="images/review-9.jpg" alt="Отзыв Dr. Villanelle" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
+              <img src="/images/review-9.jpg" alt="Отзыв Dr. Villanelle" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
               <span class="rv-media-fallback">Р</span>
             </div>
             <p class="rv-text">Здравствуйте! Приехал свитшот. Мч в восторге, говорит, снимать никогда не будет 😂😂 Мне лично очень понравилась ткань, нравится, приятная на ощупь и  тёплая. Спасибо большое!</p>
@@ -171,7 +171,7 @@ require __DIR__ . '/includes/components/header.php';
           <button class="rv-card" data-name="Deaddynasty" data-item="Князь Владимир III" data-img="images/review-10.jpg"
                   data-text="Добрый вечер! Забрала свитшот, он восхитительный, спасибо огромное 🥰🤍">
             <div class="rv-media">
-              <img src="images/review-10.jpg" alt="Отзыв Deaddynasty" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
+              <img src="/images/review-10.jpg" alt="Отзыв Deaddynasty" loading="lazy" onerror="this.closest('.rv-media').classList.add('is-empty')">
               <span class="rv-media-fallback">В</span>
             </div>
             <p class="rv-text">Добрый вечер! Забрала свитшот, он восхитительный, спасибо огромное 🥰🤍</p>

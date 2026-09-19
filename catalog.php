@@ -1,7 +1,15 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/router.php';
+
+// Обрабатываем старые URL (301 редирект если нужно)
+handleLegacyUrls();
+
+$route = parseRoute();
+if ($route['type'] === '404') {
+    show404();
+}
 
 $catFilter = trim((string)($_GET['cat'] ?? 'all'));
 $sort = trim((string)($_GET['sort'] ?? 'pop'));
@@ -58,7 +66,7 @@ require __DIR__ . '/includes/components/header.php';
 
       <!-- хлебные крошки -->
       <nav class="breadcrumbs" aria-label="Хлебные крошки">
-        <a href="index.php">Главная</a> <span>/</span> <span>Каталог</span>
+        <a href="/">Главная</a> <span>/</span> <span>Каталог</span>
       </nav>
 
       <!-- заголовок + счётчик + сортировка -->
@@ -80,14 +88,14 @@ require __DIR__ . '/includes/components/header.php';
 
       <!-- фильтры-чипы по категориям -->
       <div class="chips" role="group" aria-label="Категории">
-        <a href="catalog.php?cat=all&sort=<?= urlencode($sort) ?>" 
+        <a href="/catalog<?= $sort !== 'pop' ? '?sort=' . urlencode($sort) : '' ?>" 
            class="chip <?= ($catFilter === 'all' || $catFilter === '') ? 'is-active' : '' ?>">Все</a>
         <?php foreach ($categoriesList as $c): ?>
           <?php
             $catSlug = $c['slug'];
             $isActiveChip = ($catFilter === $catSlug || $catFilter === $c['name']);
           ?>
-          <a href="catalog.php?cat=<?= urlencode($catSlug) ?>&sort=<?= urlencode($sort) ?>" 
+          <a href="<?= categoryUrl($catSlug, $sort) ?>" 
              class="chip <?= $isActiveChip ? 'is-active' : '' ?>">
              <?= htmlspecialchars($c['name']) ?>
           </a>
@@ -114,7 +122,7 @@ require __DIR__ . '/includes/components/header.php';
                   $cardBadges[] = $t;
               }
             ?>
-            <a href="product.php?id=<?= $pId ?>" class="card card-in">
+            <a href="<?= productUrl($pId, $p['slug'] ?? null) ?>" class="card card-in">
               <div class="card-img">
                 <img src="<?= $pImg ?>" alt="<?= $pName ?>" loading="lazy"
                      onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','<?= addslashes($pName) ?>');">
@@ -138,7 +146,7 @@ require __DIR__ . '/includes/components/header.php';
         <div class="empty-state" id="emptyState">
           <div class="empty-title">Ничего не найдено</div>
           <p class="empty-sub">В этой категории пока нет товаров. Загляните в другую или напишите нам — подберём под вас.</p>
-          <a href="catalog.php" class="btn-outline empty-back">Сбросить фильтр</a>
+          <a href="/catalog" class="btn-outline empty-back">Сбросить фильтр</a>
         </div>
       <?php endif; ?>
 

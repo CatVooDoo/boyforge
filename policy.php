@@ -5,19 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Политика в отношении обработки персональных данных — BOYFORGE</title>
   <meta name="description" content="Политика в отношении обработки персональных данных интернет-магазина BOYFORGE (ИП Бояров Т. П.).">
-  <link rel="icon" href="images/favicon.png" type="image/png">
+  <link rel="icon" href="/images/favicon.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=28">
+  <link rel="stylesheet" href="/css/style.css?v=28">
 </head>
 <body>
 
   <!-- ===== HEADER ===== -->
   <header class="site-header">
     <div class="container header-inner">
-      <a href="index.php" class="logo-photo" aria-label="BOYFORGE — на главную">
-        <img class="logo-dark" src="images/logo.png" alt="BOYFORGE"
+      <a href="/" class="logo-photo" aria-label="BOYFORGE — на главную">
+        <img class="logo-dark" src="/images/logo.png" alt="BOYFORGE"
              onerror="this.replaceWith(document.createTextNode('BOYFORGE'))">
       </a>
       <button class="burger" aria-label="Открыть меню" aria-expanded="false">
@@ -32,31 +32,31 @@
     <button class="menu-close" aria-label="Закрыть меню">&times;</button>
 
     <div class="menu-group">
-      <a href="index.php">Главная</a>
-      <a href="catalog.php">Каталог</a>
+      <a href="/">Главная</a>
+      <a href="/catalog">Каталог</a>
     </div>
 
     <span class="menu-divider" aria-hidden="true"></span>
 
     <div class="menu-group">
-      <a href="delivery.php">Доставка</a>
-      <a href="payment.php">Оплата</a>
-      <a href="returns.php">Возврат</a>
+      <a href="/delivery">Доставка</a>
+      <a href="/payment">Оплата</a>
+      <a href="/returns">Возврат</a>
     </div>
 
     <span class="menu-divider" aria-hidden="true"></span>
 
     <div class="menu-group">
-      <a href="about.php">О бренде</a>
-      <a href="reviews.php">Отзывы</a>
-      <a href="contacts.php">Контакты</a>
+      <a href="/about">О бренде</a>
+      <a href="/reviews">Отзывы</a>
+      <a href="/contacts">Контакты</a>
     </div>
 
   </nav>
 
   <main class="container">
     <nav class="breadcrumbs" aria-label="Хлебные крошки">
-      <a href="index.php">Главная</a> <span>/</span> <span>Политика обработки персональных данных</span>
+      <a href="/">Главная</a> <span>/</span> <span>Политика обработки персональных данных</span>
     </nav>
 
     <article class="legal">

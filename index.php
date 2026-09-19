@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/router.php';
 
 try {
     $popStmt = $pdo->query("SELECT * FROM products WHERE is_active = 1 AND is_popular = 1 ORDER BY sort_order ASC, id ASC");
@@ -21,7 +22,7 @@ require __DIR__ . '/includes/components/header.php';
       <div class="hero-track">
 
                 <!-- Слайд 3 -->
-        <a href="product.php?id=3" class="hero-slide" aria-label="Смотреть товар">
+        <a href="<?= productUrl(3) ?>" class="hero-slide" aria-label="Смотреть товар">
           <video class="hero-video hero-video--desktop" autoplay muted playsinline preload="auto" poster="images/hero-3.jpg">
             <source src="videos/hero-3-desktop.mp4" type="video/mp4">
           </video>
@@ -31,7 +32,7 @@ require __DIR__ . '/includes/components/header.php';
         </a>
 
         <!-- Слайд 2 -->
-        <a href="product.php?id=2" class="hero-slide" aria-label="Смотреть товар">
+        <a href="<?= productUrl(2) ?>" class="hero-slide" aria-label="Смотреть товар">
           <video class="hero-video hero-video--desktop" autoplay muted playsinline preload="auto" poster="images/hero-2.jpg">
             <source src="videos/hero-2-desktop.mp4" type="video/mp4">
           </video>
@@ -41,7 +42,7 @@ require __DIR__ . '/includes/components/header.php';
         </a>
 
         <!-- Слайд 1 -->
-        <a href="product.php?id=1" class="hero-slide is-active" aria-label="Смотреть товар">
+        <a href="<?= productUrl(1) ?>" class="hero-slide is-active" aria-label="Смотреть товар">
           <video class="hero-video hero-video--desktop" autoplay muted playsinline preload="auto" poster="images/hero-1.jpg">
             <source src="videos/hero-1-desktop.mp4" type="video/mp4">
           </video>
@@ -54,7 +55,7 @@ require __DIR__ . '/includes/components/header.php';
 
       <div class="hero-slider-content container">
         <div class="eyebrow">КУЗНИЦА ТВОЕГО СТИЛЯ</div>
-        <a href="catalog.php" class="hero-btn">Перейти в каталог</a>
+        <a href="/catalog" class="hero-btn">Перейти в каталог</a>
       </div>
 
       <button class="hero-arrow hero-prev" aria-label="Предыдущий слайд">&#8249;</button>
@@ -84,7 +85,7 @@ require __DIR__ . '/includes/components/header.php';
                 $cardBadges[] = $t;
             }
           ?>
-          <a href="product.php?id=<?= $pId ?>" class="card reveal">
+          <a href="<?= productUrl($pId, $p['slug'] ?? null) ?>" class="card reveal">
             <div class="card-img">
               <img src="<?= $pImg ?>" alt="<?= $pName ?>" loading="lazy"
                    onerror="this.style.display='none';this.parentElement.classList.add('ph--empty');this.parentElement.setAttribute('data-label','<?= addslashes($pName) ?>');">
@@ -104,7 +105,7 @@ require __DIR__ . '/includes/components/header.php';
         <?php endforeach; ?>
       </div>
 
-      <a href="catalog.php" class="btn-outline reveal">Весь каталог</a>
+      <a href="/catalog" class="btn-outline reveal">Весь каталог</a>
     </section>
 
     <!-- ===== 3. О БРЕНДЕ — короткий блок ===== -->
@@ -115,7 +116,7 @@ require __DIR__ . '/includes/components/header.php';
         </div>
         <div class="brand-intro reveal">
           <p>Как и раньше важны труд, характер и уважение к тому, для кого это создаётся. Чтобы с первого взгляда вещь становилась любимой в гардеробе.</p>
-          <a href="about.php" class="btn-outline">О бренде</a>
+          <a href="/about" class="btn-outline">О бренде</a>
         </div>
       </div>
     </section>
@@ -123,20 +124,20 @@ require __DIR__ . '/includes/components/header.php';
     <!-- ===== 4. НАВИГАЦИОННЫЕ ПЛИТКИ ===== -->
     <section class="container section">
       <div class="cat-grid">
-        <a href="about.php" class="cat-tile reveal">
-          <img src="images/tile-about.jpg" alt="О бренде" loading="lazy">
+        <a href="/about" class="cat-tile reveal">
+          <img src="/images/tile-about.jpg" alt="О бренде" loading="lazy">
           <div class="cat-tile-label"><span>О бренде</span></div>
         </a>
-        <a href="delivery.php" class="cat-tile reveal">
-          <img src="images/tile-delivery.jpg" alt="Доставка" loading="lazy">
+        <a href="/delivery" class="cat-tile reveal">
+          <img src="/images/tile-delivery.jpg" alt="Доставка" loading="lazy">
           <div class="cat-tile-label"><span>Доставка</span></div>
         </a>
-        <a href="reviews.php" class="cat-tile reveal">
-          <img src="images/tile-reviews.jpg" alt="Отзывы" loading="lazy">
+        <a href="/reviews" class="cat-tile reveal">
+          <img src="/images/tile-reviews.jpg" alt="Отзывы" loading="lazy">
           <div class="cat-tile-label"><span>Отзывы</span></div>
         </a>
-        <a href="returns.php" class="cat-tile reveal">
-          <img src="images/tile-returns.jpg" alt="Возврат" loading="lazy">
+        <a href="/returns" class="cat-tile reveal">
+          <img src="/images/tile-returns.jpg" alt="Возврат" loading="lazy">
           <div class="cat-tile-label"><span>Возврат</span></div>
         </a>
       </div>
@@ -151,15 +152,15 @@ require __DIR__ . '/includes/components/header.php';
 
       <div class="gallery-marquee reveal" id="galleryMarquee">
         <div class="gallery-track" id="galleryTrack">
-          <button class="gallery-item" data-src="images/g1.jpg"><img src="images/g1.jpg" alt="Фото 1" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g2.jpg"><img src="images/g2.jpg" alt="Фото 2" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g3.jpg"><img src="images/g3.jpg" alt="Фото 3" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g4.jpg"><img src="images/g4.jpg" alt="Фото 4" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g5.jpg"><img src="images/g5.jpg" alt="Фото 5" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g6.jpg"><img src="images/g6.jpg" alt="Фото 6" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g7.jpg"><img src="images/g7.jpg" alt="Фото 7" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g8.jpg"><img src="images/g8.jpg" alt="Фото 8" loading="lazy"></button>
-          <button class="gallery-item" data-src="images/g9.jpg"><img src="images/g9.jpg" alt="Фото 9" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g1.jpg"><img src="/images/g1.jpg" alt="Фото 1" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g2.jpg"><img src="/images/g2.jpg" alt="Фото 2" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g3.jpg"><img src="/images/g3.jpg" alt="Фото 3" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g4.jpg"><img src="/images/g4.jpg" alt="Фото 4" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g5.jpg"><img src="/images/g5.jpg" alt="Фото 5" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g6.jpg"><img src="/images/g6.jpg" alt="Фото 6" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g7.jpg"><img src="/images/g7.jpg" alt="Фото 7" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g8.jpg"><img src="/images/g8.jpg" alt="Фото 8" loading="lazy"></button>
+          <button class="gallery-item" data-src="/images/g9.jpg"><img src="/images/g9.jpg" alt="Фото 9" loading="lazy"></button>
         </div>
       </div>
     </section>

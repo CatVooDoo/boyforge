@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/../bootstrap.php';
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -8,11 +9,11 @@ declare(strict_types=1);
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= htmlspecialchars($pageTitle ?? 'BOYFORGE') ?></title>
   <meta name="description" content="Одежда с авторскими принтами. Пошив в России, DTF-печать. Заказ через Telegram.">
-  <link rel="icon" href="images/favicon.png" type="image/png">
+  <link rel="icon" href="/images/favicon.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=<?= filemtime(__DIR__ . '/../../css/style.css') ?>">
+  <link rel="stylesheet" href="/css/style.css?v=<?= filemtime(__DIR__ . '/../../css/style.css') ?>">
   <!-- Yandex.Metrika counter -->
   <script type="text/javascript">
       (function(m,e,t,r,i,k,a){
@@ -27,13 +28,20 @@ declare(strict_types=1);
   <noscript><div><img src="https://mc.yandex.ru/watch/112433225" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
   <!-- /Yandex.Metrika counter -->
 </head>
-<body class="<?= htmlspecialchars($bodyClass ?? '') ?>">
+<?php
+  // Настройки CloudPayments глобально для всех страниц
+  $headerCpPublicId = env_get('CLOUDPAYMENTS_PUBLIC_ID');
+  $headerCpTaxation = env_get('CLOUDPAYMENTS_TAXATION_SYSTEM') ?: '1';
+?>
+<body class="<?= htmlspecialchars($bodyClass ?? '') ?>"
+      data-cp-public-id="<?= htmlspecialchars((string)$headerCpPublicId) ?>"
+      data-cp-taxation="<?= (int)$headerCpTaxation ?>">
 
   <!-- ===== HEADER ===== -->
   <header class="site-header">
     <div class="container header-inner">
-      <a href="index.php" class="logo-photo" aria-label="BOYFORGE — на главную">
-        <img class="logo-dark" src="images/logo.png" alt="BOYFORGE"
+      <a href="/" class="logo-photo" aria-label="BOYFORGE — на главную">
+        <img class="logo-dark" src="/images/logo.png" alt="BOYFORGE"
              onerror="this.replaceWith(document.createTextNode('BOYFORGE'))">
       </a>
       <button class="burger" aria-label="Открыть меню" aria-expanded="false">
@@ -48,23 +56,23 @@ declare(strict_types=1);
     <button class="menu-close" aria-label="Закрыть меню">&times;</button>
 
     <div class="menu-group">
-      <a href="index.php">Главная</a>
-      <a href="catalog.php">Каталог</a>
+      <a href="/">Главная</a>
+      <a href="/catalog">Каталог</a>
     </div>
 
     <span class="menu-divider" aria-hidden="true"></span>
 
     <div class="menu-group">
-      <a href="delivery.php">Доставка</a>
-      <a href="payment.php">Оплата</a>
-      <a href="returns.php">Возврат</a>
+      <a href="/delivery">Доставка</a>
+      <a href="/payment">Оплата</a>
+      <a href="/returns">Возврат</a>
     </div>
 
     <span class="menu-divider" aria-hidden="true"></span>
 
     <div class="menu-group">
-      <a href="about.php">О бренде</a>
-      <a href="reviews.php">Отзывы</a>
-      <a href="contacts.php">Контакты</a>
+      <a href="/about">О бренде</a>
+      <a href="/reviews">Отзывы</a>
+      <a href="/contacts">Контакты</a>
     </div>
   </nav>
