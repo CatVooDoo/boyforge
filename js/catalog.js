@@ -74,7 +74,7 @@
         return '<div class="card card--soon" aria-disabled="true">' + inner + "</div>";
       }
 
-      return '<a href="product.php?id=' + p.id + '" class="card">' + inner + "</a>";
+      return '<a href="/product?id=' + p.id + '" class="card">' + inner + "</a>";
     }
 
     function getItems() {

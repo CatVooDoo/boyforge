@@ -199,7 +199,7 @@ foreach ($products as $p) {
 
               <td class="actions-cell">
                 <div class="action-btns">
-                  <a href="../product.php?id=<?= $id ?>" target="_blank" class="btn-icon" title="Открыть на сайте">
+                  <a href="/product?id=<?= $id ?>" target="_blank" class="btn-icon" title="Открыть на сайте">
                     <?= renderSvgIcon('external') ?>
                   </a>
 

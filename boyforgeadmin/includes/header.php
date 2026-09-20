@@ -40,7 +40,7 @@ $isLogsActive = ($currentScript === 'logs.php');
     </div>
 
     <div class="header-actions">
-      <a href="../catalog.php" target="_blank" class="btn btn-secondary btn-sm" title="Открыть каталог в новой вкладке">
+      <a href="/catalog" target="_blank" class="btn btn-secondary btn-sm" title="Открыть каталог в новой вкладке">
         <?= renderSvgIcon('external') ?>
         <span>Каталог на сайте</span>
       </a>

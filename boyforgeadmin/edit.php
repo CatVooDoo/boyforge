@@ -283,7 +283,7 @@ require_once __DIR__ . '/includes/header.php';
   </div>
 
   <?php if ($isEdit): ?>
-    <a href="../product.php?id=<?= $id ?>" target="_blank" class="btn btn-secondary">
+    <a href="/product?id=<?= $id ?>" target="_blank" class="btn btn-secondary">
       <?= renderSvgIcon('external') ?>
       <span>Просмотр на сайте</span>
     </a>

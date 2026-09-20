@@ -105,8 +105,8 @@ function handleLegacyUrls(): void {
     $scriptName = basename($_SERVER['SCRIPT_NAME']);
     $requestUri = $_SERVER['REQUEST_URI'] ?? '';
     
-    // Старый URL товара: product.php?id=5
-    if ($scriptName === 'product.php' && isset($_GET['id']) && strpos($requestUri, 'product.php') !== false) {
+    // Старый URL товара: product.php?id=5 или /product?id=5
+    if (($scriptName === 'product.php' || strpos($requestUri, '/product?') === 0) && isset($_GET['id'])) {
         $id = (int)$_GET['id'];
         $stmt = $pdo->prepare("SELECT slug FROM products WHERE id = :id AND is_active = 1 LIMIT 1");
         $stmt->execute([':id' => $id]);
