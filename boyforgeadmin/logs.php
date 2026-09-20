@@ -146,7 +146,7 @@ $blocks = array_reverse($blocks); // Новые записи сверху
     <div class="empty-state" style="padding: 50px 20px;">
       <div class="empty-icon"><?= renderSvgIcon('box') ?></div>
       <div class="empty-title">Журнал логов 5Post пуст</div>
-      <div class="empty-desc">Запросы на получение токена, создание C2C заказов и вебхуки CloudPayments будут автоматически записываться сюда.</div>
+      <div class="empty-desc">Запросы на получение токена, создание C2C заказов и вебхуки ЮKassa будут автоматически записываться сюда.</div>
     </div>
   <?php else: ?>
     <div id="logBlocksContainer" style="display:flex; flex-direction:column;">

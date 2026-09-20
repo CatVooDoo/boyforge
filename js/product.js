@@ -309,27 +309,8 @@
         }
         refreshHref();
 
-        // Отправка данных заказа в Google Sheets
-        try {
-          var payload = {
-            productId: productId,
-            productName: productName,
-            price: productPrice,
-            gender: getGender(),
-            size: getSize(),
-            source: "Заказ через Telegram"
-          };
-
-          if (navigator.sendBeacon) {
-            navigator.sendBeacon("api/order.php", new Blob([JSON.stringify(payload)], { type: "application/json" }));
-          } else {
-            fetch("api/order.php", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload)
-            }).catch(function () {});
-          }
-        } catch (err) {}
+        // Логика заказа через Telegram больше не стучится в удаленный api/order.php,
+        // так как учет заказов идет строго через ЮKassa
       });
     }
 
