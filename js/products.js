@@ -9,7 +9,7 @@
         "catId": "tshirt",
         "cat": "Футболка",
         "name": "Футболка «Братья Святославичи»",
-        "price": "3 200 ₽",
+        "price": "5 ₽",
         "img": "images\/bratya\/p-bratya.jpg",
         "imgs": [
             "images\/bratya\/p-bratya.jpg",

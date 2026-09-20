@@ -557,7 +557,7 @@
           <div class="ozon-order-id">Номер заказа: <strong>${orderId}</strong></div>
           ${order.fivepostBarcode ? `<div class="ozon-order-id" style="margin-top:6px; font-size:13px; color:#10b981;">Трек 5Post: <strong>${escapeHtml(order.fivepostBarcode)}</strong></div>` : ''}
           <p class="ozon-success-desc">
-            Оплата успешно проведена. Ваш заказ передан в обработку.
+            Спасибо! Платёж через <strong>ЮKassa</strong> успешно проведён. Мы сформировали заказ для отправки через <strong>5Post</strong>.
           </p>
           <div class="ozon-success-summary">
             <div><span>Товар:</span> ${order.productName} (${order.gender}, размер ${order.size})</div>
@@ -697,8 +697,14 @@
                 });
                 
                 checkout.on('success', () => {
-                    // Перенаправление на success (обычно виджет сам редиректит на return_url)
-                    window.location.href = '/payment-success.php';
+                    const finalPayload = Object.assign({}, orderPayload, {
+                        paymentStatus: "paid",
+                        transactionId: data.payment_id || ""
+                    });
+                    
+                    // Fetch from 5Post is done asynchronously in webhook, 
+                    // so we don't have barcode yet. We just show success screen.
+                    showSuccessScreen(orderId, finalPayload);
                     checkout.destroy();
                 });
                 
@@ -712,10 +718,17 @@
                 });
 
                 // Открываем виджет в модалке (встроенный)
-                checkout.render('fivepostMapWrapper'); // Или любой другой контейнер
                 if (fivepostCard) fivepostCard.style.display = "none";
-                if (fivepostMapWrapper) fivepostMapWrapper.style.display = "block";
-                fivepostMapWrapper.innerHTML = ''; // Очищаем контейнер под виджет
+                if (fivepostMapWrapper) {
+                    fivepostMapWrapper.style.display = "block";
+                    fivepostMapWrapper.innerHTML = ''; // Очищаем контейнер под виджет
+                }
+                
+                // Прячем черную кнопку "Создать платеж..." и секции формы
+                if (submitBtn) submitBtn.style.display = "none";
+                const formSection = document.querySelector(".order-details-sections");
+                if (formSection) formSection.style.display = "none";
+                
                 showStatus("", null);
                 checkout.render('fivepostMapWrapper');
             } else {
