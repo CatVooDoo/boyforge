@@ -25,12 +25,38 @@ if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     exit;
 }
 
-$priceStr = $input['price'] ?? '0';
-$priceValue = (float) preg_replace('/[^\d.]/', '', str_replace(',', '.', $priceStr));
-if ($priceValue <= 0) {
-    echo json_encode(['success' => false, 'error' => 'Invalid price']);
+$productId = $input['productId'] ?? '';
+if (!$productId) {
+    echo json_encode(['success' => false, 'error' => 'Product ID is missing']);
     exit;
 }
+
+global $pdo;
+$stmt = $pdo->prepare("SELECT name, price FROM products WHERE id = :id OR cat_id = :cat_id LIMIT 1");
+// Note: Frontend sends cat_id sometimes if id is not matching. Let's just query by id if it's numeric
+if (is_numeric($productId)) {
+    $stmt->execute([':id' => $productId, ':cat_id' => '']);
+} else {
+    // If they send cat_id as productId?
+    $stmt->execute([':id' => 0, ':cat_id' => $productId]);
+}
+$product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$product) {
+    echo json_encode(['success' => false, 'error' => 'Product not found']);
+    exit;
+}
+
+$priceStr = $product['price'] ?? '3200';
+$priceValue = (float) preg_replace('/[^\d.]/', '', str_replace(',', '.', $priceStr));
+if ($priceValue <= 0) {
+    echo json_encode(['success' => false, 'error' => 'Invalid product price in DB']);
+    exit;
+}
+
+// Перезаписываем входные данные доверенными данными из БД
+$input['price'] = (string)$priceValue;
+$input['productName'] = $product['name'];
 
 $orderId = $input['orderId'] ?? 'new';
 $productName = $input['productName'] ?? 'Товар BOYFORGE';
@@ -121,10 +147,17 @@ if ($response === false) {
 $responseData = json_decode($response, true);
 
 if ($httpCode >= 200 && $httpCode < 300 && isset($responseData['confirmation']['confirmation_token'])) {
+    // Сохраняем payment_id в базу, чтобы потом проверять статус при возврате на return_url
+    $stmt = $pdo->prepare("UPDATE orders SET payment_transaction_id = :tx WHERE order_id = :oid");
+    $stmt->execute([
+        ':tx' => $responseData['id'],
+        ':oid' => $orderId
+    ]);
+
     echo json_encode([
         'success' => true,
         'confirmation_token' => $responseData['confirmation']['confirmation_token'],
-        'payment_id' => $responseData['id'] ?? null
+        'payment_id' => $responseData['id']
     ]);
 } else {
     echo json_encode([

@@ -275,7 +275,12 @@
             }
 
             if (data.points.length === 0) {
-              showStatus("В населённом пункте «" + (data.city || search) + "» пунктов 5Post нет (сеть действует в магазинах «Пятёрочка» и «Перекрёсток»). Выберите другой город или оформите доставку CDEK.", "info");
+              const safeCity = (data.city || search).toString().replace(/[&<>"']/g, function(m) {
+                return {
+                  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+                }[m];
+              });
+              showStatus("В населённом пункте «" + safeCity + "» пунктов 5Post нет (сеть действует в магазинах «Пятёрочка» и «Перекрёсток»). Пожалуйста, <a href=\"https://telegram.me/theboyforge\" target=\"_blank\" style=\"text-decoration: underline;\">обратитесь в наш телеграм</a>.", "info");
               if (yandexMap && typeof ymaps !== "undefined" && ymaps.geocode) {
                 ymaps.geocode(data.city || search).then(function (res) {
                   const firstGeo = res.geoObjects.get(0);
@@ -540,7 +545,7 @@
 
     function showStatus(msg, type) {
       if (!statusMsg) return;
-      statusMsg.textContent = msg;
+      statusMsg.innerHTML = msg;
       statusMsg.className = "ozon-status-msg order-status-msg " + (type ? "is-" + type : "");
     }
 
@@ -560,13 +565,13 @@
             Спасибо! Платёж через <strong>ЮKassa</strong> успешно проведён. Мы сформировали заказ для отправки через <strong>5Post</strong>.
           </p>
           <div class="ozon-success-summary">
-            <div><span>Товар:</span> ${order.productName} (${order.gender}, размер ${order.size})</div>
-            <div><span>Сумма:</span> <strong>${order.price}</strong> <span style="color:#10b981; font-weight:600;">(Оплачено)</span></div>
+            <div><span>Товар:</span> ${escapeHtml(order.productName)} (${escapeHtml(order.gender)}, размер ${escapeHtml(order.size)})</div>
+            <div><span>Сумма:</span> <strong>${escapeHtml(order.price)}</strong> <span style="color:#10b981; font-weight:600;">(Оплачено)</span></div>
             ${order.fio ? `<div><span>ФИО получателя:</span> <strong>${escapeHtml(order.fio)}</strong></div>` : ''}
             ${order.email ? `<div><span>Email:</span> <strong>${escapeHtml(order.email)}</strong></div>` : ''}
-            <div><span>Телефон:</span> ${order.phone}</div>
-            ${order.fivepostPointAddress ? `<div><span>Доставка 5Post:</span> <strong>${order.fivepostPointAddress}</strong> (${pointTypeRu})</div>` : ''}
-            ${order.transactionId ? `<div><span>ID транзакции:</span> #${order.transactionId}</div>` : ''}
+            <div><span>Телефон:</span> ${escapeHtml(order.phone)}</div>
+            ${order.fivepostPointAddress ? `<div><span>Доставка 5Post:</span> <strong>${escapeHtml(order.fivepostPointAddress)}</strong> (${pointTypeRu})</div>` : ''}
+            ${order.transactionId ? `<div><span>ID транзакции:</span> #${escapeHtml(order.transactionId)}</div>` : ''}
           </div>
           <p class="ozon-sms-note">
             Электронный кассовый чек отправлен. По прибытии заказа в постамат/кассу 5Post вам поступит SMS с кодом получения.
@@ -680,7 +685,7 @@
                 // Инициализация виджета ЮKassa
                 const checkout = new window.YooMoneyCheckoutWidget({
                     confirmation_token: data.confirmation_token,
-                    return_url: window.location.origin + '/payment-success.php',
+                    return_url: window.location.origin + '/payment-success.php?orderId=' + encodeURIComponent(orderId),
                     customization: {
                         colors: {
                             control_primary: '#000000',
@@ -697,15 +702,23 @@
                 });
                 
                 checkout.on('success', () => {
-                    const finalPayload = Object.assign({}, orderPayload, {
-                        paymentStatus: "paid",
-                        transactionId: data.payment_id || ""
+                    // Подтверждаем платеж на бэкенде вручную, чтобы обойти проблему с недоставкой вебхуков
+                    fetch("/api/yookassa/confirm.php", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            paymentId: data.payment_id,
+                            orderId: orderId
+                        })
+                    }).finally(() => {
+                        const finalPayload = Object.assign({}, orderPayload, {
+                            paymentStatus: "paid",
+                            transactionId: data.payment_id || ""
+                        });
+                        
+                        showSuccessScreen(orderId, finalPayload);
+                        checkout.destroy();
                     });
-                    
-                    // Fetch from 5Post is done asynchronously in webhook, 
-                    // so we don't have barcode yet. We just show success screen.
-                    showSuccessScreen(orderId, finalPayload);
-                    checkout.destroy();
                 });
                 
                 checkout.on('fail', () => {

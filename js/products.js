@@ -8,8 +8,8 @@
         "id": 1,
         "catId": "tshirt",
         "cat": "Футболка",
-        "name": "Футболка «Братья Святославичи»",
-        "price": "5 ₽",
+        "name": "Футболка «Братья Святославивсввчи»",
+        "price": "1 ₽",
         "img": "images\/bratya\/p-bratya.jpg",
         "imgs": [
             "images\/bratya\/p-bratya.jpg",
