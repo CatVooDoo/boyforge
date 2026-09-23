@@ -1,1 +1,52 @@
-Nothing should be ignored in this case, as the changes only include PHP source files (.php) which are core project files and not build artifacts, dependencies, or temporary files.
+```php
+# Environment and config files
+.env
+.env.local
+*.env.*
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swo
+*.swp
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Cache and temporary directories
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts (if any PHP builds occur)
+*.phar
+*.so
+*.dll
+*.exe
+
+# Coverage reports
+.coverage
+coverage/
+htmlcov/
+
+# Database dump files
+*.sql
+*.dump
+*.bak
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+```

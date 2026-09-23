@@ -19,6 +19,10 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
+    
+    // Устанавливаем часовой пояс MySQL на Москву (UTC+3) для консистентности времени
+    $pdo->exec("SET time_zone = '+03:00'");
+    
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Database connection failed'], JSON_UNESCAPED_UNICODE);
