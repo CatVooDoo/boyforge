@@ -24,6 +24,17 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
+    
+    /**
+     * УСТАНОВКА ЧАСОВОГО ПОЯСА ДЛЯ АДМИН-ПАНЕЛИ
+     * 
+     * Критически важно для корректного отображения времени заказов:
+     * - Все даты в БД хранятся с учетом часового пояса ККТ (Москва, UTC+3)
+     * - ФФД 1.2 требует указания timezone в чеках
+     * - NOW() должен возвращать московское время для консистентности
+     */
+    $pdo->exec("SET time_zone = '+03:00'");
+    
 } catch (PDOException $e) {
     die("Database connection error: " . htmlspecialchars($e->getMessage()));
 }
