@@ -509,6 +509,32 @@ h1,h2,h3,h4,h5,h6{ font-weight:700; line-height:1.12; }
 .sizes button:hover{ border-color:var(--black); }
 .sizes button.active{ background:var(--black); color:var(--white); border-color:var(--black); }
 
+/* размер, недоступный для заказа (отмечен в админке) — перечёркнут */
+.sizes button.size-out,
+.sizes button[disabled]{
+  position:relative;
+  color:var(--gray-500);
+  border-color:var(--border);
+  cursor:not-allowed;
+  user-select:none;
+  pointer-events:auto;
+}
+.sizes button.size-out::before,
+.sizes button[disabled]::before{
+  content:"";
+  position:absolute;
+  left:8%;
+  right:8%;
+  top:50%;
+  height:1.5px;
+  background:currentColor;
+  transform:rotate(-12deg);
+  transform-origin:center;
+  pointer-events:none;
+}
+.sizes button.size-out:hover,
+.sizes button[disabled]:hover{ border-color:var(--border); }
+
 /* ---- выбор пола ---- */
 .gender-title{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:16px; }
 .genders{ display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; }

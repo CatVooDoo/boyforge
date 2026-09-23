@@ -2,6 +2,49 @@
 declare(strict_types=1);
 
 /**
+ * Полная размерная сетка магазина (используется и на сайте, и в админке)
+ */
+function allSizes(): array {
+    return ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
+}
+
+/**
+ * Диапазоны размеров по полу (должны совпадать с SIZES_BY_GENDER в js/product.js)
+ */
+function sizesByGender(): array {
+    return [
+        'Женский' => ['XS', 'S', 'M', 'L', 'XL'],
+        'Мужской' => ['S', 'M', 'L', 'XL', '2XL', '3XL'],
+    ];
+}
+
+/**
+ * Возвращает список НЕдоступных размеров товара из колонки products.sizes (JSON)
+ *
+ * @param mixed $sizesRaw Значение колонки sizes (JSON-строка или массив)
+ * @return string[] Массив отмеченных как недоступные размеров (например ["S","2XL"])
+ */
+function productUnavailableSizes($sizesRaw): array {
+    if (is_array($sizesRaw)) {
+        $parsed = $sizesRaw;
+    } else {
+        $parsed = json_decode((string)($sizesRaw ?? ''), true);
+    }
+    if (!is_array($parsed)) {
+        return [];
+    }
+    $known = allSizes();
+    $result = [];
+    foreach ($parsed as $s) {
+        $s = trim((string)$s);
+        if ($s !== '' && in_array($s, $known, true) && !in_array($s, $result, true)) {
+            $result[] = $s;
+        }
+    }
+    return $result;
+}
+
+/**
  * Генерирует URL-friendly slug из текста (транслитерация кириллицы)
  * 
  * @param string $text Исходный текст (например, "Футболка «Братья Святославичи»")

@@ -145,12 +145,12 @@ require __DIR__ . '/includes/components/header.php';
           <div class="size-title">
             <span>Размер</span>
           </div>
-          <div class="sizes">
-            <button type="button">S</button>
-            <button type="button">M</button>
-            <button type="button">L</button>
-            <button type="button">XL</button>
-            <button type="button">2XL</button>
+          <?php $unavailableSizes = productUnavailableSizes($product['sizes'] ?? null); ?>
+          <div class="sizes" data-unavailable="<?= htmlspecialchars(implode(',', $unavailableSizes)) ?>">
+            <?php foreach (allSizes() as $sz): ?>
+              <?php $isOut = in_array($sz, $unavailableSizes, true); ?>
+              <button type="button"<?= $isOut ? ' class="size-out" disabled aria-disabled="true" title="Нет в наличии"' : '' ?>><?= htmlspecialchars($sz) ?></button>
+            <?php endforeach; ?>
           </div>
 
           <div class="product-actions">

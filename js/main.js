@@ -430,8 +430,8 @@
     }));
   }
 
-  // выбор размера
-  document.querySelectorAll('.sizes button').forEach(b => {
+  // выбор размера (недоступные размеры отмечены disabled — их пропускаем)
+  document.querySelectorAll('.sizes button:not([disabled])').forEach(b => {
     b.addEventListener('click', () => {
       document.querySelectorAll('.sizes button').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
