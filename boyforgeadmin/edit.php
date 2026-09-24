@@ -135,6 +135,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tgLink = 'https://telegram.me/theboyforge?text=' . rawurlencode('Здравствуйте! Хочу заказать: ' . $name);
         }
 
+        // Недоступные размеры (отмечены галочками — на сайте будут перечёркнуты)
+        $unavailableSizes = $_POST['sizes_unavailable'] ?? [];
+        if (!is_array($unavailableSizes)) $unavailableSizes = [];
+        $unavailableSizes = array_values(array_unique(array_filter(
+            array_map(fn($s) => trim((string)$s), $unavailableSizes),
+            fn($s) => in_array($s, allSizes(), true)
+        )));
+        $sizesJson = json_encode($unavailableSizes, JSON_UNESCAPED_UNICODE);
+
         if ($name === '') {
             $error = 'Укажите название товара.';
         }
@@ -163,6 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     description = :description,
                     specs = :specs,
                     tg_link = :tg_link,
+                    sizes = :sizes,
                     is_active = :is_active,
                     sort_order = :sort_order
                     WHERE id = :id";
@@ -182,15 +192,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':description' => $description,
                     ':specs' => $specsJson,
                     ':tg_link' => $tgLink,
+                    ':sizes' => $sizesJson,
                     ':is_active' => $isActive,
                     ':sort_order' => $sortOrder,
                     ':id' => $id
                 ]);
             } else {
                 $sql = "INSERT INTO products 
-                    (cat_id, cat, name, slug, price, price_numeric, img, imgs, sub, tags, description, specs, tg_link, is_active, sort_order)
+                    (cat_id, cat, name, slug, price, price_numeric, img, imgs, sub, tags, description, specs, tg_link, sizes, is_active, sort_order)
                     VALUES 
-                    (:cat_id, :cat, :name, :slug, :price, :price_numeric, :img, :imgs, :sub, :tags, :description, :specs, :tg_link, :is_active, :sort_order)";
+                    (:cat_id, :cat, :name, :slug, :price, :price_numeric, :img, :imgs, :sub, :tags, :description, :specs, :tg_link, :sizes, :is_active, :sort_order)";
 
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([
@@ -207,6 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':description' => $description,
                     ':specs' => $specsJson,
                     ':tg_link' => $tgLink,
+                    ':sizes' => $sizesJson,
                     ':is_active' => $isActive,
                     ':sort_order' => $sortOrder
                 ]);
@@ -243,6 +255,8 @@ $isActiveVal = (int)($product['is_active'] ?? 1) === 1;
 $sortOrderVal = (int)($product['sort_order'] ?? 0);
 $tgLinkVal = htmlspecialchars($product['tg_link'] ?? '');
 $imgVal = htmlspecialchars($product['img'] ?? '');
+
+$currentUnavailableSizes = productUnavailableSizes($product['sizes'] ?? null);
 
 $currentTags = [];
 if (!empty($product['tags'])) {
@@ -403,6 +417,21 @@ $allCategories = $pdo->query("SELECT * FROM categories ORDER BY sort_order ASC, 
         <input type="checkbox" name="is_active" value="1" <?= $isActiveVal ? 'checked' : '' ?> style="width: 18px; height: 18px;">
         <span style="font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">Опубликован на сайте (активен)</span>
       </label>
+    </div>
+
+    <div class="form-group" style="margin-top: 16px;">
+      <label class="form-label">Размеры, недоступные для заказа</label>
+      <div class="tags-badge-container" id="sizesContainer" style="display:flex; flex-wrap:wrap; gap:10px;">
+        <?php foreach (allSizes() as $sz): ?>
+          <?php $sizeChecked = in_array($sz, $currentUnavailableSizes, true); ?>
+          <label class="badge-checkbox-item size-check-item<?= $sizeChecked ? ' is-out' : '' ?>" data-size="<?= htmlspecialchars($sz) ?>"
+                 style="display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border:1.5px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">
+            <input type="checkbox" name="sizes_unavailable[]" value="<?= htmlspecialchars($sz) ?>" <?= $sizeChecked ? 'checked' : '' ?>>
+            <span class="size-check-label" style="font-weight:600; font-size:13px; position:relative;"><?= htmlspecialchars($sz) ?></span>
+          </label>
+        <?php endforeach; ?>
+      </div>
+      <div class="form-help">Отметьте галочкой размеры, которых сейчас нет в наличии — на сайте они будут перечёркнуты и недоступны для заказа.</div>
     </div>
   </div>
 
@@ -601,6 +630,52 @@ document.addEventListener('DOMContentLoaded', function() {
         slug = slug.replace(/-+/g, '-').replace(/^-+|-+$/g, '');
         
         slugInput.value = slug;
+    });
+});
+
+</script>
+<style>
+.size-check-item.is-out {
+    border-color: rgba(239, 68, 68, 0.5) !important;
+}
+.size-check-item.is-out .size-check-label {
+    color: var(--text-muted, #9ca3af);
+    position: relative;
+}
+.size-check-item.is-out .size-check-label::before {
+    content: "";
+    position: absolute;
+    left: -5%;
+    right: -5%;
+    top: 50%;
+    height: 1.5px;
+    background: currentColor;
+    transform: rotate(-12deg);
+    transform-origin: center;
+    pointer-events: none;
+}
+</style>
+<script>
+/* Зачёркивание отмеченных размеров прямо в админке (наглядно, как на сайте) */
+document.addEventListener('DOMContentLoaded', function() {
+    const sizesContainer = document.getElementById('sizesContainer');
+    if (!sizesContainer) return;
+
+    function syncSizeItem(label) {
+        const cb = label.querySelector('input[type="checkbox"]');
+        if (!cb) return;
+        if (cb.checked) {
+            label.classList.add('is-out');
+        } else {
+            label.classList.remove('is-out');
+        }
+    }
+
+    sizesContainer.querySelectorAll('label.size-check-item').forEach(syncSizeItem);
+
+    sizesContainer.addEventListener('change', function(e) {
+        const label = e.target.closest('label.size-check-item');
+        if (label) syncSizeItem(label);
     });
 });
 </script>

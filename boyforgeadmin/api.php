@@ -97,8 +97,8 @@ switch ($action) {
         $newName = $orig['name'] . ' (Копия)';
         $newTg = 'https://telegram.me/theboyforge?text=' . rawurlencode('Здравствуйте! Хочу заказать: ' . $newName);
 
-        $insertStmt = $pdo->prepare("INSERT INTO products (cat_id, cat, name, price, price_numeric, img, imgs, sub, tags, description, specs, tg_link, is_active, is_popular, sort_order)
-            VALUES (:cat_id, :cat, :name, :price, :price_numeric, :img, :imgs, :sub, :tags, :description, :specs, :tg_link, 0, 0, :sort_order)");
+        $insertStmt = $pdo->prepare("INSERT INTO products (cat_id, cat, name, price, price_numeric, img, imgs, sub, tags, description, specs, tg_link, sizes, is_active, is_popular, sort_order)
+            VALUES (:cat_id, :cat, :name, :price, :price_numeric, :img, :imgs, :sub, :tags, :description, :specs, :tg_link, :sizes, 0, 0, :sort_order)");
 
         $insertStmt->execute([
             ':cat_id' => $orig['cat_id'],
@@ -113,6 +113,7 @@ switch ($action) {
             ':description' => $orig['description'],
             ':specs' => $orig['specs'],
             ':tg_link' => $newTg,
+            ':sizes' => $orig['sizes'] ?? null,
             ':sort_order' => (int)$orig['sort_order'] + 1
         ]);
 

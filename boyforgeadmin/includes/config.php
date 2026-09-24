@@ -54,6 +54,7 @@ function initDatabase(PDO $pdo): void {
         description TEXT NULL,
         specs JSON NULL,
         tg_link VARCHAR(500) NULL,
+        sizes JSON NULL,
         is_active TINYINT(1) NOT NULL DEFAULT 1,
         is_popular TINYINT(1) NOT NULL DEFAULT 0,
         sort_order INT NOT NULL DEFAULT 0,
@@ -62,6 +63,20 @@ function initDatabase(PDO $pdo): void {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
     
     $pdo->exec($sql);
+
+    // Миграция: добавляем колонку sizes (список НЕдоступных размеров товара), если её ещё нет
+    try {
+        $hasSizesCol = false;
+        foreach ($pdo->query("SHOW COLUMNS FROM products LIKE 'sizes'")->fetchAll() as $col) {
+            $hasSizesCol = true;
+            break;
+        }
+        if (!$hasSizesCol) {
+            $pdo->exec("ALTER TABLE products ADD COLUMN sizes JSON NULL AFTER tg_link");
+        }
+    } catch (Throwable $e) {
+        // Игнорируем: не хватает прав на ALTER — колонку можно добавить вручную
+    }
 
     $count = (int)$pdo->query("SELECT COUNT(*) FROM products")->fetchColumn();
     if ($count === 0) {

@@ -238,12 +238,21 @@
         return;
       }
 
+      // Размеры, отмеченные администратором как недоступные (из БД через data-атрибут)
+      var unavailable = (sizesWrap.getAttribute("data-unavailable") || "")
+        .split(",")
+        .map(function (s) { return s.trim(); })
+        .filter(Boolean);
+
       sizesWrap.style.display = "";
       sizesWrap.innerHTML = list.map(function (s) {
+        if (unavailable.indexOf(s) !== -1) {
+          return '<button type="button" class="size-out" disabled aria-disabled="true" title="Нет в наличии">' + s + "</button>";
+        }
         return '<button type="button">' + s + "</button>";
       }).join("");
 
-      sizesWrap.querySelectorAll("button").forEach(function (btn) {
+      sizesWrap.querySelectorAll("button:not([disabled])").forEach(function (btn) {
         btn.addEventListener("click", function () {
           sizesWrap.querySelectorAll("button").forEach(function (x) { x.classList.remove("active"); });
           btn.classList.add("active");
