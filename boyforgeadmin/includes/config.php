@@ -42,6 +42,7 @@ try {
 function initDatabase(PDO $pdo): void {
     $sql = "CREATE TABLE IF NOT EXISTS products (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        slug VARCHAR(255) DEFAULT NULL UNIQUE,
         cat_id VARCHAR(64) NOT NULL DEFAULT 'tshirt',
         cat VARCHAR(128) NOT NULL DEFAULT 'Футболка',
         name VARCHAR(255) NOT NULL,
