@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/env.php';
+require_once __DIR__ . '/helpers.php';
 env_load();
 
 // Валидация критических секретов

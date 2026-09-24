@@ -633,6 +633,29 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+</script>
+<style>
+.size-check-item.is-out {
+    border-color: rgba(239, 68, 68, 0.5) !important;
+}
+.size-check-item.is-out .size-check-label {
+    color: var(--text-muted, #9ca3af);
+    position: relative;
+}
+.size-check-item.is-out .size-check-label::before {
+    content: "";
+    position: absolute;
+    left: -5%;
+    right: -5%;
+    top: 50%;
+    height: 1.5px;
+    background: currentColor;
+    transform: rotate(-12deg);
+    transform-origin: center;
+    pointer-events: none;
+}
+</style>
+<script>
 /* Зачёркивание отмеченных размеров прямо в админке (наглядно, как на сайте) */
 document.addEventListener('DOMContentLoaded', function() {
     const sizesContainer = document.getElementById('sizesContainer');
@@ -640,18 +663,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function syncSizeItem(label) {
         const cb = label.querySelector('input[type="checkbox"]');
-        const span = label.querySelector('.size-check-label');
-        if (!cb || !span) return;
+        if (!cb) return;
         if (cb.checked) {
             label.classList.add('is-out');
-            span.style.textDecoration = 'line-through';
-            span.style.color = 'var(--text-muted, #9ca3af)';
-            label.style.borderColor = 'rgba(239, 68, 68, 0.5)';
         } else {
             label.classList.remove('is-out');
-            span.style.textDecoration = 'none';
-            span.style.color = '';
-            label.style.borderColor = '';
         }
     }
 
