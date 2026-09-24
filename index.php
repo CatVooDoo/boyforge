@@ -76,7 +76,8 @@ require __DIR__ . '/includes/components/header.php';
             $pId = (int)$p['id'];
             $pName = htmlspecialchars($p['name']);
             $pPrice = htmlspecialchars($p['price']);
-            $pImg = htmlspecialchars($p['img']);
+            $pImgRaw = $p['img'] ?: '';
+            $pImg = htmlspecialchars($pImgRaw !== '' ? '/' . ltrim($pImgRaw, '/') : '');
             $pTags = json_decode($p['tags'] ?? '[]', true) ?: [];
             $cardBadges = [];
             foreach ($pTags as $t) {

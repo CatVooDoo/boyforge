@@ -37,7 +37,8 @@ if ($found) {
     $pPrice = htmlspecialchars($product['price']);
     $pSub = htmlspecialchars($product['sub'] ?: 'Футболка · авторский принт');
     $pDesc = htmlspecialchars($product['description'] ?: 'Плотный хлопок, DTF-печать — мягкий стойкий принт, который не трескается со временем. Уход: стирка при 30°, без отбеливателя.');
-    $pImg = htmlspecialchars($product['img'] ?: '');
+    $pImgRaw = $product['img'] ?: '';
+    $pImg = htmlspecialchars($pImgRaw !== '' ? '/' . ltrim($pImgRaw, '/') : '');
 
     $imgs = json_decode($product['imgs'] ?? '[]', true);
     if (!is_array($imgs) || empty($imgs)) {
@@ -48,6 +49,9 @@ if ($found) {
     if (empty($imgs) && !empty($product['img'])) {
         $imgs = [$product['img']];
     }
+    
+    // Add leading slash for absolute path resolution from /product/...
+    $imgs = array_map(function($src) { return '/' . ltrim($src, '/'); }, $imgs);
 
     $specs = json_decode($product['specs'] ?? '[]', true);
     if (!is_array($specs)) {
@@ -214,7 +218,8 @@ require __DIR__ . '/includes/components/header.php';
                 $rId = (int)$r['id'];
                 $rName = htmlspecialchars($r['name']);
                 $rPrice = htmlspecialchars($r['price']);
-                $rImg = htmlspecialchars($r['img'] ?: '');
+                $rImgRaw = $r['img'] ?: '';
+                $rImg = htmlspecialchars($rImgRaw !== '' ? '/' . ltrim($rImgRaw, '/') : '');
                 $rTags = json_decode($r['tags'] ?? '[]', true) ?: [];
                 $rBadges = [];
                 foreach ($rTags as $t) {
