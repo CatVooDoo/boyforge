@@ -6,7 +6,10 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/../includes/fivepost.php';
 
 $logFile = __DIR__ . '/../logs/5post.log';
-$envVars = FivePostClient::loadEnv();
+$envVars = [
+    '5POST_ENV' => env_get('5POST_ENV'),
+    '5POST_API_KEY' => env_get('5POST_API_KEY')
+];
 
 $action = $_GET['action'] ?? '';
 $feedbackMsg = null;

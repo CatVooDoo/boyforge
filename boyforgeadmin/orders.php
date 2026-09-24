@@ -65,7 +65,7 @@ require __DIR__ . '/includes/header.php';
                 <td>
                   <div style="font-weight:500;"><?= htmlspecialchars($order['product_name']) ?></div>
                   <div style="font-size:12px; color:#6b7280;">
-                    <?= htmlspecialchars($order['size']) ?> | <?= number_format((float)$order['price'], 0, '', ' ') ?> ₽
+                    <?= htmlspecialchars($order['size']) ?> — <?= number_format((float)$order['price'], 0, '', ' ') ?> ₽
                   </div>
                 </td>
                 <td>
