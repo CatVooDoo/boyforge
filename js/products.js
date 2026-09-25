@@ -422,7 +422,7 @@
         "id": 5,
         "catId": "tshirt",
         "cat": "Футболка",
-        "name": "Футболка чёрная мужская",
+        "name": "Тестовый товар",
         "price": "1 ₽",
         "img": "images\/ranopoh\/p-ranopoh.jpg",
         "imgs": [

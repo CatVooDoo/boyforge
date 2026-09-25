@@ -17,6 +17,13 @@ $input = json_decode(file_get_contents('php://input'), true) ?? [];
 $orderId = trim($input['order_id'] ?? '');
 $markCode = trim($input['mark_code'] ?? '');
 
+// Восстановление разделителей <GS> (\x1D), если сканер их вырезал.
+// Для одежды стандартная длина кода без <GS> = 83 символа.
+// 01(14) + 21(13) + <GS> + 91(4) + <GS> + 92(44)
+if (strlen($markCode) === 83 && preg_match('/^(01\d{14}21.{13})(91.{4})(92.{44})$/', $markCode, $matches)) {
+    $markCode = $matches[1] . "\x1D" . $matches[2] . "\x1D" . $matches[3];
+}
+
 if (empty($orderId)) {
     echo json_encode(['success' => false, 'error' => 'Отсутствует order_id']);
     exit;
@@ -81,20 +88,6 @@ try {
     $paymentSubject = $isMarked ? 'marked' : 'commodity';
 
     $receiptPayload = [
-        /**
-         * ТРЕБОВАНИЕ ФФД 1.2: internet=true обязательно для интернет-магазинов
-         * Указывает, что чек сформирован при расчетах в интернете
-         */
-        'internet' => true,
-        
-        /**
-         * ТРЕБОВАНИЕ ФФД 1.2: timezone обязателен для чеков с маркировкой
-         * Часовой пояс ККТ (используется формат IANA или номер от -12 до +14)
-         * 2 = Москва (UTC+3, но в формате ЮKassa это значение 2)
-         * Согласно документации: https://yookassa.ru/developers/api#receipt_object
-         */
-        'timezone' => 2, // Москва
-        
         'customer' => [
             'email' => $email
         ],
@@ -171,13 +164,13 @@ try {
                 /**
                  * MARK CODE INFO (код маркировки):
                  * Передается только для маркированных товаров
-                 * Формат: gs_1m — код в формате GS1 DataMatrix (13 символов)
+                 * Формат: gs_1m — код в формате GS1 DataMatrix
                  * 
                  * Требование ФФД 1.2: наличие кода маркировки обязательно
                  * для товаров подлежащих обязательной маркировке (обувь, одежда, шины и т.д.)
                  */
                 'mark_code_info' => [
-                    'gs_1m' => $markCode // GS1M код (обязателен для маркированных товаров)
+                    'gs_1m' => $markCode // Обязательно gs_1m с разделителями \x1D (GS)
                 ],
                 
                 /**
@@ -201,10 +194,11 @@ try {
     
     /**
      * IDEMPOTENCE KEY (ключ идемпотентности):
-     * Гарантирует, что повторная отправка того же запроса не создаст дубликат чека
-     * Формат: любая уникальная строка (рекомендуется использовать префикс + order_id)
+     * Добавляем time(), чтобы при изменении данных (или после прошлой ошибки)
+     * ЮKassa не блокировала запрос на 24 часа. Защита от дублей при успехе
+     * уже реализована проверкой receipt_sent в базе.
      */
-    $idempotenceKey = 'receipt_' . $order['order_id'];
+    $idempotenceKey = 'receipt_' . $order['order_id'] . '_' . time();
     
     curl_setopt_array($ch, [
         CURLOPT_POST => true,

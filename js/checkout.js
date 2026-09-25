@@ -682,6 +682,15 @@
         .then(res => res.json())
         .then(data => {
             if (data.success && data.confirmation_token) {
+                if (typeof window.YooMoneyCheckoutWidget === 'undefined') {
+                    showStatus("Не удалось загрузить форму оплаты. Возможно, она заблокирована расширением (AdBlock) или антивирусом. Пожалуйста, отключите блокировщик и обновите страницу.", "error");
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = "Оплатить онлайн";
+                    }
+                    return;
+                }
+
                 // Инициализация виджета ЮKassa
                 const checkout = new window.YooMoneyCheckoutWidget({
                     confirmation_token: data.confirmation_token,
