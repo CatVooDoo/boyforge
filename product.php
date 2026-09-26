@@ -161,12 +161,14 @@ require __DIR__ . '/includes/components/header.php';
             <button type="button" class="btn-primary btn-block" id="orderModalBtn">
               Оформить заказ с доставкой
             </button>
+            <!--
             <a href="<?= htmlspecialchars($tgBase) ?>" 
                class="btn-outline btn-block" id="orderBtn" 
                data-tg-base="<?= htmlspecialchars($tgBase) ?>"
                target="_blank" rel="noopener">
               Заказать в Telegram
             </a>
+            -->
           </div>
 
           <div class="product-accordion">
