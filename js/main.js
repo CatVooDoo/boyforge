@@ -212,7 +212,7 @@
 })();
 
    /* ============================================================
-   HERO-СЛАЙДЕР (переключение по окончании видео)
+   HERO-СЛАЙДЕР (автопереключение изображений)
    ============================================================ */
 (function () {
   const slider = document.querySelector('.hero-slider');
@@ -223,8 +223,7 @@
   const prevBtn = slider.querySelector('.hero-prev');
   const nextBtn = slider.querySelector('.hero-next');
   let index = 0;
-
-  const mq = window.matchMedia('(max-width:767px)');
+  let timerId;
 
   // точки
   slides.forEach((_, i) => {
@@ -236,31 +235,9 @@
   });
   const dots = [...dotsWrap.children];
 
-  // видео активного слайда (нужная версия — ПК/моб)
-  function activeVideo() {
-    const slide = slides[index];
-    if (!slide) return null;
-    const sel = mq.matches ? 'video.hero-video--mobile' : 'video.hero-video--desktop';
-    return slide.querySelector(sel);
-  }
-
-  // играем видео текущего слайда, остальные ставим на паузу
-  function playCurrent() {
-    slider.querySelectorAll('video.hero-video').forEach(v => {
-      v.pause();
-      v.onended = null;
-    });
-
-    const v = activeVideo();
-    if (!v) return;
-
-    try { v.currentTime = 0; } catch (e) {}
-    if (v.readyState < 2) { try { v.load(); } catch (e) {} }
-    const p = v.play();
-    if (p && p.catch) p.catch(() => {});
-
-    // когда видео доиграло — следующий слайд
-    v.onended = () => next();
+  function startTimer() {
+    clearInterval(timerId);
+    timerId = setInterval(() => next(), 5000);
   }
 
   function go(i) {
@@ -269,8 +246,9 @@
     index = (i + slides.length) % slides.length;
     slides[index].classList.add('is-active');
     dots[index].classList.add('is-active');
-    playCurrent();
+    startTimer();
   }
+  
   const next = () => go(index + 1);
   const prev = () => go(index - 1);
 
@@ -279,18 +257,39 @@
 
   // свайп на мобиле
   let startX = 0;
-  slider.addEventListener('touchstart', e => startX = e.touches[0].clientX, { passive: true });
-  slider.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - startX;
-    if (Math.abs(dx) > 50) (dx < 0 ? next() : prev());
+  let isDragging = false;
+
+  slider.addEventListener('touchstart', e => {
+    isDragging = false;
+    startX = e.touches[0].clientX;
+    clearInterval(timerId);
   }, { passive: true });
 
-  // при смене ПК/моб — перезапускаем нужную версию видео
-  if (mq.addEventListener) mq.addEventListener('change', playCurrent);
-  else mq.addListener(playCurrent);
+  slider.addEventListener('touchmove', e => {
+    isDragging = true;
+  }, { passive: true });
+
+  slider.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 50) {
+      if (dx < 0) next(); else prev();
+    } else {
+      isDragging = false;
+      startTimer();
+    }
+  }, { passive: true });
+
+  // Предотвращаем переход по ссылке, если был свайп
+  slides.forEach(slide => {
+    slide.addEventListener('click', e => {
+      if (isDragging) {
+        e.preventDefault();
+      }
+    });
+  });
 
   // старт
-  playCurrent();
+  startTimer();
 })();
 
 
