@@ -658,7 +658,7 @@
           size: state.size,
           fio: fio,
           email: email,
-          phone: phone,
+          phone: phone.replace(/[^\d+]/g, ""),
           fivepostPointId: pointId,
           fivepostPointName: (fivepostNameInput?.value || "").trim(),
           fivepostPointAddress: (fivepostAddrInput?.value || "").trim(),

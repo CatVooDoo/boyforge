@@ -22,7 +22,7 @@ function sizesByGender(): array {
  * Возвращает список НЕдоступных размеров товара из колонки products.sizes (JSON)
  *
  * @param mixed $sizesRaw Значение колонки sizes (JSON-строка или массив)
- * @return string[] Массив отмеченных как недоступные размеров (например ["S","2XL"])
+ * @return array Массив недоступных размеров по полу: ['Мужской' => [...], 'Женский' => [...]]
  */
 function productUnavailableSizes($sizesRaw): array {
     if (is_array($sizesRaw)) {
@@ -30,17 +30,39 @@ function productUnavailableSizes($sizesRaw): array {
     } else {
         $parsed = json_decode((string)($sizesRaw ?? ''), true);
     }
-    if (!is_array($parsed)) {
-        return [];
-    }
+    
+    $result = ['Мужской' => [], 'Женский' => []];
     $known = allSizes();
-    $result = [];
-    foreach ($parsed as $s) {
-        $s = trim((string)$s);
-        if ($s !== '' && in_array($s, $known, true) && !in_array($s, $result, true)) {
-            $result[] = $s;
+    
+    if (!is_array($parsed)) {
+        return $result;
+    }
+    
+    // Поддержка старого формата: плоский массив ["S", "M"] применяется к обоим полам
+    if (isset($parsed[0]) || empty($parsed)) {
+        $flat = [];
+        foreach ($parsed as $s) {
+            $s = trim((string)$s);
+            if ($s !== '' && in_array($s, $known, true) && !in_array($s, $flat, true)) {
+                $flat[] = $s;
+            }
+        }
+        $result['Мужской'] = $flat;
+        $result['Женский'] = $flat;
+    } else {
+        // Поддержка нового формата: {"Мужской": ["S"], "Женский": ["M"]}
+        foreach (['Мужской', 'Женский'] as $gender) {
+            if (isset($parsed[$gender]) && is_array($parsed[$gender])) {
+                foreach ($parsed[$gender] as $s) {
+                    $s = trim((string)$s);
+                    if ($s !== '' && in_array($s, $known, true) && !in_array($s, $result[$gender], true)) {
+                        $result[$gender][] = $s;
+                    }
+                }
+            }
         }
     }
+    
     return $result;
 }
 

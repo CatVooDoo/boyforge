@@ -150,9 +150,9 @@ require __DIR__ . '/includes/components/header.php';
             <span>Размер</span>
           </div>
           <?php $unavailableSizes = productUnavailableSizes($product['sizes'] ?? null); ?>
-          <div class="sizes" data-unavailable="<?= htmlspecialchars(implode(',', $unavailableSizes)) ?>">
+          <div class="sizes" data-unavailable-male="<?= htmlspecialchars(implode(',', $unavailableSizes['Мужской'] ?? [])) ?>" data-unavailable-female="<?= htmlspecialchars(implode(',', $unavailableSizes['Женский'] ?? [])) ?>">
             <?php foreach (allSizes() as $sz): ?>
-              <?php $isOut = in_array($sz, $unavailableSizes, true); ?>
+              <?php $isOut = in_array($sz, $unavailableSizes['Мужской'] ?? [], true) && in_array($sz, $unavailableSizes['Женский'] ?? [], true); ?>
               <button type="button"<?= $isOut ? ' class="size-out" disabled aria-disabled="true" title="Нет в наличии"' : '' ?>><?= htmlspecialchars($sz) ?></button>
             <?php endforeach; ?>
           </div>

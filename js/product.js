@@ -239,7 +239,8 @@
       }
 
       // Размеры, отмеченные администратором как недоступные (из БД через data-атрибут)
-      var unavailable = (sizesWrap.getAttribute("data-unavailable") || "")
+      var attrName = gender === "Мужской" ? "data-unavailable-male" : "data-unavailable-female";
+      var unavailable = (sizesWrap.getAttribute(attrName) || "")
         .split(",")
         .map(function (s) { return s.trim(); })
         .filter(Boolean);

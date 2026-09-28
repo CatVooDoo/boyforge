@@ -136,13 +136,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Недоступные размеры (отмечены галочками — на сайте будут перечёркнуты)
-        $unavailableSizes = $_POST['sizes_unavailable'] ?? [];
-        if (!is_array($unavailableSizes)) $unavailableSizes = [];
-        $unavailableSizes = array_values(array_unique(array_filter(
-            array_map(fn($s) => trim((string)$s), $unavailableSizes),
+        $unavailableMale = $_POST['sizes_unavailable_male'] ?? [];
+        if (!is_array($unavailableMale)) $unavailableMale = [];
+        $unavailableMale = array_values(array_unique(array_filter(
+            array_map(fn($s) => trim((string)$s), $unavailableMale),
             fn($s) => in_array($s, allSizes(), true)
         )));
-        $sizesJson = json_encode($unavailableSizes, JSON_UNESCAPED_UNICODE);
+
+        $unavailableFemale = $_POST['sizes_unavailable_female'] ?? [];
+        if (!is_array($unavailableFemale)) $unavailableFemale = [];
+        $unavailableFemale = array_values(array_unique(array_filter(
+            array_map(fn($s) => trim((string)$s), $unavailableFemale),
+            fn($s) => in_array($s, allSizes(), true)
+        )));
+
+        $sizesJson = json_encode([
+            'Мужской' => $unavailableMale,
+            'Женский' => $unavailableFemale
+        ], JSON_UNESCAPED_UNICODE);
 
         if ($name === '') {
             $error = 'Укажите название товара.';
@@ -257,6 +268,8 @@ $tgLinkVal = htmlspecialchars($product['tg_link'] ?? '');
 $imgVal = htmlspecialchars($product['img'] ?? '');
 
 $currentUnavailableSizes = productUnavailableSizes($product['sizes'] ?? null);
+$unavMale = $currentUnavailableSizes['Мужской'] ?? [];
+$unavFemale = $currentUnavailableSizes['Женский'] ?? [];
 
 $currentTags = [];
 if (!empty($product['tags'])) {
@@ -420,18 +433,30 @@ $allCategories = $pdo->query("SELECT * FROM categories ORDER BY sort_order ASC, 
     </div>
 
     <div class="form-group" style="margin-top: 16px;">
-      <label class="form-label">Размеры, недоступные для заказа</label>
-      <div class="tags-badge-container" id="sizesContainer" style="display:flex; flex-wrap:wrap; gap:10px;">
+      <label class="form-label">Недоступные размеры (Мужская сетка)</label>
+      <div class="tags-badge-container" id="sizesContainerMale" style="display:flex; flex-wrap:wrap; gap:10px;">
         <?php foreach (allSizes() as $sz): ?>
-          <?php $sizeChecked = in_array($sz, $currentUnavailableSizes, true); ?>
+          <?php $sizeChecked = in_array($sz, $unavMale, true); ?>
           <label class="badge-checkbox-item size-check-item<?= $sizeChecked ? ' is-out' : '' ?>" data-size="<?= htmlspecialchars($sz) ?>"
                  style="display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border:1.5px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">
-            <input type="checkbox" name="sizes_unavailable[]" value="<?= htmlspecialchars($sz) ?>" <?= $sizeChecked ? 'checked' : '' ?>>
+            <input type="checkbox" name="sizes_unavailable_male[]" value="<?= htmlspecialchars($sz) ?>" <?= $sizeChecked ? 'checked' : '' ?>>
             <span class="size-check-label" style="font-weight:600; font-size:13px; position:relative;"><?= htmlspecialchars($sz) ?></span>
           </label>
         <?php endforeach; ?>
       </div>
-      <div class="form-help">Отметьте галочкой размеры, которых сейчас нет в наличии — на сайте они будут перечёркнуты и недоступны для заказа.</div>
+      
+      <label class="form-label" style="margin-top: 16px;">Недоступные размеры (Женская сетка)</label>
+      <div class="tags-badge-container" id="sizesContainerFemale" style="display:flex; flex-wrap:wrap; gap:10px;">
+        <?php foreach (allSizes() as $sz): ?>
+          <?php $sizeChecked = in_array($sz, $unavFemale, true); ?>
+          <label class="badge-checkbox-item size-check-item<?= $sizeChecked ? ' is-out' : '' ?>" data-size="<?= htmlspecialchars($sz) ?>"
+                 style="display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border:1.5px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">
+            <input type="checkbox" name="sizes_unavailable_female[]" value="<?= htmlspecialchars($sz) ?>" <?= $sizeChecked ? 'checked' : '' ?>>
+            <span class="size-check-label" style="font-weight:600; font-size:13px; position:relative;"><?= htmlspecialchars($sz) ?></span>
+          </label>
+        <?php endforeach; ?>
+      </div>
+      <div class="form-help" style="margin-top: 8px;">Отметьте галочкой размеры, которых сейчас нет в наличии — на сайте они будут перечёркнуты и недоступны для заказа.</div>
     </div>
   </div>
 
@@ -658,25 +683,30 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 /* Зачёркивание отмеченных размеров прямо в админке (наглядно, как на сайте) */
 document.addEventListener('DOMContentLoaded', function() {
-    const sizesContainer = document.getElementById('sizesContainer');
-    if (!sizesContainer) return;
+    function initSizesContainer(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
 
-    function syncSizeItem(label) {
-        const cb = label.querySelector('input[type="checkbox"]');
-        if (!cb) return;
-        if (cb.checked) {
-            label.classList.add('is-out');
-        } else {
-            label.classList.remove('is-out');
+        function syncSizeItem(label) {
+            const cb = label.querySelector('input[type="checkbox"]');
+            if (!cb) return;
+            if (cb.checked) {
+                label.classList.add('is-out');
+            } else {
+                label.classList.remove('is-out');
+            }
         }
+
+        container.querySelectorAll('label.size-check-item').forEach(syncSizeItem);
+
+        container.addEventListener('change', function(e) {
+            const label = e.target.closest('label.size-check-item');
+            if (label) syncSizeItem(label);
+        });
     }
 
-    sizesContainer.querySelectorAll('label.size-check-item').forEach(syncSizeItem);
-
-    sizesContainer.addEventListener('change', function(e) {
-        const label = e.target.closest('label.size-check-item');
-        if (label) syncSizeItem(label);
-    });
+    initSizesContainer('sizesContainerMale');
+    initSizesContainer('sizesContainerFemale');
 });
 </script>
 

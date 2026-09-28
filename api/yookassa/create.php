@@ -91,8 +91,7 @@ $paymentData = [
     ],
     'description' => mb_substr($description, 0, 128),
     'metadata' => [
-        'order_id' => $orderId,
-        'payload' => json_encode($input, JSON_UNESCAPED_UNICODE)
+        'order_id' => $orderId
     ],
     'receipt' => [
         'customer' => [
