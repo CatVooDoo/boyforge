@@ -21,35 +21,20 @@ require __DIR__ . '/includes/components/header.php';
     <section class="hero-slider" aria-label="BOYFORGE — кузница стильной одежды">
       <div class="hero-track">
 
-                <!-- Слайд 3 -->
-        <a href="<?= productUrl(3) ?>" class="hero-slide" aria-label="Смотреть товар">
-          <video class="hero-video hero-video--desktop" autoplay muted playsinline preload="auto" poster="images/hero-3.jpg">
-            <source src="videos/hero-3-desktop.mp4" type="video/mp4">
-          </video>
-          <video class="hero-video hero-video--mobile" autoplay muted playsinline preload="auto" poster="images/hero-3-mobile.jpg">
-            <source src="videos/hero-3-mobile.mp4" type="video/mp4">
-          </video>
-        </a>
+                <!-- Слайд 1 -->
+        <div class="hero-slide is-active" aria-label="Слайд 1">
+          <img class="hero-image" src="images/slider/hero-1.jpg" alt="Слайд 1">
+        </div>
 
         <!-- Слайд 2 -->
-        <a href="<?= productUrl(2) ?>" class="hero-slide" aria-label="Смотреть товар">
-          <video class="hero-video hero-video--desktop" autoplay muted playsinline preload="auto" poster="images/hero-2.jpg">
-            <source src="videos/hero-2-desktop.mp4" type="video/mp4">
-          </video>
-          <video class="hero-video hero-video--mobile" autoplay muted playsinline preload="auto" poster="images/hero-2-mobile.jpg">
-            <source src="videos/hero-2-mobile.mp4" type="video/mp4">
-          </video>
-        </a>
+        <div class="hero-slide" aria-label="Слайд 2">
+          <img class="hero-image" src="images/slider/hero-2.jpg" alt="Слайд 2">
+        </div>
 
-        <!-- Слайд 1 -->
-        <a href="<?= productUrl(1) ?>" class="hero-slide is-active" aria-label="Смотреть товар">
-          <video class="hero-video hero-video--desktop" autoplay muted playsinline preload="auto" poster="images/hero-1.jpg">
-            <source src="videos/hero-1-desktop.mp4" type="video/mp4">
-          </video>
-          <video class="hero-video hero-video--mobile" autoplay muted playsinline preload="auto" poster="images/hero-1-mobile.jpg">
-            <source src="videos/hero-1-mobile.mp4" type="video/mp4">
-          </video>
-        </a>
+        <!-- Слайд 3 -->
+        <div class="hero-slide" aria-label="Слайд 3">
+          <img class="hero-image" src="images/slider/hero-3.jpg" alt="Слайд 3">
+        </div>
 
       </div>
 

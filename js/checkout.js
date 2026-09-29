@@ -658,7 +658,7 @@
           size: state.size,
           fio: fio,
           email: email,
-          phone: phone,
+          phone: phone.replace(/[^\d+]/g, ""),
           fivepostPointId: pointId,
           fivepostPointName: (fivepostNameInput?.value || "").trim(),
           fivepostPointAddress: (fivepostAddrInput?.value || "").trim(),
@@ -702,7 +702,15 @@
                         }
                     },
                     error_callback: function(error) {
-                        showStatus("Ошибка виджета оплаты", "error");
+                        console.error("YooKassa Widget Error:", error);
+                        let errMsg = "Ошибка виджета оплаты";
+                        if (error) {
+                            if (typeof error === 'string') errMsg += ": " + error;
+                            else if (error.error) errMsg += ": " + error.error;
+                            else if (error.message) errMsg += ": " + error.message;
+                        }
+                        let supportMsg = "<br><br><span style='color: #3b82f6; font-size: 0.95em; display: block; margin-top: 5px;'>Если у вас возникает такая ошибка, пожалуйста, отправьте скриншот нам в Telegram (чтобы было видно всю ошибку) <a href='https://t.me/theboyforge' target='_blank' style='color: inherit; text-decoration: underline;'>@theboyforge</a>. После этого обновите страницу и попробуйте ещё раз.</span>";
+                        showStatus(errMsg + supportMsg, "error");
                         if (submitBtn) {
                             submitBtn.disabled = false;
                             submitBtn.textContent = "Оплатить онлайн";
@@ -759,7 +767,8 @@
         })
         .catch(err => {
             console.error(err);
-            showStatus(err.message || "Не удалось инициировать оплату", "error");
+            let supportMsg = "<br><br><span style='color: #3b82f6; font-size: 0.95em; display: block; margin-top: 5px;'>Если у вас возникает такая ошибка, пожалуйста, отправьте скриншот нам в Telegram (чтобы было видно всю ошибку) <a href='https://t.me/theboyforge' target='_blank' style='color: inherit; text-decoration: underline;'>@theboyforge</a>. После этого обновите страницу и попробуйте ещё раз.</span>";
+            showStatus((err.message || "Не удалось инициировать оплату") + supportMsg, "error");
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.textContent = "Оплатить онлайн";

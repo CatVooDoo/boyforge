@@ -182,7 +182,7 @@ h1,h2,h3,h4,h5,h6{ font-weight:700; line-height:1.12; }
   background:#1a1a1a; margin-top:calc(var(--header-height) * -1);
 }
 .hero-track{ position:absolute; inset:0; }
-.hero-slide{ position:absolute; inset:0; opacity:0; transition:opacity 1s var(--ease); z-index:1; display:block; cursor:pointer; }
+.hero-slide{ position:absolute; inset:0; opacity:0; transition:opacity 1s var(--ease); z-index:1; display:block; }
 .hero-slide.is-active{ opacity:1; z-index:2; }
 .hero-slide picture,.hero-slide img{ width:100%; height:100%; object-fit:cover; }
 
@@ -2560,8 +2560,9 @@ body:not(.home){
   .drop-tag{ letter-spacing:.2em; }
 }
 
-/* ---------- HERO: видео внутри слайдов ---------- */
-.hero-slide video.hero-video{
+/* ---------- HERO: медиа внутри слайдов ---------- */
+.hero-slide video.hero-video,
+.hero-slide img.hero-image {
   width:100%;
   height:100%;
   object-fit:cover;

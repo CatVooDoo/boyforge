@@ -91,8 +91,7 @@ $paymentData = [
     ],
     'description' => mb_substr($description, 0, 128),
     'metadata' => [
-        'order_id' => $orderId,
-        'payload' => json_encode($input, JSON_UNESCAPED_UNICODE)
+        'order_id' => $orderId
     ],
     'receipt' => [
         'customer' => [
@@ -160,9 +159,19 @@ if ($httpCode >= 200 && $httpCode < 300 && isset($responseData['confirmation']['
         'payment_id' => $responseData['id']
     ]);
 } else {
+    $errorMsg = 'YooKassa API Error';
+    if (is_array($responseData) && isset($responseData['code'])) {
+        $errorMsg = "ЮKassa [" . $responseData['code'] . "]: " . ($responseData['description'] ?? '');
+        if (!empty($responseData['parameter'])) {
+            $errorMsg .= " (Параметр: " . $responseData['parameter'] . ")";
+        }
+    } elseif ($httpCode) {
+        $errorMsg .= " (HTTP $httpCode)";
+    }
+
     echo json_encode([
         'success' => false,
-        'error' => 'YooKassa API Error',
+        'error' => $errorMsg,
         'details' => $responseData
     ]);
 }
