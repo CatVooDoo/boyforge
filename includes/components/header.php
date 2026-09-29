@@ -1,6 +1,24 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/../bootstrap.php';
+
+$currentScript = basename($_SERVER['SCRIPT_NAME']);
+if (isset($_COOKIE['last_order_id']) && $currentScript !== 'payment-success.php') {
+    $lastOrderId = preg_replace('/[^a-zA-Z0-9_-]/', '', $_COOKIE['last_order_id']);
+    if ($lastOrderId) {
+        global $pdo;
+        if (isset($pdo)) {
+            $stmt = $pdo->prepare("SELECT payment_status FROM orders WHERE order_id = :oid LIMIT 1");
+            $stmt->execute([':oid' => $lastOrderId]);
+            $status = $stmt->fetchColumn();
+            if ($status === 'paid') {
+                setcookie("last_order_id", "", time() - 3600, "/");
+                header("Location: /payment-success.php?orderId=" . $lastOrderId);
+                exit;
+            }
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="ru">

@@ -735,6 +735,7 @@
                         
                         showSuccessScreen(orderId, finalPayload);
                         checkout.destroy();
+                        window.location.href = "/payment-success.php?orderId=" + orderId;
                     });
                 });
                 
@@ -760,6 +761,7 @@
                 if (formSection) formSection.style.display = "none";
                 
                 showStatus("", null);
+                document.cookie = "last_order_id=" + orderId + "; max-age=300; path=/";
                 checkout.render('fivepostMapWrapper');
             } else {
                 throw new Error(data.error || "Ошибка создания платежа");
