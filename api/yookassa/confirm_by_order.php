@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/bootstrap.php';
 require_once __DIR__ . '/../../includes/order_logic.php';
+require_once __DIR__ . '/../../includes/order_logger.php';
 
 header('Content-Type: application/json');
 
@@ -73,6 +74,10 @@ if ($httpCode === 200 && $response) {
         // Для простоты, если мы используем авто-списание, статус должен быть succeeded.
         // Запускаем процесс отправки в 5Post и Google Sheets (он идемпотентен)
         if (($paymentData['status'] ?? '') === 'succeeded') {
+            logOrderEvent($orderId, 'frontend_confirm_by_order_success', [
+                'status' => 'paid',
+                'api_response' => $paymentData
+            ]);
             processPaidOrder($pdo, $orderId, $paymentId);
             echo json_encode(['success' => true, 'status' => 'succeeded']);
             exit;
@@ -95,11 +100,19 @@ if ($httpCode === 200 && $response) {
             curl_close($chCap);
             
             // Теперь оно точно succeeded
+            logOrderEvent($orderId, 'frontend_confirm_by_order_captured', [
+                'status' => 'paid',
+                'capture_response' => $capRes
+            ]);
             processPaidOrder($pdo, $orderId, $paymentId);
             echo json_encode(['success' => true, 'status' => 'captured']);
             exit;
         }
     } else {
+        logOrderEvent($orderId, 'frontend_confirm_by_order_not_succeeded', [
+            'status' => $paymentData['status'] ?? 'unknown',
+            'api_response' => $paymentData
+        ]);
         echo json_encode(['success' => false, 'error' => 'Payment not succeeded yet', 'status' => $paymentData['status'] ?? 'unknown']);
         exit;
     }

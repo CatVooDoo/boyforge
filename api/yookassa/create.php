@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/bootstrap.php';
 require_once __DIR__ . '/../../includes/order_logic.php';
+require_once __DIR__ . '/../../includes/order_logger.php';
 
 header('Content-Type: application/json');
 
@@ -75,6 +76,14 @@ if (empty($shopId) || empty($secretKey)) {
 global $pdo;
 saveOrderToDb($pdo, $input, 'unpaid', '');
 
+logOrderEvent($orderId, 'order_created', [
+    'fio' => $input['fio'] ?? '',
+    'email' => $email,
+    'status' => 'unpaid',
+    'product_id' => $productId,
+    'price' => $priceValue
+]);
+
 // 1 = ОСН по умолчанию
 $taxSystemCode = (int) (env_get('YOOKASSA_TAX_SYSTEM') ?: '1');
 // 1 = Без НДС по умолчанию
@@ -99,7 +108,7 @@ $paymentData = [
         ],
         'items' => [
             [
-                'description' => mb_substr($productName, 0, 128),
+                'description' => mb_substr("Заказ $orderId: $productName", 0, 128),
                 'quantity' => 1.000,
                 'amount' => [
                     'value' => number_format($priceValue, 2, '.', ''),
@@ -144,6 +153,11 @@ if ($response === false) {
 }
 
 $responseData = json_decode($response, true);
+
+logOrderEvent($orderId, 'yookassa_payment_created', [
+    'http_code' => $httpCode,
+    'response' => $responseData ?: $response
+]);
 
 if ($httpCode >= 200 && $httpCode < 300 && isset($responseData['confirmation']['confirmation_token'])) {
     // Сохраняем payment_id в базу, чтобы потом проверять статус при возврате на return_url
