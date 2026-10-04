@@ -21,6 +21,24 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 require __DIR__ . '/includes/header.php';
 ?>
 
+<style>
+.cancelled-row td {
+    position: relative;
+    opacity: 0.5;
+}
+.cancelled-row td::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background-color: #6b7280;
+    pointer-events: none;
+    z-index: 10;
+}
+</style>
+
 <div class="admin-main">
   <div class="admin-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
     <h1 class="admin-title">Управление заказами и чеками</h1>
@@ -53,7 +71,8 @@ require __DIR__ . '/includes/header.php';
           </thead>
           <tbody>
             <?php foreach ($orders as $order): ?>
-              <tr id="order-row-<?= htmlspecialchars($order['order_id']) ?>">
+              <?php $isCancelled = ($order['mark_code'] === '__CANCELLED__'); ?>
+              <tr id="order-row-<?= htmlspecialchars($order['order_id']) ?>" class="<?= $isCancelled ? 'cancelled-row' : '' ?>">
                 <td>
                   <div style="font-weight:600; margin-bottom:4px;"><?= htmlspecialchars($order['order_id']) ?></div>
                   <div style="font-size:12px; color:#6b7280;"><?= htmlspecialchars($order['created_at']) ?></div>
@@ -86,9 +105,18 @@ require __DIR__ . '/includes/header.php';
                             <?= htmlspecialchars($order['mark_code']) ?>
                         </div>
                     <?php endif; ?>
+                  <?php elseif ($isCancelled): ?>
+                    <div style="color:#ef4444; font-size:14px; font-weight:500;">
+                        Отменено
+                    </div>
                   <?php else: ?>
                     <div class="receipt-form-container">
-                        <input type="text" class="form-input mark-input" placeholder="Пикните сканером код маркировки" style="margin-bottom: 8px; font-family: monospace; font-size:12px;" data-order="<?= htmlspecialchars($order['order_id']) ?>">
+                        <div style="display:flex; gap: 8px; margin-bottom: 8px;">
+                            <input type="text" class="form-input mark-input" placeholder="Пикните сканером код маркировки" style="font-family: monospace; font-size:12px; flex: 1;" data-order="<?= htmlspecialchars($order['order_id']) ?>">
+                            <button type="button" class="btn btn-danger btn-sm cancel-order-btn" data-order="<?= htmlspecialchars($order['order_id']) ?>">
+                                Отменить
+                            </button>
+                        </div>
                         <button type="button" class="btn-primary btn-sm send-receipt-btn" data-order="<?= htmlspecialchars($order['order_id']) ?>" style="width: 100%;">
                             Отправить чек
                         </button>
@@ -103,6 +131,16 @@ require __DIR__ . '/includes/header.php';
       </div>
     <?php endif; ?>
   </div>
+</div>
+
+<div id="cancelModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#fff; padding:24px; border-radius:8px; width:320px; text-align:center; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+        <h3 style="margin-top:0; margin-bottom:16px; font-size:18px;">Вы точно хотите сделать отмену заказа?</h3>
+        <div style="display:flex; gap:12px; justify-content:center;">
+            <button id="cancelModalYes" class="btn btn-danger">Да</button>
+            <button id="cancelModalNo" class="btn btn-secondary">Отмена</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -165,6 +203,57 @@ document.addEventListener('DOMContentLoaded', function() {
                 statusDiv.style.color = '#ef4444';
                 statusDiv.textContent = 'Сетевая ошибка.';
             });
+        });
+    });
+
+    const cancelModal = document.getElementById('cancelModal');
+    let orderToCancel = null;
+
+    document.querySelectorAll('.cancel-order-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            orderToCancel = this.getAttribute('data-order');
+            cancelModal.style.display = 'flex';
+        });
+    });
+
+    document.getElementById('cancelModalNo').addEventListener('click', function() {
+        cancelModal.style.display = 'none';
+        orderToCancel = null;
+    });
+
+    document.getElementById('cancelModalYes').addEventListener('click', function() {
+        if (!orderToCancel) return;
+        
+        const row = document.getElementById('order-row-' + orderToCancel);
+        const btn = row.querySelector('.cancel-order-btn');
+        const originalText = btn.textContent;
+        btn.textContent = '...';
+        btn.disabled = true;
+        cancelModal.style.display = 'none';
+        
+        fetch('api_cancel_order.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderToCancel })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                row.classList.add('cancelled-row');
+                const container = row.querySelector('.receipt-form-container');
+                if (container) {
+                    container.innerHTML = '<div style="color:#ef4444; font-size:14px; font-weight:500;">Отменено</div>';
+                }
+            } else {
+                alert(data.error || 'Ошибка отмены');
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert('Сетевая ошибка');
+            btn.textContent = originalText;
+            btn.disabled = false;
         });
     });
 });
