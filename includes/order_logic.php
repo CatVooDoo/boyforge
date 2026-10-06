@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/fivepost.php';
+require_once __DIR__ . '/order_logger.php';
 
 /**
  * Сохраняет или обновляет заказ в БД
@@ -75,7 +76,7 @@ function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): voi
 
         // 1. Отправка в 5Post
         if (!$alreadyIn5Post) {
-            $pdo->prepare("UPDATE orders SET fivepost_status = 'PROCESSING', payment_status = 'paid', payment_transaction_id = :tx WHERE order_id = :oid AND (fivepost_status IS NULL OR fivepost_status = 'PENDING')")
+            $pdo->prepare("UPDATE orders SET fivepost_status = 'PROCESSING', payment_status = 'paid', payment_transaction_id = :tx WHERE order_id = :oid AND (fivepost_status IS NULL OR fivepost_status = 'PENDING' OR fivepost_status = '')")
                 ->execute([':oid' => $orderId, ':tx' => $transactionId]);
 
             $fpClient = new FivePostClient();
@@ -90,6 +91,11 @@ function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): voi
                 'product_id'        => $order['product_id'],
                 'price'             => (float)$order['price'],
                 'weight_g'          => 350
+            ]);
+
+            logOrderEvent($orderId, '5post_c2c_order_creation', [
+                'success' => !empty($c2cResponse['success']),
+                'response' => $c2cResponse
             ]);
 
             if (!empty($c2cResponse['success'])) {
@@ -177,6 +183,12 @@ function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): voi
                 $gResponse = curl_exec($ch);
                 $gHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
+
+                logOrderEvent($orderId, 'google_sheets_sync', [
+                    'payload' => $googlePayload,
+                    'http_code' => $gHttpCode,
+                    'response' => $gResponse
+                ]);
 
                 if ($gHttpCode === 200 || $gHttpCode === 302) {
                     $pdo->prepare("UPDATE orders SET google_sheets_sent = 1 WHERE order_id = :oid")->execute([':oid' => $orderId]);

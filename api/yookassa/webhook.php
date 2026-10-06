@@ -3,112 +3,9 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/bootstrap.php';
 require_once __DIR__ . '/../../includes/order_logic.php';
+require_once __DIR__ . '/../../includes/order_logger.php';
 
-/**
- * Белый список IP-адресов ЮKassa для аутентификации webhook-уведомлений.
- * Согласно официальной документации: https://yookassa.ru/developers/notifications
- */
-$yookassaIpWhitelist = [
-    '185.71.76.0/27',
-    '185.71.77.0/27',
-    '77.75.153.0/25',
-    '77.75.156.11',
-    '77.75.156.35',
-    '77.75.154.128/25',
-    '2a02:5180::/32', // IPv6 диапазон
-];
-
-/**
- * Проверяет, входит ли IP-адрес отправителя в белый список ЮKassa.
- * Поддерживает как IPv4, так и IPv6 диапазоны (CIDR).
- *
- * @param string $ip IP-адрес отправителя
- * @param array $whitelist Список разрешенных IP/CIDR
- * @return bool true если IP разрешен
- */
-function isYookassaIp(string $ip, array $whitelist): bool {
-    // Нормализуем IP (убираем возможные пробелы)
-    $ip = trim($ip);
-    
-    foreach ($whitelist as $allowed) {
-        $allowed = trim($allowed);
-        
-        // Проверка на наличие CIDR нотации
-        if (strpos($allowed, '/') !== false) {
-            list($subnet, $mask) = explode('/', $allowed, 2);
-            $subnet = trim($subnet);
-            $mask = (int)trim($mask);
-            
-            // Определяем тип адреса (IPv4 или IPv6)
-            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-                // IPv4 проверка
-                if (!filter_var($subnet, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-                    continue;
-                }
-                $ipLong = ip2long($ip);
-                $subnetLong = ip2long($subnet);
-                $maskLong = -1 << (32 - $mask);
-                
-                if (($ipLong & $maskLong) === ($subnetLong & $maskLong)) {
-                    return true;
-                }
-            } elseif (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
-                // IPv6 проверка (упрощенная, для диапазона 2a02:5180::/32)
-                if (!filter_var($subnet, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
-                    continue;
-                }
-                $ipBin = inet_pton($ip);
-                $subnetBin = inet_pton($subnet);
-                
-                if ($ipBin === false || $subnetBin === false) {
-                    continue;
-                }
-                
-                // Сравниваем первые $mask бит (для /32 это первые 4 байта)
-                $bytesToCheck = intdiv($mask, 8);
-                $match = true;
-                for ($i = 0; $i < $bytesToCheck; $i++) {
-                    if ($ipBin[$i] !== $subnetBin[$i]) {
-                        $match = false;
-                        break;
-                    }
-                }
-                if ($match) {
-                    return true;
-                }
-            }
-        } else {
-            // Точное совпадение IP (без CIDR)
-            if ($ip === $allowed) {
-                return true;
-            }
-            // Также проверяем как IPv4 и IPv6 для совместимости
-            if (filter_var($ip, FILTER_VALIDATE_IP) && filter_var($allowed, FILTER_VALIDATE_IP)) {
-                if ($ip === $allowed) {
-                    return true;
-                }
-            }
-        }
-    }
-    
-    return false;
-}
-
-// Получаем IP-адрес отправителя (учитываем возможные прокси)
-$clientIp = $_SERVER['REMOTE_ADDR'] ?? '';
-
-// Строгая проверка IP перед обработкой webhook
-if (!isYookassaIp($clientIp, $yookassaIpWhitelist)) {
-    // Логируем попытку несанкционированного доступа
-    error_log(sprintf(
-        '[Yookassa Webhook] Blocked request from unauthorized IP: %s',
-        $clientIp
-    ));
-    http_response_code(403);
-    header('Content-Type: text/plain');
-    echo 'Forbidden: Unauthorized IP address';
-    exit;
-}
+// Строгая проверка IP удалена. Вместо нее используется проверка статуса платежа через API ЮKassa.
 
 // Получаем тело запроса
 $requestBody = file_get_contents('php://input');
@@ -134,6 +31,14 @@ $paymentObj = $data['object'] ?? [];
 $paymentId = $paymentObj['id'] ?? '';
 $orderId = $paymentObj['metadata']['order_id'] ?? '';
 
+if ($orderId) {
+    logOrderEvent($orderId, 'webhook_received', [
+        'event' => $event,
+        'payment_id' => $paymentId,
+        'payment_status' => $paymentObj['status'] ?? 'unknown'
+    ]);
+}
+
 global $pdo;
 
 switch ($event) {
@@ -144,9 +49,38 @@ switch ($event) {
     case 'payment.succeeded':
         $status = $paymentObj['status'] ?? '';
         
-        if ($orderId && $status === 'succeeded') {
-            // Запускаем процесс отправки в 5Post и Google Sheets
-            processPaidOrder($pdo, $orderId, $paymentId);
+        if ($orderId && $status === 'succeeded' && $paymentId) {
+            // Проверка подлинности платежа через API ЮKassa
+            $shopId = env_get('YOOKASSA_SHOP_ID');
+            $secretKey = env_get('YOOKASSA_SECRET_KEY');
+            
+            if (empty($shopId) || empty($secretKey)) {
+                error_log("[Yookassa Webhook] Error: YooKassa credentials not configured");
+                break;
+            }
+
+            $ch = curl_init("https://api.yookassa.ru/v3/payments/{$paymentId}");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_USERPWD, $shopId . ':' . $secretKey);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode === 200 && $response) {
+                $apiPayment = json_decode($response, true);
+                if (isset($apiPayment['status']) && $apiPayment['status'] === 'succeeded') {
+                    error_log("[Yookassa Webhook] Payment {$paymentId} successfully verified via API");
+                    logOrderEvent($orderId, 'webhook_verified', ['status' => 'paid', 'api_response' => $apiPayment]);
+                    // Запускаем процесс отправки в 5Post и Google Sheets
+                    processPaidOrder($pdo, $orderId, $paymentId);
+                } else {
+                    error_log("[Yookassa Webhook] Verification failed for payment {$paymentId}: API status is not succeeded");
+                    logOrderEvent($orderId, 'webhook_verification_failed', ['api_response' => $apiPayment]);
+                }
+            } else {
+                error_log("[Yookassa Webhook] Verification request failed for payment {$paymentId}. HTTP Code: {$httpCode}");
+                logOrderEvent($orderId, 'webhook_verification_error', ['http_code' => $httpCode, 'response' => $response]);
+            }
         }
         break;
     

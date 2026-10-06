@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/bootstrap.php';
 require_once __DIR__ . '/../../includes/order_logic.php';
+require_once __DIR__ . '/../../includes/order_logger.php';
 
 header('Content-Type: application/json');
 
@@ -49,12 +50,22 @@ if ($httpCode === 200 && $response) {
     // Проверяем статус
     if (($paymentData['status'] ?? '') === 'succeeded') {
         global $pdo;
+        
+        logOrderEvent($orderId, 'frontend_confirm_success', [
+            'status' => 'paid',
+            'api_response' => $paymentData
+        ]);
+        
         // Запускаем процесс отправки в 5Post и Google Sheets (он идемпотентен)
         processPaidOrder($pdo, $orderId, $paymentId);
         
         echo json_encode(['success' => true]);
         exit;
     } else {
+        logOrderEvent($orderId, 'frontend_confirm_not_succeeded', [
+            'status' => $paymentData['status'] ?? 'unknown',
+            'api_response' => $paymentData
+        ]);
         echo json_encode(['success' => false, 'error' => 'Payment not succeeded yet', 'status' => $paymentData['status'] ?? 'unknown']);
         exit;
     }
