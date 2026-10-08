@@ -194,6 +194,17 @@ function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): voi
                     $pdo->prepare("UPDATE orders SET google_sheets_sent = 1 WHERE order_id = :oid")->execute([':oid' => $orderId]);
                 }
             }
+
+            // 3. Отправка чека на почту клиента
+            if (!empty($order['email'])) {
+                require_once __DIR__ . '/mailer.php';
+                try {
+                    sendOrderReceipt($order);
+                    logOrderEvent($orderId, 'email_receipt_sent', ['email' => $order['email']]);
+                } catch (Throwable $e) {
+                    logOrderEvent($orderId, 'email_receipt_error', ['error' => $e->getMessage()]);
+                }
+            }
         }
     } finally {
         if ($lockAcquired) {
