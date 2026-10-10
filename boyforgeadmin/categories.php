@@ -215,7 +215,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const orderInput = document.getElementById("catFormOrder");
   const activeInput = document.getElementById("catFormActive");
 
-  // Транслитерация для автогенерации slug
   function slugify(text) {
     const a = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
     const b = "a|b|v|g|d|e|zh|z|i|y|k|l|m|n|o|p|r|s|t|u|f|h|ts|ch|sh|shch||y||e|yu|ya".split("|");
@@ -236,7 +235,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Открытие модалки создания
   document.getElementById("btnOpenAddCategoryModal").addEventListener("click", function () {
     modalTitle.textContent = "Новая категория";
     idInput.value = "0";
@@ -248,7 +246,6 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(() => nameInput.focus(), 100);
   });
 
-  // Открытие модалки редактирования
   document.querySelectorAll(".btn-edit-category").forEach((btn) => {
     btn.addEventListener("click", function () {
       modalTitle.textContent = "Редактирование категории";
@@ -266,7 +263,6 @@ document.addEventListener("DOMContentLoaded", function () {
     modal.classList.remove("active");
   });
 
-  // Сохранение категории через AJAX
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     const btnSave = document.getElementById("btnSaveCategory");
@@ -295,7 +291,6 @@ document.addEventListener("DOMContentLoaded", function () {
       });
   });
 
-  // Переключение статуса категории
   document.querySelectorAll(".cat-status-switch-input").forEach((toggle) => {
     toggle.addEventListener("change", function () {
       const id = this.getAttribute("data-id");
@@ -323,7 +318,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // Удаление категории
   const deleteModal = document.getElementById("deleteCategoryModal");
   const deleteText = document.getElementById("deleteCategoryModalText");
   const confirmDeleteBtn = document.getElementById("btnConfirmDeleteCategory");

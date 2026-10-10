@@ -20,7 +20,6 @@ try {
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
     
-    // Устанавливаем часовой пояс MySQL на Москву (UTC+3) для консистентности времени
     $pdo->exec("SET time_zone = '+03:00'");
     
 } catch (Exception $e) {

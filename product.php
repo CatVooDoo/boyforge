@@ -4,7 +4,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/router.php';
 
-// Обрабатываем старые URL (301 редирект если нужно)
 handleLegacyUrls();
 
 $route = parseRoute();
@@ -15,7 +14,6 @@ if ($route['type'] === '404') {
 $slug = $_GET['slug'] ?? null;
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-// Если есть slug, получаем ID товара
 if ($slug && !$id) {
     $stmt = $pdo->prepare("SELECT id FROM products WHERE slug = :slug AND is_active = 1 LIMIT 1");
     $stmt->execute([':slug' => $slug]);
@@ -50,7 +48,6 @@ if ($found) {
         $imgs = [$product['img']];
     }
     
-    // Add leading slash for absolute path resolution from /product/...
     $imgs = array_map(function($src) { return '/' . ltrim($src, '/'); }, $imgs);
 
     $specs = json_decode($product['specs'] ?? '[]', true);
@@ -60,7 +57,6 @@ if ($found) {
 
     $tgBase = $product['tg_link'] ?: ('https://telegram.me/theboyforge?text=' . rawurlencode('Здравствуйте! Хочу заказать: ' . $product['name']));
 
-    // Получаем похожие товары из базы данных
     $relStmt = $pdo->prepare("SELECT * FROM products WHERE is_active = 1 AND cat_id = :cat_id AND id != :id ORDER BY sort_order ASC, id ASC LIMIT 4");
     $relStmt->execute([
         ':cat_id' => $product['cat_id'],
@@ -68,8 +64,6 @@ if ($found) {
     ]);
     $relatedProducts = $relStmt->fetchAll();
 
-    // Подготавливаем объект для клиента (галерея, выбор размера и заказ)
-    // (Убрано в рамках рефакторинга: передаем через data-* атрибуты)
 }
 
 $pageTitle = $found ? $pName . ' · BOYFORGE' : 'Товар не найден · BOYFORGE';
@@ -254,8 +248,6 @@ require __DIR__ . '/includes/components/header.php';
 
     <?php endif; ?>
   </main>
-
-  
 
   <!-- модалка увеличенного фото товара -->
   <div class="pv-modal" id="pvModal" aria-hidden="true">

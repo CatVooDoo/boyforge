@@ -15,7 +15,6 @@ $action = $_GET['action'] ?? '';
 $feedbackMsg = null;
 $feedbackType = 'info';
 
-// Обработка действий
 if ($action === 'clear' && verifyCsrfToken($_GET['csrf_token'] ?? '')) {
     if (file_exists($logFile)) {
         file_put_contents($logFile, '');
@@ -37,7 +36,6 @@ $logContent = file_exists($logFile) ? (string)file_get_contents($logFile) : '';
 $logSize = file_exists($logFile) ? filesize($logFile) : 0;
 $logSizeFormatted = $logSize > 1048576 ? round($logSize / 1048576, 2) . ' МБ' : round($logSize / 1024, 1) . ' КБ';
 
-// Разбиваем лог на отдельные блоки
 $blocks = [];
 if (!empty($logContent)) {
     $rawBlocks = explode(str_repeat('=', 80), $logContent);
@@ -60,7 +58,7 @@ if (!empty($logContent)) {
         ];
     }
 }
-$blocks = array_reverse($blocks); // Новые записи сверху
+$blocks = array_reverse($blocks);
 ?>
 
 <div class="page-head">

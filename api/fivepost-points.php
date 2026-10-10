@@ -117,7 +117,6 @@ function getRussianStem(string $word): string {
 }
 
 try {
-    // Автоматическая проверка таблицы и автовосстановление при очистке
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS fivepost_points (
             id VARCHAR(64) PRIMARY KEY,
@@ -157,12 +156,11 @@ try {
 
     $client = new FivePostClient();
 
-    // Синхронизация с API 5Post (Раздел 18.5)
     if ($action === 'sync') {
         $pageToken = null;
         $totalSaved = 0;
         $pageCount = 0;
-        $maxPages = 50; // Safety limit
+        $maxPages = 50;
 
         $upsertStmt = $pdo->prepare("
             INSERT INTO fivepost_points 
@@ -226,7 +224,6 @@ try {
         exit;
     }
 
-    // Экшен списка городов
     if ($action === 'cities') {
         $stmt = $pdo->query("SELECT DISTINCT city, COUNT(*) as count FROM fivepost_points WHERE is_active = 1 GROUP BY city ORDER BY count DESC LIMIT 50");
         $cities = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -238,7 +235,6 @@ try {
     $targetCity = $city;
     $cleanSearch = trim(preg_replace('/[,\.\-\/\\\]/u', ' ', $search));
 
-    // Проверяем синонимы и распознаем город
     $lowerSearch = mb_strtolower($cleanSearch);
     $streetTokens = [];
 
@@ -263,7 +259,6 @@ try {
         $targetCity = $aliases[mb_strtolower($targetCity)];
     }
 
-    // Если передан параметр bounds (координаты видимой области карты)
     $parsedBounds = null;
     if (!empty($bounds)) {
         $parts = explode(',', $bounds);
@@ -284,7 +279,6 @@ try {
         }
     }
 
-    // Если запрос исключительно по видимой области карты (пользователь листает карту)
     if ($parsedBounds !== null && empty($city) && empty($search)) {
         $sql = "SELECT id, mdm_code, name, partner_name, type, city, street, house, full_address, lat, lng, work_hours, additional, phone 
                 FROM fivepost_points 
@@ -316,20 +310,17 @@ try {
         exit;
     }
 
-    // Формируем запрос
     $sql = "SELECT id, mdm_code, name, partner_name, type, city, street, house, full_address, lat, lng, work_hours, additional, phone 
             FROM fivepost_points 
             WHERE is_active = 1";
     $params = [];
 
     if (!empty($targetCity)) {
-        // Ищем строго по городу (точно или по корню названия города)
         $cityStem = getRussianStem($targetCity);
         $sql .= " AND (city = :c_exact OR city LIKE :c_stem)";
         $params[':c_exact'] = $targetCity;
         $params[':c_stem']  = $cityStem . '%';
 
-        // Если указана также улица в этом городе
         if (!empty($streetTokens)) {
             $tokenIdx = 0;
             foreach ($streetTokens as $t) {
@@ -343,7 +334,6 @@ try {
             }
         }
     } elseif (!empty($streetTokens)) {
-        // Город не указан, поиск по общим токенам
         $tokenIdx = 0;
         foreach ($streetTokens as $t) {
             $tokenIdx++;
@@ -362,7 +352,6 @@ try {
     $stmt->execute($params);
     $points = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Если указана улица, но по ней в городе 0 точек — возвращаем все точки этого города, чтобы карта не была пустой
     if (empty($points) && !empty($targetCity) && !empty($streetTokens)) {
         $fallbackStmt = $pdo->prepare("
             SELECT id, mdm_code, name, partner_name, type, city, street, house, full_address, lat, lng, work_hours, additional, phone 
@@ -378,7 +367,6 @@ try {
         $points = $fallbackStmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Приведение типов координат
     foreach ($points as &$pt) {
         $pt['lat'] = (float)$pt['lat'];
         $pt['lng'] = (float)$pt['lng'];

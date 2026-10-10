@@ -1,6 +1,4 @@
 <?php
-// Это шаблон письма. Переменные должны быть переданы до подключения этого файла.
-// Ожидаемые переменные: $order (массив с данными заказа)
 
 $orderId = htmlspecialchars((string)($order['order_id'] ?? 'N/A'));
 $fio = htmlspecialchars((string)($order['fio'] ?? 'Клиент'));

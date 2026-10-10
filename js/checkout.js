@@ -1,9 +1,5 @@
 "use strict";
 
-/**
- * checkout.js — Модуль оформления и онлайн-оплаты заказа через ЮKassa
- * BOYFORGE
- */
 (function () {
   "use strict";
 
@@ -20,7 +16,6 @@
     const submitBtn = document.getElementById("orderConfirmBtn") || document.getElementById("ozonConfirmBtn");
     const statusMsg = document.getElementById("orderFormStatus") || document.getElementById("ozonFormStatus");
 
-    // Элементы 5Post и кастомной Яндекс.Карты
     const fivepostIdInput = document.getElementById("fivepostPointId");
     const fivepostNameInput = document.getElementById("fivepostPointName");
     const fivepostAddrInput = document.getElementById("fivepostPointAddress");
@@ -68,7 +63,6 @@
         .replace(/'/g, "&#039;");
     }
 
-    // Получить текущее состояние товара со страницы
     function getProductState() {
       const gActive = document.querySelector("#genders button.active");
       const sActive = document.querySelector(".sizes button.active");
@@ -105,7 +99,6 @@
       }, 2500);
     }
 
-    // Обработка выбора точки 5Post на карте
     function handleSelect5PostPoint(point) {
       if (!point) return;
 
@@ -323,7 +316,7 @@
           if (mapInitialized) return;
 
           yandexMap = new ymaps.Map(fivepostMapContainer, {
-            center: [53.20066, 44.99965], // Центр Пензы
+            center: [53.20066, 44.99965],
             zoom: 12,
             controls: ["zoomControl", "fullscreenControl"]
           }, {
@@ -334,7 +327,6 @@
           yandexMap.geoObjects.add(pointsCollection);
           mapInitialized = true;
 
-          // Подгрузка точек при перемещении / зуме карты пользователем (скролл/листание)
           yandexMap.events.add("boundschange", function () {
             if (isProgrammaticMove) return;
             clearTimeout(boundsDebounceTimer);
@@ -343,7 +335,6 @@
             }, 300);
           });
 
-          // Определение города пользователя по геолокации
           if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
               function (pos) {
@@ -351,7 +342,6 @@
                 const lng = pos.coords.longitude;
                 setProgrammaticMove();
                 yandexMap.setCenter([lat, lng], 12, { checkZoomRange: true });
-                // Reverse geocode to find city name
                 if (typeof ymaps !== "undefined" && ymaps.geocode) {
                   ymaps.geocode([lat, lng]).then(function (res) {
                     const firstGeo = res.geoObjects.get(0);
@@ -370,7 +360,6 @@
                 }
               },
               function () {
-                // Geolocation denied or unavailable, use default
                 loadPoints(currentCity, "", true);
               },
               { timeout: 4000, maximumAge: 300000 }
@@ -406,7 +395,6 @@
       }
     }
 
-    // Делегирование клика по кнопке «Выбрать эту точку» в балуне Яндекс.Карты
     if (fivepostMapContainer) {
       fivepostMapContainer.addEventListener("click", function (e) {
         const btn = e.target.closest(".bf-balloon-select-btn");
@@ -423,7 +411,6 @@
       });
     }
 
-    // Поиск по городу и улице
     let searchDebounceTimer = null;
     if (searchInput) {
       searchInput.addEventListener("input", function () {
@@ -433,7 +420,6 @@
         }
         clearTimeout(searchDebounceTimer);
         searchDebounceTimer = setTimeout(function () {
-          // Ищем по городу или улице без мерцания загрузчика
           loadPoints("", val, false);
         }, 400);
       });
@@ -447,7 +433,6 @@
       });
     }
 
-    // Кнопка «Изменить» выбранный пункт
     if (fivepostChangeBtn) {
       fivepostChangeBtn.addEventListener("click", function () {
         if (fivepostCard) fivepostCard.style.display = "none";
@@ -464,9 +449,6 @@
       });
     }
 
-    // Убрана Telegram-маска
-
-    // Телефонная маска +7 (999) 000-00-00
     if (phoneInput) {
       phoneInput.addEventListener("input", function (e) {
         let x = e.target.value.replace(/\D/g, "").match(/(\d{0,1})(\d{0,3})(\d{0,3})(\d{0,2})(\d{0,2})/);
@@ -487,7 +469,6 @@
       });
     }
 
-    // Открытие модального окна
     function openModal() {
       const state = getProductState();
       if (!state.gender) {
@@ -520,7 +501,6 @@
       modal.setAttribute("aria-hidden", "false");
       document.body.classList.add("no-scroll");
 
-      // Инициализируем или подгоняем интерактивную Яндекс.Карту
       initCustomYandexMap();
     }
 
@@ -583,7 +563,6 @@
       document.getElementById("orderDoneBtn")?.addEventListener("click", closeModal);
     }
 
-    // Обработка отправки формы и запуск оплаты через ЮKassa
     if (form) {
       form.addEventListener("submit", function (e) {
         e.preventDefault();
@@ -618,7 +597,6 @@
           return;
         }
 
-        // Проверка выбора точки 5Post
         const pointId = (fivepostIdInput?.value || "").trim();
         if (!pointId) {
           showStatus("Пожалуйста, выберите удобный магазин или постамат 5Post на карте", "error");
@@ -637,7 +615,6 @@
           return;
         }
 
-        // Проверка согласия с правилами и политикой конфиденциальности
         const policyAgreeCheckbox = document.getElementById("orderPolicyAgree");
         if (policyAgreeCheckbox && !policyAgreeCheckbox.checked) {
           showStatus("Пожалуйста, подтвердите согласие с Правилами и политикой конфиденциальности", "error");
@@ -673,7 +650,6 @@
         }
         showStatus("Соединение с платежным шлюзом...", "info");
 
-        // Отправка данных на бекенд для создания платежа ЮKassa
         fetch("/api/yookassa/create.php", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -691,7 +667,6 @@
                     return;
                 }
 
-                // Инициализация виджета ЮKassa
                 const checkout = new window.YooMoneyCheckoutWidget({
                     confirmation_token: data.confirmation_token,
                     return_url: window.location.origin + '/payment-success.php?orderId=' + encodeURIComponent(orderId),
@@ -719,7 +694,6 @@
                 });
                 
                 checkout.on('success', () => {
-                    // Подтверждаем платеж на бэкенде вручную, чтобы обойти проблему с недоставкой вебхуков
                     fetch("/api/yookassa/confirm.php", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -748,14 +722,12 @@
                     checkout.destroy();
                 });
 
-                // Открываем виджет в модалке (встроенный)
                 if (fivepostCard) fivepostCard.style.display = "none";
                 if (fivepostMapWrapper) {
                     fivepostMapWrapper.style.display = "block";
-                    fivepostMapWrapper.innerHTML = ''; // Очищаем контейнер под виджет
+                    fivepostMapWrapper.innerHTML = '';
                 }
                 
-                // Прячем черную кнопку "Создать платеж..." и секции формы
                 if (submitBtn) submitBtn.style.display = "none";
                 const formSection = document.querySelector(".order-details-sections");
                 if (formSection) formSection.style.display = "none";

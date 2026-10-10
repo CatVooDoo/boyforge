@@ -28,7 +28,6 @@ if (!$paymentId || !$orderId) {
     exit;
 }
 
-// Запрашиваем статус платежа у ЮKassa напрямую
 $shopId = env_get('YOOKASSA_SHOP_ID');
 $secretKey = env_get('YOOKASSA_SECRET_KEY');
 
@@ -47,7 +46,6 @@ curl_close($ch);
 if ($httpCode === 200 && $response) {
     $paymentData = json_decode($response, true);
     
-    // Проверяем статус
     if (($paymentData['status'] ?? '') === 'succeeded') {
         global $pdo;
         
@@ -56,7 +54,6 @@ if ($httpCode === 200 && $response) {
             'api_response' => $paymentData
         ]);
         
-        // Запускаем процесс отправки в 5Post и Google Sheets (он идемпотентен)
         processPaidOrder($pdo, $orderId, $paymentId);
         
         echo json_encode(['success' => true]);

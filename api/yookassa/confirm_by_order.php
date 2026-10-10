@@ -49,7 +49,6 @@ if (!$paymentId) {
     exit;
 }
 
-// Запрашиваем статус платежа у ЮKassa напрямую
 $shopId = env_get('YOOKASSA_SHOP_ID');
 $secretKey = env_get('YOOKASSA_SECRET_KEY');
 
@@ -68,11 +67,7 @@ curl_close($ch);
 if ($httpCode === 200 && $response) {
     $paymentData = json_decode($response, true);
     
-    // Проверяем статус
     if (($paymentData['status'] ?? '') === 'succeeded' || ($paymentData['status'] ?? '') === 'waiting_for_capture') {
-        // Если waiting_for_capture, ЮKassa спишет деньги позже (или мы можем сделать capture здесь, но мы предположим succeeded)
-        // Для простоты, если мы используем авто-списание, статус должен быть succeeded.
-        // Запускаем процесс отправки в 5Post и Google Sheets (он идемпотентен)
         if (($paymentData['status'] ?? '') === 'succeeded') {
             logOrderEvent($orderId, 'frontend_confirm_by_order_success', [
                 'status' => 'paid',
@@ -82,7 +77,6 @@ if ($httpCode === 200 && $response) {
             echo json_encode(['success' => true, 'status' => 'succeeded']);
             exit;
         } else {
-            // waiting_for_capture? Need to capture it!
             $chCap = curl_init("https://api.yookassa.ru/v3/payments/{$paymentId}/capture");
             curl_setopt_array($chCap, [
                 CURLOPT_RETURNTRANSFER => true,
@@ -99,7 +93,6 @@ if ($httpCode === 200 && $response) {
             $capRes = curl_exec($chCap);
             curl_close($chCap);
             
-            // Теперь оно точно succeeded
             logOrderEvent($orderId, 'frontend_confirm_by_order_captured', [
                 'status' => 'paid',
                 'capture_response' => $capRes

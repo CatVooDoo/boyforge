@@ -1,7 +1,6 @@
 <?php
 declare(strict_types=1);
 
-// Подключаем файлы PHPMailer (установлен вручную в vendor/phpmailer)
 require_once dirname(__DIR__) . '/vendor/phpmailer/src/Exception.php';
 require_once dirname(__DIR__) . '/vendor/phpmailer/src/PHPMailer.php';
 require_once dirname(__DIR__) . '/vendor/phpmailer/src/SMTP.php';
@@ -9,12 +8,6 @@ require_once dirname(__DIR__) . '/vendor/phpmailer/src/SMTP.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-/**
- * Отправляет клиенту красивый email-чек с деталями заказа
- *
- * @param array $order Данные заказа (из БД)
- * @throws Exception
- */
 function sendOrderReceipt(array $order): void {
     if (empty($order['email'])) {
         return;
@@ -32,7 +25,6 @@ function sendOrderReceipt(array $order): void {
         $smtpPort = env_get('SMTP_PORT');
         $mail->Port = $smtpPort ? (int)$smtpPort : 587;
         
-        // Включаем шифрование если порт 465 (SMTPS) или если есть авторизация
         if ($mail->Port === 465) {
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
         } elseif ($mail->SMTPAuth) {
@@ -45,7 +37,6 @@ function sendOrderReceipt(array $order): void {
         $mail->setFrom($fromEmail, 'BOYFORGE');
         $mail->addAddress($order['email'], $order['fio'] ?? '');
 
-        // Собираем HTML шаблон
         ob_start();
         require __DIR__ . '/email_templates/receipt.php';
         $htmlBody = ob_get_clean();
@@ -54,7 +45,6 @@ function sendOrderReceipt(array $order): void {
         $mail->Subject = 'Ваш заказ #' . ($order['order_id'] ?? 'N/A') . ' в BOYFORGE';
         $mail->Body    = $htmlBody;
         
-        // Plain text версия для старых клиентов
         $mail->AltBody = "Ваш заказ #{$order['order_id']} успешно оплачен.\nТовар: {$order['product_name']}\nСумма: {$order['price']} руб.\n\nСпасибо за покупку в BOYFORGE!";
 
         $mail->send();

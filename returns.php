@@ -54,7 +54,6 @@ require __DIR__ . '/includes/components/header.php';
           </div>
         </div>
 
-
       <!-- ===== HOW TO ===== -->
       <h2 class="section-title reveal">Как оформить возврат</h2>
       <div class="return-steps">

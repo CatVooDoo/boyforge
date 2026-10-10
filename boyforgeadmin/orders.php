@@ -9,7 +9,6 @@ requireAdminAuth();
 $pageTitle = 'Заказы (Закрывающие чеки)';
 $csrfToken = getCsrfToken();
 
-// Получаем только оплаченные заказы
 $stmt = $pdo->query("
     SELECT * FROM orders 
     WHERE payment_status = 'paid' 
