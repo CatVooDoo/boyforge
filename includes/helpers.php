@@ -1,16 +1,10 @@
 <?php
 declare(strict_types=1);
 
-/**
- * Полная размерная сетка магазина (используется и на сайте, и в админке)
- */
 function allSizes(): array {
     return ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
 }
 
-/**
- * Диапазоны размеров по полу (должны совпадать с SIZES_BY_GENDER в js/product.js)
- */
 function sizesByGender(): array {
     return [
         'Женский' => ['XS', 'S', 'M', 'L', 'XL'],
@@ -18,12 +12,6 @@ function sizesByGender(): array {
     ];
 }
 
-/**
- * Возвращает список НЕдоступных размеров товара из колонки products.sizes (JSON)
- *
- * @param mixed $sizesRaw Значение колонки sizes (JSON-строка или массив)
- * @return array Массив недоступных размеров по полу: ['Мужской' => [...], 'Женский' => [...]]
- */
 function productUnavailableSizes($sizesRaw): array {
     if (is_array($sizesRaw)) {
         $parsed = $sizesRaw;
@@ -38,7 +26,6 @@ function productUnavailableSizes($sizesRaw): array {
         return $result;
     }
     
-    // Поддержка старого формата: плоский массив ["S", "M"] применяется к обоим полам
     if (isset($parsed[0]) || empty($parsed)) {
         $flat = [];
         foreach ($parsed as $s) {
@@ -50,7 +37,6 @@ function productUnavailableSizes($sizesRaw): array {
         $result['Мужской'] = $flat;
         $result['Женский'] = $flat;
     } else {
-        // Поддержка нового формата: {"Мужской": ["S"], "Женский": ["M"]}
         foreach (['Мужской', 'Женский'] as $gender) {
             if (isset($parsed[$gender]) && is_array($parsed[$gender])) {
                 foreach ($parsed[$gender] as $s) {
@@ -66,17 +52,7 @@ function productUnavailableSizes($sizesRaw): array {
     return $result;
 }
 
-/**
- * Генерирует URL-friendly slug из текста (транслитерация кириллицы)
- * 
- * @param string $text Исходный текст (например, "Футболка «Братья Святославичи»")
- * @param string $table Таблица для проверки уникальности ('products' или 'categories')
- * @param int|null $currentId ID текущей записи (чтобы не конфликтовать с самим собой)
- * @param PDO $pdo Объект PDO для запросов к БД
- * @return string Уникальный slug (например, "futbolka-bratya-svyatoslavichi")
- */
 function generateSlug(string $text, string $table, ?int $currentId, PDO $pdo): string {
-    // Таблица транслитерации (ГОСТ 7.79-2000 система B)
     $transliteration = [
         'а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd', 'е' => 'e', 'ё' => 'yo',
         'ж' => 'zh', 'з' => 'z', 'и' => 'i', 'й' => 'y', 'к' => 'k', 'л' => 'l', 'м' => 'm',
@@ -90,31 +66,24 @@ function generateSlug(string $text, string $table, ?int $currentId, PDO $pdo): s
         'Ъ' => '', 'Ы' => 'Y', 'Ь' => '', 'Э' => 'E', 'Ю' => 'Yu', 'Я' => 'Ya',
     ];
     
-    // Транслитерация
     $slug = strtr($text, $transliteration);
     
-    // Приведение к нижнему регистру
     $slug = mb_strtolower($slug, 'UTF-8');
     
-    // Замена всех не-буквенно-цифровых символов на дефисы
     $slug = preg_replace('/[^a-z0-9]+/u', '-', $slug);
     
-    // Удаление дефисов в начале и конце
     $slug = trim($slug, '-');
     
-    // Если slug пустой — используем 'item'
     if ($slug === '') {
         $slug = 'item';
     }
     
-    // Ограничение длины (для products 255, для categories 64)
     $maxLength = ($table === 'categories') ? 64 : 255;
     if (mb_strlen($slug) > $maxLength) {
         $slug = mb_substr($slug, 0, $maxLength);
         $slug = rtrim($slug, '-');
     }
     
-    // Проверка уникальности и добавление суффикса при необходимости
     $baseSlug = $slug;
     $counter = 2;
     
@@ -132,10 +101,9 @@ function generateSlug(string $text, string $table, ?int $currentId, PDO $pdo): s
         $count = (int)$stmt->fetchColumn();
         
         if ($count === 0) {
-            break; // Slug уникален
+            break;
         }
         
-        // Добавляем суффикс
         $slug = $baseSlug . '-' . $counter;
         $counter++;
     }

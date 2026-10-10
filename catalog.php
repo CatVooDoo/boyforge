@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/router.php';
 
-// Обрабатываем старые URL (301 редирект если нужно)
 handleLegacyUrls();
 
 $route = parseRoute();
@@ -14,11 +13,9 @@ if ($route['type'] === '404') {
 $catFilter = trim((string)($_GET['cat'] ?? 'all'));
 $sort = trim((string)($_GET['sort'] ?? 'pop'));
 
-// Получаем активные категории из таблицы categories
 $catStmt = $pdo->query("SELECT * FROM categories WHERE is_active = 1 ORDER BY sort_order ASC, name ASC");
 $categoriesList = $catStmt->fetchAll();
 
-// Формируем запрос на получение товаров
 $sql = "SELECT * FROM products WHERE is_active = 1";
 $params = [];
 

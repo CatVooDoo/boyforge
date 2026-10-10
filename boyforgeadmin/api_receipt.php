@@ -17,9 +17,6 @@ $input = json_decode(file_get_contents('php://input'), true) ?? [];
 $orderId = trim($input['order_id'] ?? '');
 $markCode = trim($input['mark_code'] ?? '');
 
-// Восстановление разделителей <GS> (\x1D), если сканер их вырезал.
-// Для одежды стандартная длина кода без <GS> = 83 символа.
-// 01(14) + 21(13) + <GS> + 91(4) + <GS> + 92(44)
 if (strlen($markCode) === 83 && preg_match('/^(01\d{14}21.{13})(91.{4})(92.{44})$/', $markCode, $matches)) {
     $markCode = $matches[1] . "\x1D" . $matches[2] . "\x1D" . $matches[3];
 }
@@ -28,9 +25,6 @@ if (empty($orderId)) {
     echo json_encode(['success' => false, 'error' => 'Отсутствует order_id']);
     exit;
 }
-
-// Код маркировки требуется только для маркированных товаров
-// Если товар не маркирован, mark_code может быть пустым
 
 try {
     $stmt = $pdo->prepare("SELECT * FROM orders WHERE order_id = :oid LIMIT 1");
@@ -56,72 +50,30 @@ try {
         throw new Exception('Ключи ЮKassa не настроены.');
     }
 
-    /**
-     * Подготовка чека "Полный расчет" (отгрузка с маркировкой)
-     * 
-     * ТРЕБОВАНИЯ ФФД 1.2 ДЛЯ МАРКИРОВАННЫХ ТОВАРОВ:
-     * 1. parameter "internet" должен быть равен true для всех интернет-магазинов
-     * 2. parameter "timezone" обязателен и должен соответствовать часовому поясу ККТ (Москва = 2)
-     * 3. Для маркированных товаров payment_subject ОБЯЗАН быть "marked" (а не "commodity")
-     * 4. В settlements указывается тип "prepayment" на сумму ранее принятого аванса
-     */
-    
-    // 1 = ОСН по умолчанию (Общая система налогообложения)
     $taxSystemCode = (int) (env_get('YOOKASSA_TAX_SYSTEM') ?: '1');
-    // 1 = Без НДС по умолчанию (согласно документации ЮKassa)
     $vatCode = (int) (env_get('YOOKASSA_VAT_CODE') ?: '1');
     
     $email = !empty($order['email']) ? $order['email'] : 'no-reply@boyforge.com';
     
-    // Форматируем сумму для API ЮKassa (строка с 2 знаками после запятой)
     $amountValue = number_format((float)$order['price'], 2, '.', '');
 
-    /**
-     * ОПРЕДЕЛЕНИЕ ТИПА ТОВАРА ДЛЯ ФФД
-     * Если передан код маркировки (gs_1m), товар считается маркированным
-     * и требует special реквизитов в чеке
-     */
     $isMarked = !empty($markCode);
     
-    // Для маркированных товаров payment_subject ОБЯЗАН быть "marked"
-    // Это требование ФФД 1.2 для товаров подлежащих обязательной маркировке
     $paymentSubject = $isMarked ? 'marked' : 'commodity';
 
     $receiptPayload = [
         'customer' => [
             'email' => $email
         ],
-        'type' => 'payment', // Приход
+        'type' => 'payment',
         'send' => true,
         'payment_id' => $order['payment_transaction_id'],
-        
-        /**
-         * TAX SYSTEM CODE (система налогообложения):
-         * 1 = ОСН (общая)
-         * 2 = УСН (упрощенная)
-         * 3 = ЕНВД
-         * 4 = ЕСН
-         * 5 = Патент
-         * 6 = АУСН
-         */
+
         'tax_system_code' => $taxSystemCode,
-        
-        /**
-         * SETTLEMENTS (взаиморасчеты):
-         * Для сценария "Аванс + Зачет предоплаты":
-         * - При оплате аванса: type = "prepayment", amount = сумма аванса
-         * - При отгрузке (этот чек): type = "prepayment", amount = сумма зачета
-         * 
-         * Важно: sum всех settlements должна равняться общей сумме чека
-         */
+
         'settlements' => [
             [
-                /**
-                 * Тип "prepayment" означает зачет ранее внесенного аванса
-                 * Это соответствует сценарию двухстадийного платежа:
-                 * 1. Клиент оплатил аванс (первый чек с payment_mode="advance")
-                 * 2. Теперь происходит отгрузка товара (зачет предоплаты)
-                 */
+                
                 'type' => 'prepayment',
                 'amount' => [
                     'value' => $amountValue,
@@ -138,66 +90,27 @@ try {
                     'currency' => 'RUB'
                 ],
                 'vat_code' => $vatCode,
-                
-                /**
-                 * PAYMENT SUBJECT (признак предмета расчета) по ФФД 1.2:
-                 * - "marked" — для маркированных товаров (обязательно при наличии кода маркировки)
-                 * - "commodity" — для обычных товаров
-                 * 
-                 * Нарушение этого требования ведет к штрафу по ст. 14.5 КоАП РФ
-                 */
+
                 'payment_subject' => $paymentSubject,
-                
-                /**
-                 * PAYMENT MODE (признак способа расчета):
-                 * "full_payment" — полный расчет (означает зачет предоплаты при отгрузке)
-                 * 
-                 * Возможные значения:
-                 * - "full_payment" — полный расчет
-                 * - "advance" — аванс
-                 * - "partial_payment" — частичный расчет и кредит
-                 * - "credit" — кредит
-                 * - "credit_payment" — оплата кредита
-                 */
+
                 'payment_mode' => 'full_payment',
-                
-                /**
-                 * MARK CODE INFO (код маркировки):
-                 * Передается только для маркированных товаров
-                 * Формат: gs_1m — код в формате GS1 DataMatrix
-                 * 
-                 * Требование ФФД 1.2: наличие кода маркировки обязательно
-                 * для товаров подлежащих обязательной маркировке (обувь, одежда, шины и т.д.)
-                 */
+
                 'mark_code_info' => [
-                    'gs_1m' => $markCode // Обязательно gs_1m с разделителями \x1D (GS)
+                    'gs_1m' => $markCode
                 ],
-                
-                /**
-                 * MEASURE (единица измерения):
-                 * "piece" — штука (наиболее распространенное для одежды)
-                 * 
-                 * Другие варианты: "kg", "g", "cm", "m", "ml", "l" и т.д.
-                 */
+
                 'measure' => 'piece'
             ]
         ]
     ];
     
-    // Если товар не маркирован, удаляем mark_code_info из payload
     if (!$isMarked) {
         unset($receiptPayload['items'][0]['mark_code_info']);
     }
     
     $url = 'https://api.yookassa.ru/v3/receipts';
     $ch = curl_init($url);
-    
-    /**
-     * IDEMPOTENCE KEY (ключ идемпотентности):
-     * Добавляем time(), чтобы при изменении данных (или после прошлой ошибки)
-     * ЮKassa не блокировала запрос на 24 часа. Защита от дублей при успехе
-     * уже реализована проверкой receipt_sent в базе.
-     */
+
     $idempotenceKey = 'receipt_' . $order['order_id'] . '_' . time();
     
     curl_setopt_array($ch, [
@@ -224,7 +137,6 @@ try {
     $resData = json_decode($response, true);
 
     if ($httpCode >= 200 && $httpCode < 300 && isset($resData['id'])) {
-        // Успешно отправлено
         $upd = $pdo->prepare("UPDATE orders SET receipt_sent = 1, mark_code = :mc WHERE id = :id");
         $upd->execute([
             ':mc' => $markCode,

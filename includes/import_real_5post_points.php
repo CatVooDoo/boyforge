@@ -34,7 +34,6 @@ if ($total === 0) {
     die("Нет точек в ответе.\n");
 }
 
-// Очищаем таблицу от старых/тестовых точек
 $pdo->exec("TRUNCATE TABLE fivepost_points;");
 $pdo->exec("TRUNCATE TABLE fivepost_cache;");
 
@@ -70,14 +69,12 @@ foreach ($features as $f) {
     $partnerName = '5Post';
     $additional = ($type === 'POSTAMAT') ? 'Постамат 5Post в магазине' : 'Касса в магазине';
 
-    // Парсим город из адреса ("Пенза г, Победы пр-кт, 2" или "Москва г, ...")
     $city = '';
     $street = '';
     $house = '';
     $parts = array_map('trim', explode(',', $address));
 
     if (!empty($parts[0])) {
-        // Убираем маркеры "г", "рп", "п", "д", "с"
         $rawCity = $parts[0];
         $city = trim(preg_replace('/\b(г|город|пгт|рп|п|пос|с|село|д|деревня|ст|станица|аул|мкр)\.?\b/ui', '', $rawCity));
         if (empty($city)) $city = $rawCity;
@@ -120,7 +117,6 @@ $pdo->commit();
 
 echo "Успешно записано $inserted реальных боевых точек 5Post!\n";
 
-// Обновляем fivepost_cache
 $cacheStmt = $pdo->prepare("
     INSERT INTO fivepost_cache (city, points_count, last_synced_at, ttl_seconds, status, error_msg)
     VALUES (:city, :count, NOW(), 432000, 'fresh', NULL)

@@ -24,15 +24,7 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
-    
-    /**
-     * УСТАНОВКА ЧАСОВОГО ПОЯСА ДЛЯ АДМИН-ПАНЕЛИ
-     * 
-     * Критически важно для корректного отображения времени заказов:
-     * - Все даты в БД хранятся с учетом часового пояса ККТ (Москва, UTC+3)
-     * - ФФД 1.2 требует указания timezone в чеках
-     * - NOW() должен возвращать московское время для консистентности
-     */
+
     $pdo->exec("SET time_zone = '+03:00'");
     
 } catch (PDOException $e) {
@@ -65,7 +57,6 @@ function initDatabase(PDO $pdo): void {
     
     $pdo->exec($sql);
 
-    // Миграция: добавляем колонку sizes (список НЕдоступных размеров товара), если её ещё нет
     try {
         $hasSizesCol = false;
         foreach ($pdo->query("SHOW COLUMNS FROM products LIKE 'sizes'")->fetchAll() as $col) {
@@ -76,7 +67,6 @@ function initDatabase(PDO $pdo): void {
             $pdo->exec("ALTER TABLE products ADD COLUMN sizes JSON NULL AFTER tg_link");
         }
     } catch (Throwable $e) {
-        // Игнорируем: не хватает прав на ALTER — колонку можно добавить вручную
     }
 
     $count = (int)$pdo->query("SELECT COUNT(*) FROM products")->fetchColumn();
@@ -246,7 +236,6 @@ function initDatabase(PDO $pdo): void {
             $stmtTag->execute([':name' => $t]);
         }
 
-        // Import existing tags from products if any
         $existingProductTags = $pdo->query("SELECT tags FROM products WHERE tags IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN);
         foreach ($existingProductTags as $tJson) {
             $parsed = json_decode((string)$tJson, true);

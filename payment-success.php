@@ -13,7 +13,7 @@ $email = '';
 $telegramLink = 'https://telegram.me/theboyforge';
 
 if ($orderId) {
-    global $pdo; // Should be available via header/config if included
+    global $pdo;
     if (isset($pdo)) {
         $stmt = $pdo->prepare("SELECT email FROM orders WHERE order_id = :oid LIMIT 1");
         $stmt->execute([':oid' => $orderId]);
@@ -53,7 +53,6 @@ document.addEventListener("DOMContentLoaded", function() {
     const params = new URLSearchParams(window.location.search);
     const orderId = params.get('orderId');
     if (orderId) {
-        // Запускаем проверку статуса заказа на сервере
         fetch('/api/yookassa/confirm_by_order.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

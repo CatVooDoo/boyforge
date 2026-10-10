@@ -1,7 +1,5 @@
 "use strict";
 
-/* catalog.js — рендер карточек под BOYFORGE-разметку (.card, .catalog-grid, .chip)
-   Порядок загрузки: products.js -> catalog.js */
 (function () {
   "use strict";
 
@@ -29,12 +27,10 @@
         .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    // цена как число для сортировки ("4 200 ₽" -> 4200)
     function priceNum(p) {
       return parseInt(String(p.price).replace(/\D/g, ""), 10) || 0;
     }
 
-    // формирует бейджи из тегов (поддержка любых бейджей)
     function badgesHTML(p) {
       var tags = p.tags || [];
       var out = "";
@@ -69,7 +65,6 @@
         '<div class="card-price">' + esc(p.price) + "</div>" +
         "</div>";
 
-      // "скоро появится" — карточка не ссылка, открыть нельзя
       if (p.soon) {
         return '<div class="card card--soon" aria-disabled="true">' + inner + "</div>";
       }
@@ -85,7 +80,7 @@
       if (state.sort === "cheap") items.sort(function (a, b) { return priceNum(a) - priceNum(b); });
       else if (state.sort === "exp") items.sort(function (a, b) { return priceNum(b) - priceNum(a); });
       else if (state.sort === "new") items.sort(function (a, b) { return b.id - a.id; });
-      else items.sort(function (a, b) { return a.id - b.id; }); // pop / по умолчанию
+      else items.sort(function (a, b) { return a.id - b.id; });
 
       return items;
     }
@@ -104,7 +99,6 @@
 
       grid.innerHTML = items.map(cardHTML).join("");
 
-      // плавное появление (класс .card-in из твоего CSS)
       var cards = grid.querySelectorAll(".card");
       cards.forEach(function (c, i) {
         setTimeout(function () { c.classList.add("card-in"); }, i * 60);

@@ -1,11 +1,6 @@
 <?php
 declare(strict_types=1);
 
-/**
- * fivepost.php — Официальный модуль интеграции 5Post API по разделу 18 (C2C Заказы)
- * с полным сквозным логированием всех HTTP-запросов и ответов.
- */
-
 class FivePostClient {
     private string $apiKey;
     private string $env;
@@ -28,10 +23,6 @@ class FivePostClient {
         $this->logFile = __DIR__ . '/../logs/5post.log';
     }
 
-
-    /**
-     * Запись подробного лога с разделителями
-     */
     public function log(string $action, array $data): void {
         $timestamp = date('Y-m-d H:i:s');
         $divider = str_repeat('=', 80);
@@ -47,9 +38,6 @@ class FivePostClient {
         @file_put_contents($this->logFile, $entry, FILE_APPEND | LOCK_EX);
     }
 
-    /**
-     * Раздел 4: Получение Bearer токена POST jwtGenerate
-     */
     public function getJwtToken(): ?string {
         $userSuffix = function_exists('posix_geteuid') ? ('_' . posix_geteuid()) : '';
         $cacheFile = sys_get_temp_dir() . '/5post_jwt_' . md5($this->apiKey . $this->baseUrl) . $userSuffix . '.json';
@@ -105,10 +93,9 @@ class FivePostClient {
         if ($httpCode === 200 && is_string($response)) {
             $json = json_decode($response, true);
             if (!empty($json['jwt'])) {
-                // Decode JWT exp claim for accurate cache TTL
                 $jwtParts = explode('.', $json['jwt']);
                 $jwtPayload = (count($jwtParts) >= 2) ? json_decode(base64_decode(strtr($jwtParts[1], '-_', '+/')), true) : null;
-                $expiresAt = (!empty($jwtPayload['exp'])) ? (int)$jwtPayload['exp'] - 60 : time() + 3000; // 60s safety margin
+                $expiresAt = (!empty($jwtPayload['exp'])) ? (int)$jwtPayload['exp'] - 60 : time() + 3000;
                 @file_put_contents($cacheFile, json_encode([
                     'jwt' => $json['jwt'],
                     'expires_at' => $expiresAt
@@ -121,9 +108,6 @@ class FivePostClient {
         return null;
     }
 
-    /**
-     * Диагностический тест соединения с API 5Post (проверка API-ключа)
-     */
     public function testConnection(): array {
         $startTime = microtime(true);
         $url = $this->baseUrl . '/jwt-generate-claims/rs256/1?apikey=' . urlencode($this->apiKey);
@@ -171,9 +155,6 @@ class FivePostClient {
         ];
     }
 
-    /**
-     * Раздел 18.5: Получение точек выдачи — POST /api/v2/points/pickup
-     */
     public function fetchPickupPoints(?string $pageToken = null, int $maxPageSize = 1000): array {
         $jwt = $this->getJwtToken();
         if (!$jwt) {
@@ -232,15 +213,11 @@ class FivePostClient {
         ];
     }
 
-    /**
-     * Раздел 18.2: Создание C2C-заказа — POST /api/v1/orders/c2c
-     */
     public function createC2COrder(array $order): array {
         $senderOrderId = (string)($order['order_id'] ?? ('BF-' . strtoupper(substr(md5(uniqid()), 0, 8))));
         $clientOrderId = (string)($order['client_order_id'] ?? $senderOrderId);
         $receiverLocation = (string)($order['fivepost_point_id'] ?? '');
 
-        // Нормализация телефона (+7...)
         $receiverPhone = preg_replace('/[^\d\+]/', '', (string)($order['phone'] ?? ''));
         if (strpos($receiverPhone, '8') === 0 && strlen($receiverPhone) === 11) {
             $receiverPhone = '+7' . substr($receiverPhone, 1);
@@ -276,7 +253,6 @@ class FivePostClient {
         $senderCargoId = !empty($order['sender_cargo_id']) ? (string)$order['sender_cargo_id'] : ($senderOrderId . '-1');
         $cargoData['senderCargoId'] = $senderCargoId;
 
-        // Структура JSON строго по Разделу 18.2 документации
         $payload = [
             'senderOrderId'       => $senderOrderId,
             'clientOrderId'       => $clientOrderId,
@@ -304,7 +280,6 @@ class FivePostClient {
             $payload['receiverClientEmail'] = $receiverEmail;
         }
 
-        // Валидация UUID точки выдачи (receiverLocation)
         if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $receiverLocation)) {
             $err = 'Некорректный UUID точки выдачи 5Post: ' . $receiverLocation;
             $this->log('CREATE_C2C_ORDER_ABORTED', [
@@ -319,7 +294,6 @@ class FivePostClient {
             ];
         }
 
-        // 1. Попытка получить JWT токен
         $jwt = $this->getJwtToken();
         if (!$jwt) {
             $err = 'Не удалось авторизоваться в 5Post: API-ключ не активирован на шлюзе X5 (401 Unauthorized)';
@@ -339,7 +313,6 @@ class FivePostClient {
             ];
         }
 
-        // 2. Отправка C2C заказа в 5Post API (Раздел 18.2)
         $url = $this->baseUrl . '/api/v1/orders/c2c';
         $this->log('CREATE_C2C_ORDER_REQUEST', [
             'OrderId'  => $senderOrderId,
@@ -395,7 +368,6 @@ class FivePostClient {
 
         $json = json_decode((string)$response, true);
 
-        // Успешный ответ или распознавание существующего заказа (идемпотентность по 18.2)
         $isCreated = !empty($json['created']);
         $hasExistingOrderData = !empty($json['orderId']) && !empty($json['cargoes'][0]['barcode']);
 
@@ -417,7 +389,6 @@ class FivePostClient {
             ];
         }
 
-        // Ошибка валидации со стороны 5Post
         $errorMsg = "Ошибка 5Post HTTP {$httpCode}";
         if (is_array($json) && !empty($json['errors'])) {
             $errParts = [];
@@ -446,9 +417,6 @@ class FivePostClient {
         ];
     }
 
-    /**
-     * Отмена заказа в 5Post: DELETE /api/v2/cancelOrder/byOrderId/{orderId}
-     */
     public function cancelOrder(string $orderId): array {
         $jwt = $this->getJwtToken();
         if (!$jwt) {

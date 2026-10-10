@@ -1,12 +1,10 @@
-/* Reviews page — modal + fallback initials */
+
 (function () {
-  // подставляем инициалы в fallback карточек
   document.querySelectorAll('.rv-card').forEach(function (card) {
     var name = card.getAttribute('data-name') || '';
     var img = card.getAttribute('data-img');
     var fb = card.querySelector('.rv-media-fallback');
     if (fb) fb.textContent = name.charAt(0).toUpperCase();
-    // если фото не указано — сразу показываем инициал
     var media = card.querySelector('.rv-media');
     if (media && (!img || img.trim() === '')) {
       media.classList.add('is-empty');

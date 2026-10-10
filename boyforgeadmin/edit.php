@@ -60,7 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $isActive = isset($_POST['is_active']) ? 1 : 0;
         $sortOrder = (int)($_POST['sort_order'] ?? 0);
 
-        // Tags
         $selectedTags = $_POST['tags'] ?? [];
         if (!is_array($selectedTags)) $selectedTags = [];
         $selectedTags = array_values(array_filter(array_map('trim', $selectedTags)));
@@ -81,7 +80,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $tagsJson = json_encode(array_values(array_unique($selectedTags)), JSON_UNESCAPED_UNICODE);
 
-        // Main image
         $img = trim((string)($_POST['img'] ?? ''));
         if (isset($_FILES['main_image_file']) && $_FILES['main_image_file']['error'] === UPLOAD_ERR_OK) {
             $up = handleImageUpload($_FILES['main_image_file']);
@@ -92,7 +90,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Gallery images
         $galleryImgs = $_POST['gallery_imgs'] ?? [];
         if (!is_array($galleryImgs)) $galleryImgs = [];
         $galleryImgs = array_filter(array_map('trim', $galleryImgs));
@@ -121,7 +118,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $imgsJson = json_encode(array_values(array_unique($galleryImgs)), JSON_UNESCAPED_UNICODE);
 
-        // Specs
         $specsJsonInput = trim((string)($_POST['specs_json'] ?? ''));
         $specs = json_decode($specsJsonInput, true);
         if (!is_array($specs)) {
@@ -129,13 +125,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $specsJson = json_encode($specs, JSON_UNESCAPED_UNICODE);
 
-        // TG link
         $tgLink = trim((string)($_POST['tg_link'] ?? ''));
         if ($tgLink === '') {
             $tgLink = 'https://telegram.me/theboyforge?text=' . rawurlencode('Здравствуйте! Хочу заказать: ' . $name);
         }
 
-        // Недоступные размеры (отмечены галочками — на сайте будут перечёркнуты)
         $unavailableMale = $_POST['sizes_unavailable_male'] ?? [];
         if (!is_array($unavailableMale)) $unavailableMale = [];
         $unavailableMale = array_values(array_unique(array_filter(
@@ -254,7 +248,6 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'saved') {
     $success = 'Изменения успешно сохранены и синхронизированы с сайтом!';
 }
 
-// Prepare values for form
 $nameVal = htmlspecialchars($product['name'] ?? '');
 $slugVal = htmlspecialchars($product['slug'] ?? '');
 $catVal = htmlspecialchars($product['cat'] ?? 'Футболка');
@@ -629,7 +622,6 @@ document.addEventListener('DOMContentLoaded', function() {
     nameInput.addEventListener('input', function() {
         if (slugManuallyEdited) return;
         
-        // Simple transliteration (Russian to Latin)
         const transliteration = {
             'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i',
             'й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t',
@@ -651,7 +643,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Remove duplicate dashes and trim
         slug = slug.replace(/-+/g, '-').replace(/^-+|-+$/g, '');
         
         slugInput.value = slug;
@@ -681,7 +672,7 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 </style>
 <script>
-/* Зачёркивание отмеченных размеров прямо в админке (наглядно, как на сайте) */
+
 document.addEventListener('DOMContentLoaded', function() {
     function initSizesContainer(containerId) {
         const container = document.getElementById(containerId);

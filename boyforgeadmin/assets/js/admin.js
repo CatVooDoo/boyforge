@@ -1,7 +1,6 @@
 "use strict";
 
 document.addEventListener("DOMContentLoaded", function () {
-  // Toast notifications
   window.showToast = function (message, type = "success") {
     let container = document.getElementById("toastContainer");
     if (!container) {
@@ -24,10 +23,8 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 3500);
   };
 
-  // CSRF token
   const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
 
-  // Table Search and Filter
   const searchInput = document.getElementById("searchInput");
   const filterCat = document.getElementById("filterCat");
   const filterStatus = document.getElementById("filterStatus");
@@ -61,7 +58,6 @@ document.addEventListener("DOMContentLoaded", function () {
   if (filterCat) filterCat.addEventListener("change", filterTable);
   if (filterStatus) filterStatus.addEventListener("change", filterTable);
 
-  // Status Toggle
   document.querySelectorAll(".status-switch-input").forEach((toggle) => {
     toggle.addEventListener("change", function () {
       const id = this.getAttribute("data-id");
@@ -94,7 +90,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // Popular Toggle
   document.querySelectorAll(".popular-switch-input").forEach((toggle) => {
     toggle.addEventListener("change", function () {
       const id = this.getAttribute("data-id");
@@ -127,7 +122,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // Modal Delete logic
   const deleteModal = document.getElementById("deleteModal");
   let productToDeleteId = null;
 
@@ -178,7 +172,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Duplicate product
   document.querySelectorAll(".btn-duplicate-product").forEach((btn) => {
     btn.addEventListener("click", function () {
       const id = this.getAttribute("data-id");
@@ -205,8 +198,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-
-
   function updateStatsCounts() {
     const totalEl = document.getElementById("statTotalCount");
     const activeEl = document.getElementById("statActiveCount");
@@ -221,7 +212,6 @@ document.addEventListener("DOMContentLoaded", function () {
     if (hiddenEl) hiddenEl.textContent = hiddenRows.length;
   }
 
-  // Specs Editor logic (in edit.php)
   const specsTableBody = document.getElementById("specsTableBody");
   const btnAddSpec = document.getElementById("btnAddSpec");
   const btnPresetTshirt = document.getElementById("btnPresetTshirt");
@@ -287,7 +277,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Gallery uploads and management (in edit.php)
   const mainImageInput = document.getElementById("mainImageInput");
   const mainImageFile = document.getElementById("mainImageFile");
   const mainImagePreview = document.getElementById("mainImagePreview");
@@ -380,7 +369,6 @@ document.addEventListener("DOMContentLoaded", function () {
       });
   }
 
-  // Before Form Submit in edit.php: compile specs to hidden json
   const productForm = document.getElementById("productForm");
   if (productForm) {
     productForm.addEventListener("submit", function () {
@@ -399,7 +387,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Badges / Tags Management (edit.php)
   const tagsContainer = document.getElementById("tagsContainer");
   const customTagInput = document.getElementById("custom_tag");
   const btnAddCustomTag = document.getElementById("btnAddCustomTag");
@@ -408,7 +395,6 @@ document.addEventListener("DOMContentLoaded", function () {
     tagName = tagName.trim();
     if (!tagName || !tagsContainer) return;
 
-    // Check if tag already exists in the container (case-insensitive)
     const existing = Array.from(tagsContainer.querySelectorAll(".badge-checkbox-item")).find(
       (item) => (item.getAttribute("data-tag") || "").toLowerCase() === tagName.toLowerCase()
     );
@@ -423,7 +409,6 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    // Create new badge element
     const label = document.createElement("label");
     label.className = "badge-checkbox-item";
     label.setAttribute("data-tag", tagName);
@@ -436,7 +421,6 @@ document.addEventListener("DOMContentLoaded", function () {
     bindBadgeDelete(label.querySelector(".badge-delete-btn"));
     tagsContainer.appendChild(label);
 
-    // Save to database via API
     const formData = new FormData();
     formData.append("csrf_token", csrfToken);
     formData.append("name", tagName);

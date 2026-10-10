@@ -37,7 +37,6 @@ require __DIR__ . '/includes/components/header.php';
           <!-- Чтобы добавить фото: впишите путь в data-img И в src внутри .rv-media img.
                Если фото нет — оставьте data-img пустым, покажется инициал. -->
 
-
           <button class="rv-card" data-name="Alina" data-item="Варяга меч кормит" data-img="images/review-11.jpg"
                   data-text="Добрый вечер, забрала футболку. Спасибо большое, все довольны 😍😍😍">
             <div class="rv-media">

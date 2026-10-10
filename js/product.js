@@ -1,11 +1,8 @@
 "use strict";
 
-/* product.js — интерактивность для страницы товара
-   Читает данные из data-* атрибутов, не использует window.PRODUCT_DATA */
 (function () {
   "use strict";
 
-  // диапазоны размеров по полу
   var SIZES_BY_GENDER = {
     "Женский": ["XS", "S", "M", "L", "XL"],
     "Мужской": ["S", "M", "L", "XL", "2XL", "3XL"]
@@ -15,7 +12,6 @@
     var main = document.querySelector("main.container");
     if (!main) return;
 
-    // Читаем данные товара из data-* атрибутов
     var productId = main.dataset.productId;
     var productName = main.dataset.productName;
     var productPrice = main.dataset.productPrice;
@@ -26,25 +22,19 @@
       return;
     }
 
-    /* ==========================================================
-       ГАЛЕРЕЯ: работа с уже существующими DOM-элементами
-       ========================================================== */
     var mainImg = document.getElementById("galleryMain");
     var thumbs = document.getElementById("thumbs");
     var dotsWrap = document.getElementById("galleryDots");
     
-    // Получаем массив всех изображений из миниатюр
     var thumbImages = thumbs ? Array.from(thumbs.querySelectorAll("img")) : [];
     var imgs = thumbImages.map(function(img) { return img.src; });
     
-    // Если миниатюр нет, используем главное фото
     if (imgs.length === 0 && mainImg) {
       imgs = [mainImg.src];
     }
 
     var current = 0;
 
-    // показать фото по индексу и синхронизировать миниатюры/точки
     function showImage(i) {
       if (i < 0) i = imgs.length - 1;
       if (i >= imgs.length) i = 0;
@@ -70,7 +60,6 @@
       }
     }
 
-    // заглушка, если главное фото не загрузилось
     if (mainImg) {
       mainImg.onerror = function () {
         this.style.display = "none";
@@ -81,7 +70,6 @@
       };
     }
 
-    // миниатюры (десктоп) — навешиваем обработчики на уже существующие элементы
     if (thumbs && thumbImages.length > 0) {
       thumbImages.forEach(function(t) {
         t.addEventListener("click", function () {
@@ -90,7 +78,6 @@
       });
     }
 
-    // точки (мобайл) — навешиваем обработчики
     if (dotsWrap) {
       var dots = dotsWrap.querySelectorAll("button");
       dots.forEach(function(d) {
@@ -100,7 +87,6 @@
       });
     }
 
-    // свайп по главному фото (мобайл)
     if (mainImg && imgs.length > 1) {
       var startX = 0;
       var startY = 0;
@@ -128,12 +114,8 @@
       }, { passive: true });
     }
 
-    // стартовое фото
     showImage(0);
 
-    /* ==========================================================
-       ЛАЙТБОКС — увеличение фото по клику
-       ========================================================== */
     (function () {
       var modal = document.getElementById("pvModal");
       if (!modal || !mainImg) return;
@@ -212,9 +194,6 @@
       }
     })();
 
-    /* ==========================================================
-       ВЫБОР ПОЛА + РАЗМЕРЫ + КНОПКА TELEGRAM
-       ========================================================== */
     var orderBtn = document.getElementById("orderBtn");
     var gendersWrap = document.getElementById("genders");
     var sizesWrap = document.querySelector(".sizes");
@@ -238,7 +217,6 @@
         return;
       }
 
-      // Размеры, отмеченные администратором как недоступные (из БД через data-атрибут)
       var attrName = gender === "Мужской" ? "data-unavailable-male" : "data-unavailable-female";
       var unavailable = (sizesWrap.getAttribute(attrName) || "")
         .split(",")
@@ -319,8 +297,6 @@
         }
         refreshHref();
 
-        // Логика заказа через Telegram больше не стучится в удаленный api/order.php,
-        // так как учет заказов идет строго через ЮKassa
       });
     }
 

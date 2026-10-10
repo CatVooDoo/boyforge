@@ -1,8 +1,6 @@
 (function () {
   'use strict';
 
-  // ⬇ ДАТА И ВРЕМЯ ОТКРЫТИЯ: год, месяц-1, день, час, минута
-  // Сейчас стоит: 15 июля 2026, 20:00 (месяц июль = 6)
   var OPEN_AT = new Date(2026, 6, 15, 20, 0, 0).getTime();
 
   var lock = document.getElementById('dropLock');

@@ -5,9 +5,6 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/fivepost.php';
 require_once __DIR__ . '/order_logger.php';
 
-/**
- * Сохраняет или обновляет заказ в БД
- */
 function saveOrderToDb(PDO $pdo, array $data, string $paymentStatus, string $transactionId = ''): void {
     $stmt = $pdo->prepare("
         INSERT INTO orders (
@@ -49,9 +46,6 @@ function saveOrderToDb(PDO $pdo, array $data, string $paymentStatus, string $tra
     ]);
 }
 
-/**
- * Обрабатывает оплаченный заказ: отправляет в 5Post и Google Sheets
- */
 function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): void {
     $lockName = 'bf_order_' . md5($orderId);
     $lockAcquired = false;
@@ -74,7 +68,6 @@ function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): voi
         $alreadyIn5Post = !empty($order['fivepost_status']) && in_array($order['fivepost_status'], ['CREATED', 'PROCESSING']);
         $alreadyInSheets = !empty($order['google_sheets_sent']);
 
-        // 1. Отправка в 5Post
         if (!$alreadyIn5Post) {
             $pdo->prepare("UPDATE orders SET fivepost_status = 'PROCESSING', payment_status = 'paid', payment_transaction_id = :tx WHERE order_id = :oid AND (fivepost_status IS NULL OR fivepost_status = 'PENDING' OR fivepost_status = '')")
                 ->execute([':oid' => $orderId, ':tx' => $transactionId]);
@@ -143,7 +136,6 @@ function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): voi
             }
         }
 
-        // 2. Отправка в Google Sheets
         if (!$alreadyInSheets) {
             $googleScriptUrl = env_get('GOOGLE_SCRIPT_URL');
             if (!empty($googleScriptUrl)) {
@@ -192,6 +184,16 @@ function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): voi
 
                 if ($gHttpCode === 200 || $gHttpCode === 302) {
                     $pdo->prepare("UPDATE orders SET google_sheets_sent = 1 WHERE order_id = :oid")->execute([':oid' => $orderId]);
+                }
+            }
+
+            if (!empty($order['email'])) {
+                require_once __DIR__ . '/mailer.php';
+                try {
+                    sendOrderReceipt($order);
+                    logOrderEvent($orderId, 'email_receipt_sent', ['email' => $order['email']]);
+                } catch (Throwable $e) {
+                    logOrderEvent($orderId, 'email_receipt_error', ['error' => $e->getMessage()]);
                 }
             }
         }

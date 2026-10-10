@@ -1,17 +1,11 @@
-/* ============================================================
-   BOYFORGE — основной скрипт сайта
-   Минимальный набор: меню, форма, аккордеон, галерея, мелочи
-   ============================================================ */
+
 (function () {
   'use strict';
 
-  /* ---------- утилиты ---------- */
   const $  = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
   const on = (el, ev, fn) => el && el.addEventListener(ev, fn);
 
-
-/* ===== МОБИЛЬНОЕ МЕНЮ ===== */
 (function () {
   const burger  = document.querySelector('.burger');
   const menu    = document.querySelector('.mobile-menu');
@@ -31,7 +25,6 @@
     menu.classList.remove('open');
     if (overlay) {
       overlay.classList.remove('open');
-      // прячем оверлей после завершения анимации
       setTimeout(() => { overlay.hidden = true; }, 350);
     }
     document.body.classList.remove('no-scroll');
@@ -45,22 +38,17 @@
 
   if (closeBtn) closeBtn.addEventListener('click', closeMenu);
 
-  // клик по пустому месту (оверлей)
   if (overlay) overlay.addEventListener('click', closeMenu);
 
-  // закрытие по ссылке в меню
   menu.querySelectorAll('a').forEach(link => {
     link.addEventListener('click', closeMenu);
   });
 
-  // закрытие по Esc
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && menu.classList.contains('open')) closeMenu();
   });
 })();
 
-
-  /* ---------- 3. Форма заявки в Telegram ---------- */
   (function contactForm() {
     const form = $('#contactForm');
     if (!form) return;
@@ -84,8 +72,6 @@
       const btn = $('button[type="submit"]', form);
       btn && (btn.disabled = true, btn.dataset.txt = btn.textContent, btn.textContent = 'Отправляем…');
 
-      // TODO: подключить реальную отправку (Telegram-бот / Formspree / почта).
-      // Пока — имитация успешной отправки:
       setTimeout(() => {
         setStatus('Заявка отправлена! Мы свяжемся с вами в Telegram.', true);
         form.reset();
@@ -94,8 +80,6 @@
     });
   })();
 
-
-  /* ---------- 5. Галерея на карточке товара ---------- */
   (function gallery() {
     const main  = $('#galleryMain');
     const thumbs = $$('.gallery-thumb');
@@ -111,8 +95,6 @@
     });
   })();
 
-
-  /* ---------- 6. Выбор размера на карточке товара ---------- */
   (function sizePicker() {
     const sizes = $$('.size-option');
     if (!sizes.length) return;
@@ -128,8 +110,6 @@
     });
   })();
 
-
-  /* ---------- 7. Плавная прокрутка по якорям ---------- */
   (function smoothAnchors() {
 
     $$('a[href^="#"]').forEach(a => {
@@ -144,8 +124,6 @@
     });
   })();
 
-
-  /* ---------- 8. Появление блоков при скролле (.reveal) ---------- */
   (function reveal() {
     const els = $$('.reveal');
     if (!els.length || !('IntersectionObserver' in window)) {
@@ -163,8 +141,6 @@
     els.forEach(el => io.observe(el));
   })();
 
-
-  /* ---------- 9. Год в футере ---------- */
   (function year() {
     const el = $('#year');
     el && (el.textContent = new Date().getFullYear());
@@ -172,7 +148,6 @@
 
 })();
 
-  /* ---------- Прозрачный хедер → белая плашка (без дёрганья) ---------- */
 (function headerScroll() {
   const header = document.querySelector('.site-header');
   if (!header) return;
@@ -184,8 +159,6 @@
   function compute() {
     ticking = false;
     const y = window.scrollY;
-    // гистерезис: включаем на 70% экрана, выключаем только на 55% —
-    // между ними класс не мигает
     const onPoint  = isTransparent ? window.innerHeight * 0.70 : 8;
     const offPoint = isTransparent ? window.innerHeight * 0.55 : 4;
 
@@ -211,9 +184,6 @@
   window.addEventListener('resize', onScroll, { passive: true });
 })();
 
-   /* ============================================================
-   HERO-СЛАЙДЕР (автопереключение изображений)
-   ============================================================ */
 (function () {
   const slider = document.querySelector('.hero-slider');
   if (!slider) return;
@@ -225,7 +195,6 @@
   let index = 0;
   let timerId;
 
-  // точки
   slides.forEach((_, i) => {
     const dot = document.createElement('button');
     dot.setAttribute('aria-label', 'Слайд ' + (i + 1));
@@ -255,7 +224,6 @@
   nextBtn && nextBtn.addEventListener('click', next);
   prevBtn && prevBtn.addEventListener('click', prev);
 
-  // свайп на мобиле
   let startX = 0;
   let isDragging = false;
 
@@ -279,7 +247,6 @@
     }
   }, { passive: true });
 
-  // Предотвращаем переход по ссылке, если был свайп
   slides.forEach(slide => {
     slide.addEventListener('click', e => {
       if (isDragging) {
@@ -288,34 +255,25 @@
     });
   });
 
-  // старт
   startTimer();
 })();
 
-
-/* ============================================================
-   ГАЛЕРЕЯ (авто-marquee) + МОДАЛКА
-   ============================================================ */
 (function () {
   const marquee = document.getElementById('galleryMarquee');
   const track = document.getElementById('galleryTrack');
   const modal = document.getElementById('galleryModal');
   if (!marquee || !track || !modal) return;
 
-  // собираем список src ДО дублирования
   const originals = [...track.querySelectorAll('.gallery-item')];
   const sources = originals.map(el => el.dataset.src);
 
-  // дублируем содержимое для бесшовной прокрутки (-50%)
   track.innerHTML += track.innerHTML;
 
-  // пауза при наведении / касании (удержании)
   marquee.addEventListener('mouseenter', () => marquee.classList.add('is-paused'));
   marquee.addEventListener('mouseleave', () => marquee.classList.remove('is-paused'));
   marquee.addEventListener('touchstart', () => marquee.classList.add('is-paused'), { passive: true });
   marquee.addEventListener('touchend', () => marquee.classList.remove('is-paused'), { passive: true });
 
-  // модалка
   const modalImg = document.getElementById('galleryModalImg');
   const closeBtn = modal.querySelector('.gallery-modal-close');
   const prevBtn = modal.querySelector('.gm-prev');
@@ -337,7 +295,6 @@
   const showPrev = () => open(current - 1);
   const showNext = () => open(current + 1);
 
-  // клик по любой плитке (в т.ч. по дублям) открывает модалку
   track.addEventListener('click', e => {
     const item = e.target.closest('.gallery-item');
     if (!item) return;
@@ -357,7 +314,6 @@
   });
 })();
 
-/* ===== КАТАЛОГ: фильтры + сортировка ===== */
 (function () {
   const grid = document.getElementById('catalogGrid');
   if (!grid) return;
@@ -404,7 +360,6 @@
 
   if (sortSelect) sortSelect.addEventListener('change', apply);
 
-  // кнопка «Сбросить фильтр» в пустом состоянии
   if (emptyBack) emptyBack.addEventListener('click', () => {
     chips.forEach(c => c.classList.remove('is-active'));
     const allChip = document.querySelector('.chip[data-cat="all"]');
@@ -412,13 +367,10 @@
     apply();
   });
 
-  apply(); // первый запуск — покажет все товары
+  apply();
 })();
 
-
-/* ===== СТРАНИЦА ТОВАРА ===== */
 (function () {
-  // смена главного фото по клику на миниатюру
   const main = document.getElementById('galleryMain');
   const thumbs = document.querySelectorAll('.thumbs img');
   if (main && thumbs.length) {
@@ -429,7 +381,6 @@
     }));
   }
 
-  // выбор размера (недоступные размеры отмечены disabled — их пропускаем)
   document.querySelectorAll('.sizes button:not([disabled])').forEach(b => {
     b.addEventListener('click', () => {
       document.querySelectorAll('.sizes button').forEach(x => x.classList.remove('active'));
@@ -437,7 +388,6 @@
     });
   });
 
-  // аккордеон (делегирование — работает всегда)
   document.addEventListener('click', function (e) {
     var head = e.target.closest('.accordion-head');
     if (!head) return;
@@ -446,7 +396,6 @@
   });
 })();
 
-/* ===== МОДАЛКА ОТЗЫВОВ ===== */
 (function () {
   const track = document.getElementById('reviewsTrack');
   const modal = document.getElementById('reviewModal');

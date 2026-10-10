@@ -160,7 +160,6 @@ switch ($action) {
             exit;
         }
 
-        // Проверка уникальности slug
         $checkStmt = $pdo->prepare("SELECT id FROM categories WHERE slug = :slug AND id != :id LIMIT 1");
         $checkStmt->execute([':slug' => $slug, ':id' => $catId]);
         if ($checkStmt->fetch()) {
