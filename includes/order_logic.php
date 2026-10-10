@@ -196,6 +196,14 @@ function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): voi
                     logOrderEvent($orderId, 'email_receipt_error', ['error' => $e->getMessage()]);
                 }
             }
+            
+            require_once __DIR__ . '/telegram.php';
+            try {
+                sendTelegramNotification($order);
+                logOrderEvent($orderId, 'telegram_notification_sent', []);
+            } catch (Throwable $e) {
+                logOrderEvent($orderId, 'telegram_notification_error', ['error' => $e->getMessage()]);
+            }
         }
     } finally {
         if ($lockAcquired) {

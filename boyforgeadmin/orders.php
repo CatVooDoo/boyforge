@@ -17,6 +17,15 @@ $stmt = $pdo->query("
 ");
 $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+$settingsFile = dirname(__DIR__) . '/includes/settings.json';
+$tgEnabled = true;
+if (file_exists($settingsFile)) {
+    $settings = json_decode(file_get_contents($settingsFile), true) ?: [];
+    if (isset($settings['tg_notifications_enabled'])) {
+        $tgEnabled = (bool)$settings['tg_notifications_enabled'];
+    }
+}
+
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -41,6 +50,13 @@ require __DIR__ . '/includes/header.php';
 <div class="admin-main">
   <div class="admin-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
     <h1 class="admin-title">Управление заказами и чеками</h1>
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 14px; font-weight: 500; color: #4b5563;">Уведомления в Telegram</span>
+        <label class="switch-label" title="Включить/выключить уведомления">
+            <input type="checkbox" id="tgNotificationToggle" <?= $tgEnabled ? 'checked' : '' ?>>
+            <span class="slider"></span>
+        </label>
+    </div>
   </div>
 
   <div class="admin-card">
@@ -144,6 +160,28 @@ require __DIR__ . '/includes/header.php';
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const tgToggle = document.getElementById('tgNotificationToggle');
+    if (tgToggle) {
+        tgToggle.addEventListener('change', function() {
+            fetch('api_tg_toggle.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: this.checked })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('Ошибка при сохранении настроек: ' + (data.error || 'Неизвестная ошибка'));
+                    this.checked = !this.checked;
+                }
+            })
+            .catch(err => {
+                alert('Сетевая ошибка при сохранении настроек');
+                this.checked = !this.checked;
+            });
+        });
+    }
+
     const buttons = document.querySelectorAll('.send-receipt-btn');
     
     buttons.forEach(btn => {
