@@ -45,7 +45,7 @@ function sendOrderReceipt(array $order): void {
         $mail->Subject = 'Ваш заказ #' . ($order['order_id'] ?? 'N/A') . ' в BOYFORGE';
         $mail->Body    = $htmlBody;
         
-        $mail->AltBody = "Ваш заказ #{$order['order_id']} успешно оплачен.\nТовар: {$order['product_name']}\nСумма: {$order['price']} руб.\n\nСпасибо за покупку в BOYFORGE!";
+        $mail->AltBody = "Спасибо за покупку!\nВаш заказ #{$order['order_id']} успешно оплачен и передан в обработку.\nТовар: {$order['product_name']}\nСумма: {$order['price']} руб.\n\nВ ближайшее время (3-4 дня) мы передадим заказ в службу доставки 5POST.\nОтслеживать заказ можете на сайте: https://fivepost.ru";
 
         $mail->send();
     } catch (Exception $e) {
