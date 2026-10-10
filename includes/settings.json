@@ -1,3 +1,5 @@
 {
-    "tg_notifications_enabled": true
+    "tg_notifications_enabled": true,
+    "tg_bot_token": "8918256076:AAGDqYV-AmrHiArHCeCX0ClyQLhn27yBA7I",
+    "tg_chat_id": "1642658562"
 }

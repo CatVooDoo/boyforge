@@ -19,11 +19,15 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $settingsFile = dirname(__DIR__) . '/includes/settings.json';
 $tgEnabled = true;
+$tgToken = '';
+$tgChatId = '';
 if (file_exists($settingsFile)) {
     $settings = json_decode(file_get_contents($settingsFile), true) ?: [];
     if (isset($settings['tg_notifications_enabled'])) {
         $tgEnabled = (bool)$settings['tg_notifications_enabled'];
     }
+    $tgToken = $settings['tg_bot_token'] ?? '';
+    $tgChatId = $settings['tg_chat_id'] ?? '';
 }
 
 require __DIR__ . '/includes/header.php';
@@ -45,17 +49,29 @@ require __DIR__ . '/includes/header.php';
     pointer-events: none;
     z-index: 10;
 }
+#btnTgSettings .icon {
+    transition: transform 0.6s ease-out;
+}
+#btnTgSettings:hover .icon {
+    transform: rotate(720deg);
+}
 </style>
 
 <div class="admin-main">
   <div class="admin-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
     <h1 class="admin-title">Управление заказами и чеками</h1>
-    <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 14px; font-weight: 500; color: #4b5563;">Уведомления в Telegram</span>
-        <label class="switch-label" title="Включить/выключить уведомления">
-            <input type="checkbox" id="tgNotificationToggle" <?= $tgEnabled ? 'checked' : '' ?>>
-            <span class="slider"></span>
-        </label>
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <button id="btnTgSettings" class="btn btn-secondary btn-sm" title="Настройки Telegram">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            Настройки
+        </button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 14px; font-weight: 500; color: #4b5563;">Уведомления в Telegram</span>
+            <label class="switch-label" title="Включить/выключить уведомления">
+                <input type="checkbox" id="tgNotificationToggle" <?= $tgEnabled ? 'checked' : '' ?>>
+                <span class="slider"></span>
+            </label>
+        </div>
     </div>
   </div>
 
@@ -158,12 +174,37 @@ require __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<div id="tgSettingsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#fff; padding:32px; border-radius:8px; width:520px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+        <h3 style="margin-top:0; margin-bottom:16px; font-size:18px;">Секреты Telegram</h3>
+        <p style="font-size:13px; color:#6b7280; margin-bottom: 16px;">Укажите данные, чтобы уведомления приходили в нужный вам чат/группу. При пустых полях будут использоваться дефолтные из .env.</p>
+        
+        <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label">Telegram Bot Token (HTTP API):</label>
+            <input type="text" id="tgBotTokenInput" class="form-input" value="<?= htmlspecialchars($tgToken) ?>" placeholder="Например: 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 24px;">
+            <label class="form-label">Telegram Chat ID (ID чата или канала):</label>
+            <input type="text" id="tgChatIdInput" class="form-input" value="<?= htmlspecialchars($tgChatId) ?>" placeholder="Например: -1003895656779">
+        </div>
+
+        <div style="display:flex; gap:12px; justify-content:space-between; align-items:center; margin-top: 16px;">
+            <button id="tgTestBtn" class="btn btn-secondary" style="font-size: 13px;">Отправить тест</button>
+            <div style="display:flex; gap:12px;">
+                <button id="tgSettingsClose" class="btn btn-secondary">Отмена</button>
+                <button id="tgSettingsSave" class="btn btn-primary">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const tgToggle = document.getElementById('tgNotificationToggle');
     if (tgToggle) {
         tgToggle.addEventListener('change', function() {
-            fetch('api_tg_toggle.php', {
+            fetch('api_tg_settings.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ enabled: this.checked })
@@ -173,11 +214,92 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!data.success) {
                     alert('Ошибка при сохранении настроек: ' + (data.error || 'Неизвестная ошибка'));
                     this.checked = !this.checked;
+                } else {
+                    document.getElementById('tgTestBtn').disabled = !this.checked;
                 }
             })
             .catch(err => {
                 alert('Сетевая ошибка при сохранении настроек');
                 this.checked = !this.checked;
+            });
+        });
+    }
+
+    const tgSettingsModal = document.getElementById('tgSettingsModal');
+    const btnTgSettings = document.getElementById('btnTgSettings');
+    const tgSettingsClose = document.getElementById('tgSettingsClose');
+    const tgSettingsSave = document.getElementById('tgSettingsSave');
+    const tgTestBtn = document.getElementById('tgTestBtn');
+
+    if (tgToggle && tgTestBtn) {
+        tgTestBtn.disabled = !tgToggle.checked;
+    }
+
+    if (tgTestBtn) {
+        tgTestBtn.addEventListener('click', function() {
+            if (tgToggle && !tgToggle.checked) {
+                alert('Включите уведомления (тумблер) перед отправкой теста!');
+                return;
+            }
+            const originalText = this.textContent;
+            this.textContent = 'Отправка...';
+            this.disabled = true;
+
+            fetch('api_tg_test.php', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Тестовое сообщение успешно отправлено!');
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(err => alert('Сетевая ошибка'))
+            .finally(() => {
+                this.textContent = originalText;
+                this.disabled = false;
+            });
+        });
+    }
+
+    if (btnTgSettings && tgSettingsModal) {
+        btnTgSettings.addEventListener('click', () => {
+            tgSettingsModal.style.display = 'flex';
+        });
+
+        tgSettingsClose.addEventListener('click', () => {
+            tgSettingsModal.style.display = 'none';
+        });
+
+        tgSettingsSave.addEventListener('click', function() {
+            const token = document.getElementById('tgBotTokenInput').value.trim();
+            const chatId = document.getElementById('tgChatIdInput').value.trim();
+            
+            const originalText = this.textContent;
+            this.textContent = 'Сохранение...';
+            this.disabled = true;
+
+            fetch('api_tg_settings.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tg_bot_token: token,
+                    tg_chat_id: chatId
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    tgSettingsModal.style.display = 'none';
+                    alert('Настройки Telegram успешно сохранены!');
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(err => alert('Сетевая ошибка'))
+            .finally(() => {
+                this.textContent = originalText;
+                this.disabled = false;
             });
         });
     }

@@ -10,8 +10,9 @@
         "cat": "Футболка",
         "name": "Футболка «Колизей»",
         "price": "3 200 ₽",
-        "img": "uploads\/products\/prod_20260915_140357_62ab6d22.jpg",
+        "img": "uploads\/products\/prod_20260929_145349_bee918b2.jpg",
         "imgs": [
+            "uploads\/products\/prod_20260929_145349_bee918b2.jpg",
             "uploads\/products\/prod_20260915_140357_62ab6d22.jpg",
             "uploads\/products\/prod_20260915_140353_03c6a333.jpg",
             "uploads\/products\/prod_20260915_140353_f0f64bb9.jpg",
@@ -19,7 +20,7 @@
             "uploads\/products\/prod_20260915_140353_a62e1d5b.jpg",
             "uploads\/products\/prod_20260915_140353_4c78285d.jpg",
             "uploads\/products\/prod_20260915_140353_a129f056.jpg",
-            "uploads\/products\/prod_20260915_140353_eb0792bb.jpg"
+            "uploads\/products\/prod_20260929_145338_b182169f.jpg"
         ],
         "sub": "Футболка · 95% хлопок \/ 5% эластан",
         "tags": [
@@ -57,16 +58,17 @@
         "cat": "Футболка",
         "name": "Футболка «Гладиатор»",
         "price": "3 200 ₽",
-        "img": "uploads\/products\/prod_20260915_134957_9856812f.jpg",
+        "img": "uploads\/products\/prod_20260929_145419_d2f441ca.jpg",
         "imgs": [
+            "uploads\/products\/prod_20260929_145419_d2f441ca.jpg",
             "uploads\/products\/prod_20260915_134957_9856812f.jpg",
             "uploads\/products\/prod_20260915_135102_4b94577a.jpg",
             "uploads\/products\/prod_20260915_135103_e7baaa9c.jpg",
             "uploads\/products\/prod_20260915_135106_15cb67da.jpg",
             "uploads\/products\/prod_20260915_135108_bca0ab98.jpg",
             "uploads\/products\/prod_20260915_135110_717ec8a8.jpg",
-            "uploads\/products\/prod_20260915_135112_a5372bef.jpg",
-            "uploads\/products\/prod_20260915_135114_2c003939.jpg"
+            "uploads\/products\/prod_20260929_145415_86732ae6.jpg",
+            "uploads\/products\/prod_20260929_145417_b6ac1c04.jpg"
         ],
         "sub": "Футболка · 95% хлопок \/ 5% эластан",
         "tags": [
@@ -104,16 +106,17 @@
         "cat": "Футболка",
         "name": "Футболка «Минотавр»",
         "price": "3 200 ₽",
-        "img": "uploads\/products\/prod_20260915_140312_08678a5b.jpg",
+        "img": "uploads\/products\/prod_20260929_151213_f2fcdde4.jpg",
         "imgs": [
+            "uploads\/products\/prod_20260929_151213_f2fcdde4.jpg",
             "uploads\/products\/prod_20260915_140312_08678a5b.jpg",
             "uploads\/products\/prod_20260915_140312_5c60971f.jpg",
             "uploads\/products\/prod_20260915_140312_132699b3.jpg",
             "uploads\/products\/prod_20260915_140312_5e7a8fbf.jpg",
             "uploads\/products\/prod_20260915_140312_7fd74c46.jpg",
             "uploads\/products\/prod_20260915_140312_2ad34f5b.jpg",
-            "uploads\/products\/prod_20260915_140312_19c382d8.jpg",
-            "uploads\/products\/prod_20260915_140312_638692f9.jpg"
+            "uploads\/products\/prod_20260929_145439_a010324c.jpg",
+            "uploads\/products\/prod_20260929_145441_0f31e29f.jpg"
         ],
         "sub": "Футболка · 95% хлопок \/ 5% эластан",
         "tags": [
@@ -151,16 +154,17 @@
         "cat": "Футболка",
         "name": "Футболка «Троя»",
         "price": "3 200 ₽",
-        "img": "uploads\/products\/prod_20260915_141002_052c3346.jpg",
+        "img": "uploads\/products\/prod_20260929_145507_232284bc.jpg",
         "imgs": [
+            "uploads\/products\/prod_20260929_145507_232284bc.jpg",
             "uploads\/products\/prod_20260915_141002_052c3346.jpg",
             "uploads\/products\/prod_20260915_141002_5f49cd2b.jpg",
             "uploads\/products\/prod_20260915_141002_ea3a354c.jpg",
             "uploads\/products\/prod_20260915_141002_4f777c32.jpg",
             "uploads\/products\/prod_20260915_141002_3bb78650.jpg",
             "uploads\/products\/prod_20260915_141002_f11f9556.jpg",
-            "uploads\/products\/prod_20260915_141002_01a4d0be.jpg",
-            "uploads\/products\/prod_20260915_141002_d2865d95.jpg"
+            "uploads\/products\/prod_20260929_145504_6c2ab4d3.jpg",
+            "uploads\/products\/prod_20260929_145505_d9215dcd.jpg"
         ],
         "sub": "Футболка · 95% хлопок \/ 5% эластан",
         "tags": [
@@ -198,16 +202,17 @@
         "cat": "Футболка",
         "name": "Футболка «Несломленный»",
         "price": "3 200 ₽",
-        "img": "uploads\/products\/prod_20260915_140508_b5a397ad.jpg",
+        "img": "uploads\/products\/prod_20260929_145535_dd86dd28.jpg",
         "imgs": [
+            "uploads\/products\/prod_20260929_145535_dd86dd28.jpg",
             "uploads\/products\/prod_20260915_140508_b5a397ad.jpg",
             "uploads\/products\/prod_20260915_140459_5d04d719.jpg",
             "uploads\/products\/prod_20260915_140459_9c9ae1d0.jpg",
             "uploads\/products\/prod_20260915_140459_e1a32b4b.jpg",
             "uploads\/products\/prod_20260915_140459_01545511.jpg",
             "uploads\/products\/prod_20260915_140459_70109ecb.jpg",
-            "uploads\/products\/prod_20260915_140459_2aa9b175.jpg",
-            "uploads\/products\/prod_20260915_140459_61d5f353.jpg"
+            "uploads\/products\/prod_20260929_145530_85da5bf5.jpg",
+            "uploads\/products\/prod_20260929_145548_508917fe.jpg"
         ],
         "sub": "Футболка · 95% хлопок \/ 5% эластан",
         "tags": [
@@ -245,16 +250,17 @@
         "cat": "Футболка",
         "name": "Футболка «Центурион»",
         "price": "3 200 ₽",
-        "img": "uploads\/products\/prod_20260915_141111_83079d8b.jpg",
+        "img": "uploads\/products\/prod_20260929_145615_c7650940.jpg",
         "imgs": [
+            "uploads\/products\/prod_20260929_145615_c7650940.jpg",
             "uploads\/products\/prod_20260915_141111_83079d8b.jpg",
             "uploads\/products\/prod_20260915_141103_0ab592bb.jpg",
             "uploads\/products\/prod_20260915_141105_90991142.jpg",
             "uploads\/products\/prod_20260915_141108_968467af.jpg",
             "uploads\/products\/prod_20260915_141108_9f25da38.jpg",
             "uploads\/products\/prod_20260915_141108_4a716079.jpg",
-            "uploads\/products\/prod_20260915_141108_1b0828a0.jpg",
-            "uploads\/products\/prod_20260915_141108_ddd5bea0.jpg"
+            "uploads\/products\/prod_20260929_145610_90ff8c76.jpg",
+            "uploads\/products\/prod_20260929_145612_40d8ebdc.jpg"
         ],
         "sub": "Футболка · 95% хлопок \/ 5% эластан",
         "tags": [
@@ -291,7 +297,7 @@
         "catId": "tshirt",
         "cat": "Футболка",
         "name": "Футболка «Рано меня похоронили»",
-        "price": "2 800 ₽",
+        "price": "3 200 ₽",
         "img": "images\/ranopoh\/p-ranopoh.jpg",
         "imgs": [
             "images\/ranopoh\/p-ranopoh.jpg",
@@ -334,7 +340,7 @@
         "catId": "tshirt",
         "cat": "Футболка",
         "name": "Футболка «По белу снегу заскучал»",
-        "price": "2 700 ₽",
+        "price": "3 000 ₽",
         "img": "uploads\/products\/prod_20260915_102430_4f02c627.jpg",
         "imgs": [
             "uploads\/products\/prod_20260915_102430_4f02c627.jpg",
@@ -377,9 +383,10 @@
         "catId": "tshirt",
         "cat": "Футболка",
         "name": "Футболка «Варяга меч кормит»",
-        "price": "2 800 ₽",
-        "img": "images\/varyag\/p-varyag.jpg",
+        "price": "3 200 ₽",
+        "img": "uploads\/products\/prod_20260929_145929_c908b28e.jpg",
         "imgs": [
+            "uploads\/products\/prod_20260929_145929_c908b28e.jpg",
             "images\/varyag\/p-varyag.jpg",
             "images\/varyag\/p-varyag-2.jpg",
             "images\/varyag\/p-varyag-3.jpg",
@@ -419,44 +426,44 @@
         "tg": "https:\/\/telegram.me\/theboyforge?text=%D0%97%D0%B4%D1%80%D0%B0%D0%B2%D1%81%D1%82%D0%B2%D1%83%D0%B9%D1%82%D0%B5%21%20%D0%A5%D0%BE%D1%87%D1%83%20%D0%B7%D0%B0%D0%BA%D0%B0%D0%B7%D0%B0%D1%82%D1%8C%3A%20%D0%92%D0%B0%D1%80%D1%8F%D0%B3%D0%B0%20%D0%BC%D0%B5%D1%87%20%D0%BA%D0%BE%D1%80%D0%BC%D0%B8%D1%82"
     },
     {
-        "id": 5,
+        "id": 12,
         "catId": "tshirt",
         "cat": "Футболка",
-        "name": "Тестовый товар",
+        "name": "ТЕСТОВЫЙ ТОВАР",
         "price": "1 ₽",
-        "img": "images\/ranopoh\/p-ranopoh.jpg",
+        "img": "uploads\/products\/prod_20260915_140357_62ab6d22.jpg",
         "imgs": [
-            "images\/ranopoh\/p-ranopoh.jpg"
+            "uploads\/products\/prod_20260915_140357_62ab6d22.jpg"
         ],
         "sub": "Футболка · 95% хлопок \/ 5% эластан",
         "tags": [
-            "Хит",
+            "Новая коллекция",
             "S–3XL"
         ],
-        "desc": "Футболка «Рано меня похоронили» — авторский принт. Футер 2-нитка (95% хлопок \/ 5% эластан), 240 г\/м², стойкая DTF-печать. Ровный крой, комфортная посадка на каждый день.",
+        "desc": "ТЕСТ",
         "specs": [
             [
-                "Материал",
-                "Футер 2-нитка, 95% хлопок \/ 5% эластан"
+                "ТЕСТ",
+                "ТЕСТ"
             ],
             [
-                "Плотность",
-                "240 г\/м²"
+                "ТЕСТ",
+                "ТЕСТ"
             ],
             [
-                "Печать",
-                "DTF"
+                "ТЕСТ",
+                "ТЕСТ"
             ],
             [
-                "Размеры",
-                "S–3XL"
+                "ТЕСТ",
+                "ТЕСТ"
             ],
             [
-                "Пошив",
-                "Россия"
+                "ТЕСТ",
+                "ТЕСТ"
             ]
         ],
-        "tg": "https:\/\/telegram.me\/theboyforge?text=%D0%97%D0%B4%D1%80%D0%B0%D0%B2%D1%81%D1%82%D0%B2%D1%83%D0%B9%D1%82%D0%B5%21%20%D0%A5%D0%BE%D1%87%D1%83%20%D0%B7%D0%B0%D0%BA%D0%B0%D0%B7%D0%B0%D1%82%D1%8C%3A%20%D0%A4%D1%83%D1%82%D0%B1%D0%BE%D0%BB%D0%BA%D0%B0%20%C2%AB%D0%A0%D0%B0%D0%BD%D0%BE%20%D0%BC%D0%B5%D0%BD%D1%8F%20%D0%BF%D0%BE%D1%85%D0%BE%D1%80%D0%BE%D0%BD%D0%B8%D0%BB%D0%B8%C2%BB%20%28%D0%9A%D0%BE%D0%BF%D0%B8%D1%8F%29"
+        "tg": "https:\/\/telegram.me\/theboyforge?text=%D0%97%D0%B4%D1%80%D0%B0%D0%B2%D1%81%D1%82%D0%B2%D1%83%D0%B9%D1%82%D0%B5%21%20%D0%A5%D0%BE%D1%87%D1%83%20%D0%B7%D0%B0%D0%BA%D0%B0%D0%B7%D0%B0%D1%82%D1%8C%3A%20%D0%A4%D1%83%D1%82%D0%B1%D0%BE%D0%BB%D0%BA%D0%B0%20%C2%AB%D0%9A%D0%BE%D0%BB%D0%B8%D0%B7%D0%B5%D0%B9%C2%BB%20%28%D0%9A%D0%BE%D0%BF%D0%B8%D1%8F%29"
     }
 ];
 

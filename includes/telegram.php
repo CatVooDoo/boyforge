@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 function sendTelegramNotification(array $order): void {
     $settingsFile = __DIR__ . '/settings.json';
+    $settings = [];
     if (file_exists($settingsFile)) {
         $settings = json_decode(file_get_contents($settingsFile), true) ?: [];
         if (isset($settings['tg_notifications_enabled']) && !$settings['tg_notifications_enabled']) {
@@ -10,8 +11,8 @@ function sendTelegramNotification(array $order): void {
         }
     }
 
-    $token = env_get('TG_BOT_TOKEN');
-    $chatId = env_get('TG_CHAT_ID');
+    $token = !empty($settings['tg_bot_token']) ? $settings['tg_bot_token'] : env_get('TG_BOT_TOKEN');
+    $chatId = !empty($settings['tg_chat_id']) ? $settings['tg_chat_id'] : env_get('TG_CHAT_ID');
     $apiUrl = env_get('TG_API_URL');
     
     if (!$token || !$chatId) {
