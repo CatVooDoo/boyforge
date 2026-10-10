@@ -29,7 +29,12 @@ if (!$token || !$chatId) {
 
 $message = "🔔 <b>Тестовое сообщение</b> из админ-панели BOYFORGE\n\nЕсли вы видите это сообщение, значит интеграция с Telegram настроена и работает корректно!";
 
-$url = rtrim($apiUrl ?: 'https://api.telegram.org/', '/') . "/bot{$token}/sendMessage";
+if (!$apiUrl) {
+    echo json_encode(['success' => false, 'error' => 'TG_API_URL не настроен']);
+    exit;
+}
+
+$url = rtrim($apiUrl, '/') . "/bot{$token}/sendMessage";
 $data = [
     'chat_id' => $chatId,
     'text' => $message,

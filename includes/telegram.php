@@ -20,7 +20,7 @@ function sendTelegramNotification(array $order): void {
     }
     
     if (!$apiUrl) {
-        $apiUrl = 'https://api.telegram.org/';
+        throw new Exception("TG_API_URL is not set in environment or settings. Requests must go strictly through Cloudflare worker.");
     }
     
     $apiUrl = rtrim($apiUrl, '/') . '/';
