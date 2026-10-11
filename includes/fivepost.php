@@ -459,4 +459,84 @@ class FivePostClient {
             'response'  => (string)$response
         ];
     }
+
+    /**
+     * Batch status retrieval by senderOrderIds (Boyforge order_id)
+     * @param string[] $senderOrderIds
+     * @return array
+     */
+    public function getOrderStatuses(array $senderOrderIds): array {
+        if (empty($senderOrderIds)) {
+            return ['success' => true, 'data' => []];
+        }
+
+        $jwt = $this->getJwtToken();
+        if (!$jwt) {
+            return [
+                'success'   => false,
+                'http_code' => 401,
+                'error'     => 'Не удалось получить авторизационный токен 5Post'
+            ];
+        }
+
+        $url = $this->baseUrl . '/api/v1/getOrderStatus';
+        $payload = [];
+        foreach ($senderOrderIds as $id) {
+            $payload[] = ['senderOrderId' => (string)$id];
+        }
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_HTTPHEADER     => [
+                'Authorization: Bearer ' . $jwt,
+                'Content-Type: application/json',
+                'Accept: application/json'
+            ],
+            CURLOPT_POSTFIELDS     => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2
+        ]);
+
+        $startTime = microtime(true);
+        $response = curl_exec($ch);
+        $duration = round(microtime(true) - $startTime, 3);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+
+        $this->log('GET_ORDER_STATUSES_RESPONSE', [
+            'Count'       => count($senderOrderIds),
+            'HTTP_Code'   => $httpCode,
+            'Duration_s'  => $duration,
+            'Curl_Error'  => $curlErr ?: 'none',
+            'Response'    => (string)$response
+        ]);
+
+        if ($curlErr) {
+            return [
+                'success'   => false,
+                'http_code' => 0,
+                'error'     => 'Ошибка cURL к 5Post: ' . $curlErr
+            ];
+        }
+
+        $json = json_decode((string)$response, true);
+        if ($httpCode === 200 && is_array($json)) {
+            return [
+                'success'   => true,
+                'http_code' => 200,
+                'data'      => $json
+            ];
+        }
+
+        return [
+            'success'   => false,
+            'http_code' => $httpCode,
+            'error'     => 'Ошибка 5Post getOrderStatus HTTP ' . $httpCode
+        ];
+    }
 }
+
