@@ -61,6 +61,10 @@ require __DIR__ . '/includes/header.php';
   <div class="admin-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
     <h1 class="admin-title">Управление заказами и чеками</h1>
     <div style="display: flex; align-items: center; gap: 16px;">
+        <button id="btnOpenReportModal" class="btn btn-secondary btn-sm" title="Выгрузка отчетов по заказам">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Отчет по заказам
+        </button>
         <button id="btnTgSettings" class="btn btn-secondary btn-sm" title="Настройки Telegram">
             <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             Настройки
@@ -199,6 +203,70 @@ require __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<div id="orderReportModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#fff; padding:32px; border-radius:12px; width:520px; max-width:92%; box-shadow:0 10px 25px rgba(0,0,0,0.15);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="margin:0; font-size:18px; font-weight:700;">Отчет по заказам</h3>
+            <button type="button" id="orderReportCloseCross" style="font-size:24px; line-height:1; color:#9ca3af; cursor:pointer; background:none; border:none;" title="Закрыть">&times;</button>
+        </div>
+        <p style="font-size:13px; color:#6b7280; margin-bottom: 20px;">
+            Выберите период для формирования отчета в Excel (.xlsx). Вы можете сразу скачать файл или отправить его в рабочий Telegram-чат.
+        </p>
+
+        <!-- Быстрые пресеты дат -->
+        <div style="margin-bottom: 16px;">
+            <label class="form-label" style="margin-bottom:8px; display:block; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; color:#6b7280;">Быстрый выбор периода:</label>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <button type="button" class="btn btn-secondary btn-sm preset-date-btn" data-preset="today">Сегодня</button>
+                <button type="button" class="btn btn-secondary btn-sm preset-date-btn" data-preset="yesterday">Вчера</button>
+                <button type="button" class="btn btn-secondary btn-sm preset-date-btn" data-preset="week">7 дней</button>
+                <button type="button" class="btn btn-secondary btn-sm preset-date-btn" data-preset="month">Этот месяц</button>
+                <button type="button" class="btn btn-secondary btn-sm preset-date-btn" data-preset="all">За всё время</button>
+            </div>
+        </div>
+
+        <!-- Выбор дат -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+            <div class="form-group">
+                <label class="form-label" for="reportDateFrom">Дата с:</label>
+                <input type="date" id="reportDateFrom" class="form-input" value="<?= date('Y-m-01') ?>">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="reportDateTo">Дата по:</label>
+                <input type="date" id="reportDateTo" class="form-input" value="<?= date('Y-m-d') ?>">
+            </div>
+        </div>
+
+        <!-- Статус заказов -->
+        <div class="form-group" style="margin-bottom: 24px;">
+            <label class="form-label" for="reportStatusSelect">Статус заказов:</label>
+            <select id="reportStatusSelect" class="form-input">
+                <option value="paid" selected>Только оплаченные (без отмен)</option>
+                <option value="all">Все заказы</option>
+                <option value="cancelled">Только отмененные</option>
+            </select>
+        </div>
+
+        <!-- Статус отправки / уведомление -->
+        <div id="reportActionStatus" style="display:none; padding:10px 14px; border-radius:8px; margin-bottom:18px; font-size:13px;"></div>
+
+        <!-- Действия -->
+        <div style="display:flex; gap:10px; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+            <button type="button" id="orderReportClose" class="btn btn-secondary">Закрыть</button>
+            <div style="display:flex; gap:10px;">
+                <button type="button" id="btnSendReportTg" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:6px;">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    <span>В Telegram</span>
+                </button>
+                <button type="button" id="btnDownloadReportExcel" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <span>Скачать Excel</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const tgToggle = document.getElementById('tgNotificationToggle');
@@ -299,6 +367,164 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(err => alert('Сетевая ошибка'))
             .finally(() => {
                 this.textContent = originalText;
+                this.disabled = false;
+            });
+        });
+    }
+
+    // --- Модальное окно выгрузки отчетов по заказам ---
+    const orderReportModal = document.getElementById('orderReportModal');
+    const btnOpenReportModal = document.getElementById('btnOpenReportModal');
+    const orderReportClose = document.getElementById('orderReportClose');
+    const orderReportCloseCross = document.getElementById('orderReportCloseCross');
+    const reportDateFrom = document.getElementById('reportDateFrom');
+    const reportDateTo = document.getElementById('reportDateTo');
+    const reportStatusSelect = document.getElementById('reportStatusSelect');
+    const reportActionStatus = document.getElementById('reportActionStatus');
+    const btnDownloadReportExcel = document.getElementById('btnDownloadReportExcel');
+    const btnSendReportTg = document.getElementById('btnSendReportTg');
+
+    if (btnOpenReportModal && orderReportModal) {
+        btnOpenReportModal.addEventListener('click', () => {
+            if (reportActionStatus) {
+                reportActionStatus.style.display = 'none';
+            }
+            orderReportModal.style.display = 'flex';
+        });
+    }
+
+    const closeReportModal = () => {
+        if (orderReportModal) {
+            orderReportModal.style.display = 'none';
+        }
+    };
+
+    if (orderReportClose) orderReportClose.addEventListener('click', closeReportModal);
+    if (orderReportCloseCross) orderReportCloseCross.addEventListener('click', closeReportModal);
+
+    // Пресеты дат
+    const formatYmd = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    document.querySelectorAll('.preset-date-btn').forEach(presetBtn => {
+        presetBtn.addEventListener('click', function() {
+            const preset = this.getAttribute('data-preset');
+            const now = new Date();
+            let from = new Date();
+            let to = new Date();
+
+            if (preset === 'today') {
+                from = now;
+                to = now;
+            } else if (preset === 'yesterday') {
+                from = new Date(now);
+                from.setDate(now.getDate() - 1);
+                to = new Date(from);
+            } else if (preset === 'week') {
+                from = new Date(now);
+                from.setDate(now.getDate() - 6);
+                to = now;
+            } else if (preset === 'month') {
+                from = new Date(now.getFullYear(), now.getMonth(), 1);
+                to = now;
+            } else if (preset === 'all') {
+                from = new Date(2024, 0, 1);
+                to = now;
+            }
+
+            if (reportDateFrom) reportDateFrom.value = formatYmd(from);
+            if (reportDateTo) reportDateTo.value = formatYmd(to);
+        });
+    });
+
+    // Скачивание Excel
+    if (btnDownloadReportExcel) {
+        btnDownloadReportExcel.addEventListener('click', function() {
+            const from = reportDateFrom ? reportDateFrom.value : '';
+            const to = reportDateTo ? reportDateTo.value : '';
+            const status = reportStatusSelect ? reportStatusSelect.value : 'paid';
+
+            if (!from || !to) {
+                alert('Пожалуйста, выберите диапазон дат.');
+                return;
+            }
+
+            const downloadUrl = 'api_export_orders.php?action=download&date_from=' + encodeURIComponent(from) + '&date_to=' + encodeURIComponent(to) + '&status=' + encodeURIComponent(status);
+            window.location.href = downloadUrl;
+        });
+    }
+
+    // Отправка в Telegram
+    if (btnSendReportTg) {
+        btnSendReportTg.addEventListener('click', function() {
+            const from = reportDateFrom ? reportDateFrom.value : '';
+            const to = reportDateTo ? reportDateTo.value : '';
+            const status = reportStatusSelect ? reportStatusSelect.value : 'paid';
+
+            if (!from || !to) {
+                alert('Пожалуйста, выберите диапазон дат.');
+                return;
+            }
+
+            const originalHtml = this.innerHTML;
+            this.innerHTML = '<span>Отправка...</span>';
+            this.disabled = true;
+
+            if (reportActionStatus) {
+                reportActionStatus.style.display = 'block';
+                reportActionStatus.style.background = '#f1f5f9';
+                reportActionStatus.style.color = '#475569';
+                reportActionStatus.style.border = '1px solid #e2e8f0';
+                reportActionStatus.textContent = 'Формирование отчета и отправка в Telegram...';
+            }
+
+            const params = new URLSearchParams();
+            params.append('action', 'telegram');
+            params.append('date_from', from);
+            params.append('date_to', to);
+            params.append('status', status);
+
+            fetch('api_export_orders.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    if (reportActionStatus) {
+                        reportActionStatus.style.display = 'block';
+                        reportActionStatus.style.background = '#dcfce7';
+                        reportActionStatus.style.color = '#15803d';
+                        reportActionStatus.style.border = '1px solid #bbf7d0';
+                        reportActionStatus.style.whiteSpace = 'pre-line';
+                        reportActionStatus.textContent = data.message || 'Отчет успешно отправлен в Telegram!';
+                    }
+                } else {
+                    if (reportActionStatus) {
+                        reportActionStatus.style.display = 'block';
+                        reportActionStatus.style.background = '#fee2e2';
+                        reportActionStatus.style.color = '#b91c1c';
+                        reportActionStatus.style.border = '1px solid #fecaca';
+                        reportActionStatus.textContent = 'Ошибка: ' + (data.error || 'Не удалось отправить отчет в Telegram');
+                    }
+                }
+            })
+            .catch(err => {
+                if (reportActionStatus) {
+                    reportActionStatus.style.display = 'block';
+                    reportActionStatus.style.background = '#fee2e2';
+                    reportActionStatus.style.color = '#b91c1c';
+                    reportActionStatus.style.border = '1px solid #fecaca';
+                    reportActionStatus.textContent = 'Сетевая ошибка при отправке отчета.';
+                }
+            })
+            .finally(() => {
+                this.innerHTML = originalHtml;
                 this.disabled = false;
             });
         });
