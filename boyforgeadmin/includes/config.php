@@ -69,6 +69,18 @@ function initDatabase(PDO $pdo): void {
     } catch (Throwable $e) {
     }
 
+    try {
+        $hasColorCol = false;
+        foreach ($pdo->query("SHOW COLUMNS FROM orders LIKE 'stage_color'")->fetchAll() as $col) {
+            $hasColorCol = true;
+            break;
+        }
+        if (!$hasColorCol) {
+            $pdo->exec("ALTER TABLE orders ADD COLUMN stage_color VARCHAR(32) NULL DEFAULT NULL AFTER payment_status");
+        }
+    } catch (Throwable $e) {
+    }
+
     $count = (int)$pdo->query("SELECT COUNT(*) FROM products")->fetchColumn();
     if ($count === 0) {
         $baseSpecs = json_encode([

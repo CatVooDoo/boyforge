@@ -55,6 +55,184 @@ require __DIR__ . '/includes/header.php';
 #btnTgSettings:hover .icon {
     transform: rotate(720deg);
 }
+
+/* Color Palette & Stage Indicators */
+.order-color-picker-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.order-palette-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
+    color: #9ca3af;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+.order-palette-btn:hover {
+    border-color: #141414;
+    color: #141414;
+}
+.order-palette-btn.color-orange {
+    background-color: #ea580c;
+    border-color: #c2410c;
+    color: #ffffff;
+}
+.order-palette-btn.color-orange:hover {
+    background-color: #c2410c;
+}
+.order-palette-btn.color-teal {
+    background-color: #0d9488;
+    border-color: #0f766e;
+    color: #ffffff;
+}
+.order-palette-btn.color-teal:hover {
+    background-color: #0f766e;
+}
+.color-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 100;
+    min-width: 170px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    padding: 6px;
+    display: none;
+    text-align: left;
+}
+.color-dropdown-menu.is-open {
+    display: block;
+}
+.color-dropdown-header {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #9ca3af;
+    font-weight: 700;
+    padding: 6px 10px 4px;
+}
+.color-opt-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 500;
+    color: #141414;
+    cursor: pointer;
+    transition: background-color 0.15s;
+    text-align: left;
+}
+.color-opt-btn:hover {
+    background-color: #f4f4f5;
+}
+.color-opt-btn.active {
+    background-color: #f0f0ee;
+    font-weight: 600;
+}
+.color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.dot-orange {
+    background-color: #ea580c;
+}
+.dot-teal {
+    background-color: #0d9488;
+}
+.dot-reset {
+    border: 1.5px solid #9ca3af;
+    background-color: transparent;
+}
+.color-check {
+    margin-left: auto;
+    opacity: 0;
+    color: #141414;
+    display: inline-flex;
+    align-items: center;
+}
+.color-check svg {
+    width: 14px;
+    height: 14px;
+}
+.color-opt-btn.active .color-check {
+    opacity: 1;
+}
+.color-dropdown-divider {
+    height: 1px;
+    background-color: #f0f0ee;
+    margin: 4px 0;
+}
+.color-opt-reset {
+    color: #6b7280;
+}
+.color-opt-reset:hover {
+    color: #ef4444;
+}
+
+/* Stage Pill Badges */
+.order-stage-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    line-height: 1.2;
+}
+.stage-pill-orange {
+    background-color: #ea580c;
+    color: #ffffff;
+}
+.stage-pill-teal {
+    background-color: #0d9488;
+    color: #ffffff;
+}
+.is-hidden {
+    display: none !important;
+}
+
+/* Выраженные фоновые цвета строк карточек */
+tr.order-color-orange td {
+    background-color: #fff0e3 !important;
+    border-bottom-color: #fcd5b8 !important;
+}
+tr.order-color-orange:hover td {
+    background-color: #ffe4ce !important;
+}
+tr.order-color-orange td:first-child {
+    border-left: 5px solid #ea580c !important;
+}
+
+tr.order-color-teal td {
+    background-color: #e6f7f5 !important;
+    border-bottom-color: #bbf0e7 !important;
+}
+tr.order-color-teal:hover td {
+    background-color: #d6f2ee !important;
+}
+tr.order-color-teal td:first-child {
+    border-left: 5px solid #0d9488 !important;
+}
 </style>
 
 <div class="admin-main">
@@ -81,7 +259,7 @@ require __DIR__ . '/includes/header.php';
 
   <div class="admin-card">
     <div style="padding: 20px;">
-        <p style="margin-bottom: 15px; color: #4b5563;">
+        <p style="margin-bottom: 0; color: #4b5563;">
             Здесь отображаются все оплаченные заказы. Для товаров, подлежащих маркировке (одежда), 
             перед передачей в 5Post необходимо пробить закрывающий чек («Полный расчет») с указанием кода Честного ЗНАКа.
         </p>
@@ -97,6 +275,9 @@ require __DIR__ . '/includes/header.php';
         <table class="admin-table">
           <thead>
             <tr>
+              <th style="width: 48px; text-align: center; padding-left: 14px; padding-right: 6px;" title="Стадия заказа">
+                <span style="opacity: 0.6;"><?= renderSvgIcon('palette', 'icon') ?></span>
+              </th>
               <th>Дата и Заказ</th>
               <th>Покупатель</th>
               <th>Товар</th>
@@ -106,10 +287,48 @@ require __DIR__ . '/includes/header.php';
           </thead>
           <tbody>
             <?php foreach ($orders as $order): ?>
-              <?php $isCancelled = ($order['mark_code'] === '__CANCELLED__'); ?>
-              <tr id="order-row-<?= htmlspecialchars($order['order_id']) ?>" class="<?= $isCancelled ? 'cancelled-row' : '' ?>">
+              <?php 
+                $isCancelled = ($order['mark_code'] === '__CANCELLED__'); 
+                $color = trim((string)($order['stage_color'] ?? ''));
+              ?>
+              <tr id="order-row-<?= htmlspecialchars($order['order_id']) ?>" 
+                  class="order-row <?= $isCancelled ? 'cancelled-row' : '' ?> <?= $color ? 'order-color-' . htmlspecialchars($color) : '' ?>"
+                  data-order="<?= htmlspecialchars($order['order_id']) ?>"
+                  data-stage-color="<?= htmlspecialchars($color) ?>">
+                <td style="text-align: center; padding-left: 14px; padding-right: 6px; width: 48px;">
+                  <div class="order-color-picker-wrap">
+                    <button type="button" 
+                            class="order-palette-btn <?= $color ? 'has-color color-' . htmlspecialchars($color) : '' ?>" 
+                            data-order="<?= htmlspecialchars($order['order_id']) ?>"
+                            title="<?= $color === 'orange' ? 'Стадия: Сделан (нажмите для смены)' : ($color === 'teal' ? 'Стадия: Упакован (нажмите для смены)' : 'Отметить стадию') ?>">
+                      <?= renderSvgIcon('palette', 'icon-palette') ?>
+                    </button>
+                    <div class="color-dropdown-menu">
+                      <div class="color-dropdown-header">Стадия заказа</div>
+                      <button type="button" class="color-opt-btn <?= $color === 'orange' ? 'active' : '' ?>" data-color="orange">
+                        <span class="color-dot dot-orange"></span>
+                        <span class="color-name">Сделан</span>
+                        <span class="color-check"><?= renderSvgIcon('check', 'icon-check') ?></span>
+                      </button>
+                      <button type="button" class="color-opt-btn <?= $color === 'teal' ? 'active' : '' ?>" data-color="teal">
+                        <span class="color-dot dot-teal"></span>
+                        <span class="color-name">Упакован</span>
+                        <span class="color-check"><?= renderSvgIcon('check', 'icon-check') ?></span>
+                      </button>
+                      <div class="color-dropdown-divider"></div>
+                      <button type="button" class="color-opt-btn color-opt-reset <?= empty($color) ? 'active' : '' ?>" data-color="">
+                        <span class="color-dot dot-reset"></span>
+                        <span class="color-name">Сбросить отметку</span>
+                      </button>
+                    </div>
+                  </div>
+                </td>
                 <td>
-                  <div style="font-weight:600; margin-bottom:4px;"><?= htmlspecialchars($order['order_id']) ?></div>
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+                    <div style="font-weight:600;"><?= htmlspecialchars($order['order_id']) ?></div>
+                    <span class="order-stage-pill stage-pill-orange <?= $color === 'orange' ? '' : 'is-hidden' ?>">Сделан</span>
+                    <span class="order-stage-pill stage-pill-teal <?= $color === 'teal' ? '' : 'is-hidden' ?>">Упакован</span>
+                  </div>
                   <div style="font-size:12px; color:#6b7280;"><?= htmlspecialchars($order['created_at']) ?></div>
                 </td>
                 <td>
@@ -640,6 +859,111 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.textContent = originalText;
             btn.disabled = false;
         });
+    });
+
+    // --- Управление цветовыми стадиями заказов (Палитра) ---
+    // Восстановление из localStorage на случай, если колонка еще не заполнена
+    document.querySelectorAll('.order-row').forEach(row => {
+        const orderId = row.getAttribute('data-order');
+        const localColor = localStorage.getItem('bf_stage_color_' + orderId);
+        const serverColor = row.getAttribute('data-stage-color');
+        if (!serverColor && localColor) {
+            applyColorToRow(row, localColor, false);
+        }
+    });
+
+    function applyColorToRow(row, color, saveServer = true) {
+        const orderId = row.getAttribute('data-order');
+        row.setAttribute('data-stage-color', color || '');
+        
+        // Классы строки (выраженный цвет)
+        row.classList.remove('order-color-orange', 'order-color-teal');
+        if (color) {
+            row.classList.add('order-color-' + color);
+        }
+
+        // Кнопка палитры
+        const paletteBtn = row.querySelector('.order-palette-btn');
+        if (paletteBtn) {
+            paletteBtn.classList.remove('has-color', 'color-orange', 'color-teal');
+            if (color) {
+                paletteBtn.classList.add('has-color', 'color-' + color);
+                paletteBtn.title = (color === 'orange') ? 'Стадия: Сделан (нажмите для смены)' : 'Стадия: Упакован (нажмите для смены)';
+            } else {
+                paletteBtn.title = 'Отметить стадию заказа';
+            }
+        }
+
+        // Бейджи-пилюли
+        const pillOrange = row.querySelector('.stage-pill-orange');
+        const pillTeal = row.querySelector('.stage-pill-teal');
+        if (pillOrange) pillOrange.classList.toggle('is-hidden', color !== 'orange');
+        if (pillTeal) pillTeal.classList.toggle('is-hidden', color !== 'teal');
+
+        // Активные элементы в выпадающем списке
+        const menu = row.querySelector('.color-dropdown-menu');
+        if (menu) {
+            menu.querySelectorAll('.color-opt-btn').forEach(btn => {
+                const btnColor = btn.getAttribute('data-color');
+                btn.classList.toggle('active', btnColor === (color || ''));
+            });
+        }
+
+        // Локальное сохранение
+        if (color) {
+            localStorage.setItem('bf_stage_color_' + orderId, color);
+        } else {
+            localStorage.removeItem('bf_stage_color_' + orderId);
+        }
+
+        // Серверное сохранение в базу данных
+        if (saveServer) {
+            fetch('api_order_color.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order_id: orderId,
+                    stage_color: color || ''
+                })
+            }).catch(err => console.error('Ошибка сохранения цвета:', err));
+        }
+    }
+
+    // Открытие / закрытие выпадающего меню палитры
+    document.querySelectorAll('.order-palette-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const wrap = this.closest('.order-color-picker-wrap');
+            const menu = wrap.querySelector('.color-dropdown-menu');
+            const isOpen = menu.classList.contains('is-open');
+
+            // Закрыть все остальные открытые меню
+            document.querySelectorAll('.color-dropdown-menu.is-open').forEach(m => {
+                if (m !== menu) m.classList.remove('is-open');
+            });
+
+            menu.classList.toggle('is-open', !isOpen);
+        });
+    });
+
+    // Клик по цвету в меню
+    document.querySelectorAll('.color-opt-btn').forEach(optBtn => {
+        optBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const color = this.getAttribute('data-color') || '';
+            const row = this.closest('.order-row');
+            const menu = this.closest('.color-dropdown-menu');
+            
+            applyColorToRow(row, color, true);
+            if (menu) menu.classList.remove('is-open');
+        });
+    });
+
+    // Закрытие выпадающих меню при клике вне
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.order-color-picker-wrap')) {
+            document.querySelectorAll('.color-dropdown-menu.is-open').forEach(m => m.classList.remove('is-open'));
+        }
     });
 });
 </script>
