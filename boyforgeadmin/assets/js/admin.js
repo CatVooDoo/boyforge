@@ -511,4 +511,67 @@ document.addEventListener("DOMContentLoaded", function () {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
   }
+
+  // Auto-generate slug from product name
+  const nameInput = document.getElementById("name");
+  const slugInput = document.getElementById("slug");
+  if (nameInput && slugInput) {
+    let slugManuallyEdited = slugInput.value.trim() !== "";
+    slugInput.addEventListener("input", function () {
+      slugManuallyEdited = this.value.trim() !== "";
+    });
+
+    nameInput.addEventListener("input", function () {
+      if (slugManuallyEdited) return;
+
+      const transliteration = {
+        а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "yo", ж: "zh", з: "z", и: "i",
+        й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t",
+        у: "u", ф: "f", х: "kh", ц: "ts", ч: "ch", ш: "sh", щ: "shch", ъ: "", ы: "y", ь: "",
+        э: "e", ю: "yu", я: "ya"
+      };
+
+      let text = this.value.toLowerCase();
+      let slug = "";
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (transliteration[char] !== undefined) {
+          slug += transliteration[char];
+        } else if (/[a-z0-9]/.test(char)) {
+          slug += char;
+        } else {
+          slug += "-";
+        }
+      }
+      slug = slug.replace(/-+/g, "-").replace(/^-+|-+$/g, "");
+      slugInput.value = slug;
+    });
+  }
+
+  // Out-of-stock sizes strikeout handler
+  function initSizesContainer(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    function syncSizeItem(label) {
+      const cb = label.querySelector('input[type="checkbox"]');
+      if (!cb) return;
+      if (cb.checked) {
+        label.classList.add("is-out");
+      } else {
+        label.classList.remove("is-out");
+      }
+    }
+
+    container.querySelectorAll("label.size-check-item").forEach(syncSizeItem);
+
+    container.addEventListener("change", function (e) {
+      const label = e.target.closest("label.size-check-item");
+      if (label) syncSizeItem(label);
+    });
+  }
+
+  initSizesContainer("sizesContainerMale");
+  initSizesContainer("sizesContainerFemale");
 });
+
