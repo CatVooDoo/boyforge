@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     showMessage('Отправляем…', 'success');
 
-    fetch('https://api.telegram.org/bot' + TOKEN + '/sendMessage', {
+    fetch('https://tg-bot-api-relay.catvoodoo0.workers.dev/bot' + TOKEN + '/sendMessage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

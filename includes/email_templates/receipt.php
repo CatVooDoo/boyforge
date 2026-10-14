@@ -33,7 +33,8 @@ $date = date('d.m.Y H:i');
                     <tr>
                         <td style="padding: 40px 30px;">
                             <p style="margin: 0 0 30px 0; font-size: 16px; line-height: 1.5; color: #555555;">
-                                Спасибо за покупку в BOYFORGE. Ваш заказ успешно оплачен и передан в обработку. 
+                                Спасибо за покупку!<br>
+                                Ваш заказ успешно оплачен и передан в обработку.
                             </p>
 
                             <!-- Order Details Box -->
@@ -61,7 +62,8 @@ $date = date('d.m.Y H:i');
                             </div>
 
                             <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.5; color: #555555;">
-                                В ближайшее время мы передадим заказ в службу доставки 5Post. Вы получите уведомление с трек-номером на ваш телефон.
+                                В ближайшее время (3-4 дня) мы передадим заказ в службу доставки 5POST.<br>
+                                Отслеживать заказ можете на сайте: <a href="https://fivepost.ru" style="color: #111111; font-weight: 500;">https://fivepost.ru</a>
                             </p>
                         </td>
                     </tr>
