@@ -45,6 +45,90 @@
     const renderedPointIds = new Set();
     let boundsDebounceTimer = null;
     let isProgrammaticMove = false;
+    let deliveryProvider = 'fivepost';
+    let deliveryQuote = null;
+    let deliveryMode = null;
+    let pointsRequest = 0;
+    let selectionRequest = 0;
+    let cdekPinLayout = null;
+    const providerButtons = document.querySelectorAll('[data-delivery-provider]');
+    const deliveryNotice = document.getElementById('deliveryNotice');
+    const quoteEl = document.getElementById('deliveryQuote');
+    const pointList = document.getElementById('deliveryPointList');
+    const carrierName = () => deliveryProvider === 'cdek' ? 'СДЭК' : '5Post';
+    const pointsEndpoint = () => deliveryProvider === 'cdek' ? '/api/cdek-points.php?' : '/api/fivepost-points.php?';
+
+    function clearDeliverySelection() {
+      selectionRequest++;
+      deliveryQuote = null;
+      [fivepostIdInput, fivepostNameInput, fivepostAddrInput, fivepostTypeInput, fivepostDetailsInput].forEach(input => { if (input) input.value = ''; });
+      if (fivepostCard) fivepostCard.style.display = 'none';
+      if (fivepostMapWrapper) fivepostMapWrapper.style.display = 'block';
+      if (quoteEl) quoteEl.hidden = true;
+      if (submitBtn) submitBtn.textContent = 'Оплатить онлайн картой / СБП';
+    }
+
+    providerButtons.forEach(button => button.addEventListener('click', function () {
+      const next = button.dataset.deliveryProvider;
+      if (next === deliveryProvider) return;
+      deliveryProvider = next;
+      pointsRequest++;
+      clearTimeout(searchDebounceTimer);
+      clearTimeout(boundsDebounceTimer);
+      clearDeliverySelection();
+      deliveryMode = null;
+      currentPoints = [];
+      renderedPointIds.clear();
+      if (pointsCollection) pointsCollection.removeAll();
+      if (yandexMap?.balloon) yandexMap.balloon.close();
+      providerButtons.forEach(btn => {
+        const active = btn.dataset.deliveryProvider === next;
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-pressed', String(active));
+      });
+      if (deliveryNotice) {
+        deliveryNotice.hidden = false;
+        deliveryNotice.textContent = next === 'cdek' ? 'Загружаем пункты СДЭК…' : 'Доставка 5Post за счёт магазина.';
+      }
+      if (pointList) { pointList.hidden = true; pointList.innerHTML = ''; }
+      if (yandexMap) setTimeout(() => yandexMap.container.fitToViewport(), 50);
+      loadPoints('', searchInput?.value.trim() || currentCity, true);
+    }));
+
+    function updateDeliveryMode(mode) {
+      deliveryMode = mode;
+      if (deliveryNotice && deliveryProvider === 'cdek') {
+        deliveryNotice.hidden = false;
+        deliveryNotice.textContent = mode === 'sandbox'
+          ? 'Тестовый режим СДЭК: можно выбрать пункт и оформить тестовый заказ. Посылка не будет отправлена. Для оплаты нужен тестовый магазин ЮKassa.'
+          : 'Доставку СДЭК оплачиваете вы вместе с товаром. Стоимость и срок появятся после выбора пункта.';
+      }
+    }
+
+    async function chooseDeliveryPoint(point) {
+      if (deliveryProvider !== 'cdek') { handleSelect5PostPoint(point); return; }
+      clearDeliverySelection();
+      const request = selectionRequest;
+      showStatus('Рассчитываем стоимость доставки СДЭК…', 'info');
+      try {
+        const value = parseFloat(getProductState().price.replace(/[^\d.]/g, '')) || 3200;
+        const res = await fetch('/api/cdek-quote.php?point=' + encodeURIComponent(point.id) + '&value=' + encodeURIComponent(value));
+        const data = await res.json();
+        if (request !== selectionRequest || deliveryProvider !== 'cdek') return;
+        if (!res.ok || !data.success) throw new Error(data.error || 'Не удалось рассчитать доставку');
+        deliveryQuote = data.quote;
+        updateDeliveryMode(data.mode);
+        handleSelect5PostPoint(data.point);
+        const total = (parseFloat(getProductState().price.replace(/[^\d.]/g, '')) || 3200) + data.quote.cost;
+        if (quoteEl) {
+          quoteEl.hidden = false;
+          quoteEl.textContent = `Доставка: ${data.quote.cost.toLocaleString('ru-RU')} ₽ · ${data.quote.days_min}–${data.quote.days_max} дн. Итого с товаром: ${total.toLocaleString('ru-RU')} ₽`;
+        }
+        if (submitBtn) submitBtn.textContent = 'Оплатить ' + total.toLocaleString('ru-RU') + ' ₽ онлайн';
+      } catch (err) {
+        if (request === selectionRequest) showStatus(escapeHtml(err.message), 'error');
+      }
+    }
 
     function setProgrammaticMove() {
       isProgrammaticMove = true;
@@ -115,11 +199,11 @@
       if (fivepostDetailsInput) fivepostDetailsInput.value = pointExtra;
 
       if (badgeEl) {
-        badgeEl.textContent = pointType === "POSTAMAT" ? "Постамат" : "Касса";
+        badgeEl.textContent = pointType === 'PVZ' ? 'Пункт выдачи' : (pointType === "POSTAMAT" ? "Постамат" : "Касса");
       }
       if (nameEl) nameEl.textContent = pointName;
       if (addrEl) addrEl.textContent = pointAddr;
-      if (extraEl) extraEl.textContent = pointExtra || "Выдача заказа 5Post";
+      if (extraEl) extraEl.textContent = pointExtra || ('Выдача заказа ' + carrierName());
 
       if (fivepostCard) fivepostCard.style.display = "flex";
       if (fivepostMapWrapper) fivepostMapWrapper.style.display = "none";
@@ -128,6 +212,10 @@
     }
 
     function createCustomPinLayout() {
+      if (deliveryProvider === 'cdek' && typeof ymaps !== 'undefined') {
+        if (!cdekPinLayout) cdekPinLayout = ymaps.templateLayoutFactory.createClass('<div class="bf-cdek-pin">СДЭК</div>');
+        return cdekPinLayout;
+      }
       if (customPinLayout || typeof ymaps === "undefined") return customPinLayout;
       customPinLayout = ymaps.templateLayoutFactory.createClass(
         '<div class="bf-map-pin fivepost-pin" title="$[properties.hintContent]">' +
@@ -175,6 +263,11 @@
     }
 
     function renderMarkers(points, adjustViewport) {
+      if (pointList) {
+        pointList.hidden = deliveryProvider !== 'cdek' || !points?.length;
+        pointList.innerHTML = deliveryProvider === 'cdek' ? (points || []).map(p => `<button type="button" class="delivery-point-choice" data-point-id="${escapeHtml(p.id)}"><strong>${escapeHtml(p.name)}</strong><span>${escapeHtml(p.full_address)}</span><span>${escapeHtml(p.work_hours)}</span></button>`).join('') : '';
+      }
+      currentPoints = points || [];
       if (typeof adjustViewport === "undefined") adjustViewport = true;
       if (!pointsCollection || !yandexMap) return;
       pointsCollection.removeAll();
@@ -235,13 +328,15 @@
       const lngMax = Math.max(bounds[0][1], bounds[1][1]);
 
       const boundsParam = latMin.toFixed(6) + "," + lngMin.toFixed(6) + "," + latMax.toFixed(6) + "," + lngMax.toFixed(6);
-      const url = "/api/fivepost-points.php?bounds=" + encodeURIComponent(boundsParam) + "&zoom=" + zoom;
+      const url = pointsEndpoint() + "bounds=" + encodeURIComponent(boundsParam) + "&zoom=" + zoom;
+      const provider = deliveryProvider;
+      const request = pointsRequest;
 
       fetch(url)
         .then(function (res) { return res.json(); })
         .then(function (data) {
           if (data && data.success && Array.isArray(data.points)) {
-            appendMarkers(data.points);
+            if (provider === deliveryProvider && request === pointsRequest) appendMarkers(data.points);
           }
         })
         .catch(function (err) {
@@ -250,15 +345,20 @@
     }
 
     function loadPoints(city, search, isInitial) {
+      const request = ++pointsRequest;
+      const provider = deliveryProvider;
       if (isInitial && mapLoader) mapLoader.style.display = "flex";
 
-      let url = "/api/fivepost-points.php?";
+      let url = pointsEndpoint();
       if (city) url += "city=" + encodeURIComponent(city) + "&";
       if (search) url += "search=" + encodeURIComponent(search);
 
       fetch(url)
         .then(function (res) { return res.json(); })
         .then(function (data) {
+          if (request !== pointsRequest || provider !== deliveryProvider) return;
+          if (!data?.success) throw new Error(data?.error || 'Не удалось загрузить пункты выдачи');
+          if (provider === 'cdek') updateDeliveryMode(data.mode);
           if (data && data.success && Array.isArray(data.points)) {
             currentPoints = data.points;
             renderMarkers(data.points);
@@ -268,15 +368,11 @@
             }
 
             if (data.points.length === 0) {
-              const safeCity = (data.city || search).toString().replace(/[&<>"']/g, function(m) {
-                return {
-                  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-                }[m];
-              });
-              showStatus("В населённом пункте «" + safeCity + "» пунктов 5Post нет (сеть действует в магазинах «Пятёрочка» и «Перекрёсток»). Пожалуйста, <a href=\"https://telegram.me/theboyforge\" target=\"_blank\" style=\"text-decoration: underline;\">обратитесь в наш телеграм</a>.", "info");
+              showStatus('Пункты ' + carrierName() + ' не найдены. Укажите город или город и улицу через запятую.', 'info');
               if (yandexMap && typeof ymaps !== "undefined" && ymaps.geocode) {
                 ymaps.geocode(data.city || search).then(function (res) {
                   const firstGeo = res.geoObjects.get(0);
+                  if (request !== pointsRequest || provider !== deliveryProvider) return;
                   if (firstGeo) {
                     setProgrammaticMove();
                     yandexMap.setCenter(firstGeo.geometry.getCoordinates(), 11, { checkZoomRange: true });
@@ -289,11 +385,11 @@
           }
         })
         .catch(function (err) {
-          console.error("Ошибка загрузки точек 5Post:", err);
-          showStatus("Не удалось загрузить точки выдачи. Проверьте интернет-соединение и попробуйте снова.", "error");
+          if (request !== pointsRequest || provider !== deliveryProvider) return;
+          showStatus(escapeHtml(err.message || 'Не удалось загрузить пункты выдачи. Попробуйте ещё раз.'), 'error');
         })
         .finally(function () {
-          if (mapLoader) mapLoader.style.display = "none";
+          if (request === pointsRequest && mapLoader) mapLoader.style.display = "none";
         });
     }
 
@@ -402,7 +498,7 @@
           const pid = btn.getAttribute("data-point-id");
           const pt = currentPoints.find(function (p) { return String(p.id) === String(pid); });
           if (pt) {
-            handleSelect5PostPoint(pt);
+            chooseDeliveryPoint(pt);
             if (yandexMap && yandexMap.balloon) {
               yandexMap.balloon.close();
             }
@@ -412,6 +508,11 @@
     }
 
     let searchDebounceTimer = null;
+    if (pointList) pointList.addEventListener('click', e => {
+      const button = e.target.closest('[data-point-id]');
+      const point = button && currentPoints.find(p => String(p.id) === button.dataset.pointId);
+      if (point) chooseDeliveryPoint(point);
+    });
     if (searchInput) {
       searchInput.addEventListener("input", function () {
         const val = this.value.trim();
@@ -494,7 +595,8 @@
 
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = "Оплатить " + state.price + " онлайн";
+        const total = (parseFloat(state.price.replace(/[^\d.]/g, '')) || 3200) + (deliveryQuote?.cost || 0);
+        submitBtn.textContent = 'Оплатить ' + total.toLocaleString('ru-RU') + ' ₽ онлайн';
       }
 
       modal.classList.add("is-open");
@@ -542,19 +644,20 @@
           <div class="ozon-order-id">Номер заказа: <strong>${orderId}</strong></div>
           ${order.fivepostBarcode ? `<div class="ozon-order-id" style="margin-top:6px; font-size:13px; color:#10b981;">Трек 5Post: <strong>${escapeHtml(order.fivepostBarcode)}</strong></div>` : ''}
           <p class="ozon-success-desc">
-            Спасибо! Платёж через <strong>ЮKassa</strong> успешно проведён. Мы сформировали заказ для отправки через <strong>5Post</strong>.
+            Спасибо! Заказ передан в обработку. Служба доставки: <strong>${carrierName()}</strong>.
           </p>
           <div class="ozon-success-summary">
             <div><span>Товар:</span> ${escapeHtml(order.productName)} (${escapeHtml(order.gender)}, размер ${escapeHtml(order.size)})</div>
-            <div><span>Сумма:</span> <strong>${escapeHtml(order.price)}</strong> <span style="color:#10b981; font-weight:600;">(Оплачено)</span></div>
+            <div><span>Итого с доставкой:</span> <strong>${escapeHtml(order.totalAmount)} ₽</strong> <span style="color:#10b981; font-weight:600;">(Оплачено)</span></div>
+            ${Number(order.deliveryCost) > 0 ? `<div><span>В том числе доставка:</span> ${escapeHtml(order.deliveryCost)} ₽</div>` : ''}
             ${order.fio ? `<div><span>ФИО получателя:</span> <strong>${escapeHtml(order.fio)}</strong></div>` : ''}
             ${order.email ? `<div><span>Email:</span> <strong>${escapeHtml(order.email)}</strong></div>` : ''}
             <div><span>Телефон:</span> ${escapeHtml(order.phone)}</div>
-            ${order.fivepostPointAddress ? `<div><span>Доставка 5Post:</span> <strong>${escapeHtml(order.fivepostPointAddress)}</strong> (${pointTypeRu})</div>` : ''}
+            ${order.fivepostPointAddress ? `<div><span>Доставка ${carrierName()}:</span> <strong>${escapeHtml(order.fivepostPointAddress)}</strong> (${pointTypeRu})</div>` : ''}
             ${order.transactionId ? `<div><span>ID транзакции:</span> #${escapeHtml(order.transactionId)}</div>` : ''}
           </div>
           <p class="ozon-sms-note">
-            Электронный кассовый чек отправлен. По прибытии заказа в постамат/кассу 5Post вам поступит SMS с кодом получения.
+            ${deliveryMode === 'sandbox' ? 'Тестовый заказ СДЭК: посылка не будет отправлена.' : 'Уведомим вас о доставке заказа в выбранный пункт выдачи.'}
           </p>
           <button type="button" class="btn-primary btn-block" id="orderDoneBtn" style="margin-top:12px;">Отлично</button>
         </div>
@@ -579,7 +682,7 @@
 
         const fioWords = fio.split(/\s+/).filter(Boolean);
         if (fioWords.length < 2) {
-          showStatus("Укажите как минимум Имя и Фамилию для получения посылки в 5Post", "error");
+          showStatus('Укажите как минимум Имя и Фамилию для получения посылки в ' + carrierName(), 'error');
           fioInput?.focus();
           return;
         }
@@ -599,7 +702,7 @@
 
         const pointId = (fivepostIdInput?.value || "").trim();
         if (!pointId) {
-          showStatus("Пожалуйста, выберите удобный магазин или постамат 5Post на карте", "error");
+          showStatus('Пожалуйста, выберите пункт выдачи ' + carrierName(), 'error');
           if (fivepostMapWrapper) {
             fivepostMapWrapper.style.display = "block";
             if (fivepostCard) fivepostCard.style.display = "none";
@@ -623,8 +726,14 @@
         }
 
         const state = getProductState();
+        if (deliveryProvider === 'cdek' && !deliveryQuote) {
+          showStatus('Выберите пункт СДЭК и дождитесь расчёта доставки', 'error');
+          return;
+        }
         const numPrice = parseFloat(state.price.replace(/[^\d.]/g, "")) || 3200;
-        const orderId = "BF-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+        const random = new Uint8Array(8);
+        window.crypto.getRandomValues(random);
+        const orderId = 'BF-' + Array.from(random, n => n.toString(16).padStart(2, '0')).join('').toUpperCase();
 
         const orderPayload = {
           orderId: orderId,
@@ -636,12 +745,15 @@
           fio: fio,
           email: email,
           phone: phone.replace(/[^\d+]/g, ""),
+          deliveryProvider: deliveryProvider,
+          deliveryQuoteMode: deliveryMode,
+          deliveryQuoteCost: deliveryQuote?.cost,
           fivepostPointId: pointId,
           fivepostPointName: (fivepostNameInput?.value || "").trim(),
           fivepostPointAddress: (fivepostAddrInput?.value || "").trim(),
           fivepostPointType: (fivepostTypeInput?.value || "").trim(),
           fivepostPointDetails: (fivepostDetailsInput?.value || "").trim(),
-          source: "Онлайн-оплата (5Post + ЮKassa)"
+          source: 'Онлайн-оплата (' + carrierName() + ' + ЮKassa)'
         };
 
         if (submitBtn) {
@@ -703,6 +815,8 @@
                         })
                     }).finally(() => {
                         const finalPayload = Object.assign({}, orderPayload, {
+                            totalAmount: data.total_amount,
+                            deliveryCost: data.delivery_cost,
                             paymentStatus: "paid",
                             transactionId: data.payment_id || ""
                         });
@@ -723,6 +837,9 @@
                 });
 
                 if (fivepostCard) fivepostCard.style.display = "none";
+                providerButtons.forEach(button => { button.disabled = true; });
+                pointsRequest++;
+                selectionRequest++;
                 if (fivepostMapWrapper) {
                     fivepostMapWrapper.style.display = "block";
                     fivepostMapWrapper.innerHTML = '';

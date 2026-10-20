@@ -4,17 +4,18 @@ declare(strict_types=1);
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/fivepost.php';
 require_once __DIR__ . '/order_logger.php';
+require_once __DIR__ . '/cdek_orders.php';
 
 function saveOrderToDb(PDO $pdo, array $data, string $paymentStatus, string $transactionId = ''): void {
     $stmt = $pdo->prepare("
         INSERT INTO orders (
             order_id, client_order_id, product_id, product_name, price, gender, size,
             fio, phone, tg_username, email, fivepost_point_id, fivepost_point_name, fivepost_point_address,
-            fivepost_point_type, payment_status, payment_transaction_id, created_at
+            fivepost_point_type, delivery_provider, delivery_mode, delivery_cost, payment_status, payment_transaction_id, created_at
         ) VALUES (
             :order_id, :client_order_id, :product_id, :product_name, :price, :gender, :size,
             :fio, :phone, :tg_username, :email, :fivepost_point_id, :fivepost_point_name, :fivepost_point_address,
-            :fivepost_point_type, :payment_status, :payment_transaction_id, NOW()
+            :fivepost_point_type, :delivery_provider, :delivery_mode, :delivery_cost, :payment_status, :payment_transaction_id, NOW()
         )
         ON DUPLICATE KEY UPDATE
             payment_status = VALUES(payment_status),
@@ -41,6 +42,9 @@ function saveOrderToDb(PDO $pdo, array $data, string $paymentStatus, string $tra
         ':fivepost_point_name'    => $data['fivepostPointName'] ?? '',
         ':fivepost_point_address' => $data['fivepostPointAddress'] ?? '',
         ':fivepost_point_type'    => $data['fivepostPointType'] ?? '',
+        ':delivery_provider'      => $data['deliveryProvider'] ?? 'fivepost',
+        ':delivery_mode'          => $data['deliveryMode'] ?? 'production',
+        ':delivery_cost'          => $data['deliveryCost'] ?? 0,
         ':payment_status'         => $paymentStatus,
         ':payment_transaction_id' => $transactionId
     ]);
@@ -65,10 +69,22 @@ function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): voi
             return;
         }
 
+        $isCdek = ($order['delivery_provider'] ?? 'fivepost') === 'cdek';
+        $carrier = $isCdek ? 'СДЭК' : '5Post';
+        if ($isCdek) {
+            if (!$lockAcquired) throw new RuntimeException('Не удалось заблокировать заказ для отправки в СДЭК');
+            if (empty($order['payment_transaction_id']) || !hash_equals($order['payment_transaction_id'], $transactionId)) {
+                throw new RuntimeException('Платёж не соответствует заказу');
+            }
+            $pdo->prepare("UPDATE orders SET payment_status = 'paid', payment_transaction_id = :tx WHERE order_id = :oid")
+                ->execute([':oid' => $orderId, ':tx' => $transactionId]);
+            processCdekOrder($pdo, $order);
+        }
+
         $alreadyIn5Post = !empty($order['fivepost_status']) && in_array($order['fivepost_status'], ['CREATED', 'PROCESSING']);
         $alreadyInSheets = !empty($order['google_sheets_sent']);
 
-        if (!$alreadyIn5Post) {
+        if (!$isCdek && !$alreadyIn5Post) {
             $pdo->prepare("UPDATE orders SET fivepost_status = 'PROCESSING', payment_status = 'paid', payment_transaction_id = :tx WHERE order_id = :oid AND (fivepost_status IS NULL OR fivepost_status = 'PENDING' OR fivepost_status = '')")
                 ->execute([':oid' => $orderId, ':tx' => $transactionId]);
 
@@ -147,18 +163,18 @@ function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): voi
                 $googlePayload = [
                     'date'                 => date('d.m.Y H:i:s'),
                     'orderId'              => $orderId,
-                    'fivepostOrderId'      => $order['fivepost_order_id'] ?? '—',
-                    'fivepostBarcode'      => $order['fivepost_barcode'] ?? '—',
+                    'fivepostOrderId'      => ($isCdek ? $order['cdek_uuid'] : ($order['fivepost_order_id'] ?? null)) ?? '—',
+                    'fivepostBarcode'      => ($isCdek ? $order['cdek_number'] : ($order['fivepost_barcode'] ?? null)) ?? '—',
                     'fio'                  => $order['fio'],
                     'phone'                => $safePhone,
                     'tgUsername'           => $contactInfo,
-                    'fivepostPointAddress' => $order['fivepost_point_address'] . " ({$pointTypeRu})",
+                    'fivepostPointAddress' => $carrier . ': ' . $order['fivepost_point_address'] . " ({$pointTypeRu})",
                     'productName'          => $order['product_name'],
                     'gender'               => $order['gender'],
                     'size'                 => $order['size'],
-                    'price'                => number_format((float)$order['price'], 0, '', ' ') . ' ₽',
+                    'price'                => number_format((float)$order['price'] + (float)($order['delivery_cost'] ?? 0), 2, '.', ' ') . ' ₽',
                     'transactionId'        => "#{$transactionId}",
-                    'status'               => 'Оплачен (ЮKassa), сформирован 5Post'
+                    'status'               => 'Оплачен (ЮKassa), ' . $carrier . ': ' . ($isCdek ? ($order['cdek_status'] ?? 'PENDING') : ($order['fivepost_status'] ?? 'PENDING')) . ($isCdek && $order['delivery_mode'] === 'sandbox' ? ' (ТЕСТ)' : '')
                 ];
 
                 $ch = curl_init($googleScriptUrl);

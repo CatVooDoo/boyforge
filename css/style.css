@@ -3168,3 +3168,20 @@ body:not(.home){
 .order-agree-text a:hover{
   opacity:.7;
 }
+/* Delivery provider selection follows the monochrome checkout controls. */
+.delivery-switch { display:flex; gap:8px; margin:14px 0; }
+.delivery-option { flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; padding:13px 14px; text-align:left; border:1px solid #e5e7eb; border-radius:12px; background:#fff; color:#111; font:inherit; cursor:pointer; transition:background .2s,border-color .2s; }
+.delivery-option strong { font-size:15px; }
+.delivery-option span { font-size:11px; color:#6b7280; }
+.delivery-option.is-active { border-color:#111; background:#f2f3f5; box-shadow:inset 0 0 0 1px #111; }
+.delivery-option:focus-visible, .delivery-point-choice:focus-visible { outline:2px solid #111; outline-offset:3px; }
+.delivery-notice, .delivery-quote { font-size:12px; line-height:1.5; margin:10px 0; color:#4b5563; }
+.delivery-notice { padding:10px 12px; border-radius:8px; background:#f3f4f6; }
+.delivery-quote { font-weight:600; color:#111; }
+.bf-cdek-pin { display:flex; align-items:center; justify-content:center; width:42px; height:30px; margin:-38px 0 0 -21px; border-radius:8px; background:#111; color:#fff; font:700 10px Arial,sans-serif; box-shadow:0 3px 8px #0003; }
+.delivery-point-list { max-height:190px; overflow:auto; margin-top:10px; border:1px solid #e5e7eb; border-radius:10px; }
+.delivery-point-choice { display:block; width:100%; border:0; border-bottom:1px solid #eee; padding:12px; background:#fff; color:#111; text-align:left; font:inherit; font-size:12px; cursor:pointer; }
+.delivery-point-choice:hover { background:#f2f3f5; }
+.delivery-point-choice strong, .delivery-point-choice span { display:block; }
+.delivery-point-choice span { margin-top:4px; color:#6b7280; }
+.delivery-notice[hidden], .delivery-quote[hidden], .delivery-point-list[hidden] { display:none !important; }

@@ -108,6 +108,15 @@ try {
         unset($receiptPayload['items'][0]['mark_code_info']);
     }
     
+    $deliveryCost = (float)($order['delivery_cost'] ?? 0);
+    if ($deliveryCost > 0) {
+        $receiptPayload['settlements'][0]['amount']['value'] = number_format((float)$order['price'] + $deliveryCost, 2, '.', '');
+        $receiptPayload['items'][] = [
+            'description' => 'Доставка СДЭК до пункта выдачи', 'quantity' => '1.000',
+            'amount' => ['value' => number_format($deliveryCost, 2, '.', ''), 'currency' => 'RUB'],
+            'vat_code' => $vatCode, 'payment_subject' => 'service', 'payment_mode' => 'full_payment',
+        ];
+    }
     $url = 'https://api.yookassa.ru/v3/receipts';
     $ch = curl_init($url);
 

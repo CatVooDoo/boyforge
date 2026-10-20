@@ -33,8 +33,15 @@ function sendTelegramNotification(array $order): void {
     $text .= "<b>Email:</b> " . htmlspecialchars((string)($order['email'] ?? 'Не указано')) . "\n";
     $text .= "<b>Товар:</b> " . htmlspecialchars((string)($order['product_name'] ?? 'Не указано')) . "\n";
     $text .= "<b>Размер:</b> " . htmlspecialchars((string)($order['size'] ?? 'Не указано')) . "\n";
-    $text .= "<b>Сумма:</b> " . number_format((float)($order['price'] ?? 0), 0, '', ' ') . " руб.\n\n";
-    $text .= "<b>Доставка (5Post):</b>\n" . htmlspecialchars((string)($order['fivepost_point_address'] ?? 'Не указано'));
+    $text .= "<b>Итого оплачено:</b> " . number_format((float)($order['price'] ?? 0) + (float)($order['delivery_cost'] ?? 0), 2, '.', ' ') . " руб.\n\n";
+    $carrier = ($order['delivery_provider'] ?? 'fivepost') === 'cdek' ? 'СДЭК' : '5Post';
+    $text .= '<b>Доставка (' . $carrier . "):</b>\n" . htmlspecialchars((string)($order['fivepost_point_address'] ?? 'Не указано'));
+    if ($carrier === 'СДЭК') {
+        $text .= "\nСтатус: " . htmlspecialchars((string)($order['cdek_status'] ?? 'PENDING'));
+        $text .= "\nТрек: " . htmlspecialchars((string)($order['cdek_number'] ?? 'Ожидает регистрации'));
+        $text .= "\nДоставка: " . number_format((float)($order['delivery_cost'] ?? 0), 2, '.', ' ') . ' руб.';
+        if (($order['delivery_mode'] ?? '') === 'sandbox') $text .= "\nТЕСТ: посылка не будет отправлена";
+    }
 
     $url = $apiUrl . "bot{$token}/sendMessage";
     

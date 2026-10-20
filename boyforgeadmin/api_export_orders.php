@@ -91,9 +91,9 @@ $headers = [
     'Размер',
     'Пол',
     'Цена (₽)',
-    'Трек 5Post (Баркод)',
-    'Статус 5Post',
-    'Адрес ПВЗ 5Post',
+    'Служба / трек',
+    'Статус доставки',
+    'Адрес ПВЗ',
     'Название ПВЗ',
     'Чек полный расчет',
     'Код маркировки',
@@ -125,7 +125,7 @@ foreach ($orders as $o) {
         $receiptStatusRu = 'Отменен';
     }
 
-    $price = (float)($o['price'] ?? 0);
+    $price = (float)($o['price'] ?? 0) + (float)($o['delivery_cost'] ?? 0);
     if (!$isCancelled && $o['payment_status'] === 'paid') {
         $totalSum += $price;
     }
@@ -142,8 +142,8 @@ foreach ($orders as $o) {
         (string)($o['size'] ?? ''),
         (string)($o['gender'] ?? ''),
         $price,
-        (string)($o['fivepost_barcode'] ?? ''),
-        (string)($o['fivepost_status'] ?? ''),
+        (($o['delivery_provider'] ?? 'fivepost') === 'cdek' ? 'СДЭК' . (($o['delivery_mode'] ?? '') === 'sandbox' ? ' (ТЕСТ)' : '') . ': ' . ($o['cdek_number'] ?? '') : '5Post: ' . ($o['fivepost_barcode'] ?? '')),
+        (string)(($o['delivery_provider'] ?? 'fivepost') === 'cdek' ? ($o['cdek_status'] ?? '') : ($o['fivepost_status'] ?? '')),
         (string)($o['fivepost_point_address'] ?? ''),
         (string)($o['fivepost_point_name'] ?? ''),
         $receiptStatusRu,

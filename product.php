@@ -192,9 +192,9 @@ require __DIR__ . '/includes/components/header.php';
             <div class="accordion-item">
               <button class="accordion-head" type="button">Доставка и оплата <span class="plus">+</span></button>
               <div class="accordion-body"><div class="accordion-body-inner">
-                <p>Доставка через Ozon (по номеру телефона) или CDEK там, где Ozon недоступен.
-                Для стран СНГ доставка через CDEK оплачивается покупателем. Оплата — по счёту
-                на email, чек приходит автоматически. Отправка обычно 7–10 дней.</p>
+                <p>Выберите 5Post или СДЭК и удобный пункт выдачи на карте при оформлении заказа.
+                Стоимость и срок доставки СДЭК рассчитываются после выбора пункта; доставка оплачивается вместе с товаром.
+                Оплата — онлайн картой или СБП, электронный чек придёт на email. Доставку за пределы России согласуем в Telegram.</p>
               </div></div>
             </div>
           </div>
@@ -302,8 +302,15 @@ require __DIR__ . '/includes/components/header.php';
           <!-- 2. Пункт выдачи 5Post -->
           <div class="ozon-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
             <div style="display:flex; align-items:center; justify-content:space-between;">
-              <div class="ozon-section-title">2. Доставка 5Post (Пятёрочка / Перекрёсток)</div>
+              <div class="ozon-section-title">2. Доставка</div>
             </div>
+
+            <div class="delivery-switch" role="group" aria-label="Служба доставки">
+              <button type="button" class="delivery-option is-active" data-delivery-provider="fivepost" aria-pressed="true"><strong>5Post</strong><span>Пятёрочка / Перекрёсток</span></button>
+              <button type="button" class="delivery-option" data-delivery-provider="cdek" aria-pressed="false"><strong>СДЭК</strong><span>Пункты выдачи</span></button>
+            </div>
+            <p id="deliveryNotice" class="delivery-notice" role="status">Доставка 5Post за счёт магазина.</p>
+            <p id="deliveryQuote" class="delivery-quote" role="status" hidden></p>
 
             <!-- Скрытые поля для данных выбранной точки 5Post -->
             <input type="hidden" id="fivepostPointId" name="fivepostPointId" value="">
@@ -342,6 +349,8 @@ require __DIR__ . '/includes/components/header.php';
                   <span>Загрузка карты и точек выдачи…</span>
                 </div>
               </div>
+
+              <div id="deliveryPointList" class="delivery-point-list" aria-label="Пункты выдачи СДЭК" hidden></div>
             </div>
           </div>
 

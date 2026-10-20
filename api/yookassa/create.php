@@ -56,6 +56,66 @@ if ($priceValue <= 0) {
 $input['price'] = (string)$priceValue;
 $input['productName'] = $product['name'];
 
+$newOrderId = (string)($input['orderId'] ?? '');
+if (!preg_match('/^BF-[A-Z0-9]{6,32}$/', $newOrderId)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Некорректный номер заказа']);
+    exit;
+}
+$existingOrder = $pdo->prepare('SELECT 1 FROM orders WHERE order_id = ?');
+$existingOrder->execute([$newOrderId]);
+if ($existingOrder->fetchColumn()) {
+    http_response_code(409);
+    echo json_encode(['success' => false, 'error' => 'Заказ уже существует. Повторите оформление.']);
+    exit;
+}
+
+// Resolve the office and tariff on the server; never trust browser prices or addresses.
+$provider = $input['deliveryProvider'] ?? 'fivepost';
+if (!in_array($provider, ['fivepost', 'cdek'], true)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Неизвестная служба доставки']);
+    exit;
+}
+$input['deliveryProvider'] = $provider;
+$input['deliveryCost'] = 0;
+$input['deliveryMode'] = 'production';
+$deliveryCost = 0.0;
+if ($provider === 'cdek') {
+    try {
+        $cdek = new CdekClient();
+        if (count(preg_split('/\s+/u', trim((string)($input['fio'] ?? '')), -1, PREG_SPLIT_NO_EMPTY)) < 2
+            || !preg_match('/^\+7\d{10}$/', (string)($input['phone'] ?? ''))) {
+            throw new RuntimeException('Укажите имя, фамилию и полный номер телефона получателя');
+        }
+        $code = (string)($input['fivepostPointId'] ?? '');
+        if (!preg_match('/^[a-z0-9_-]{1,32}$/i', $code)) throw new RuntimeException('Выберите пункт СДЭК');
+        $points = $cdek->points(['code' => $code]);
+        $point = array_values(array_filter($points, static fn($p) => $p['id'] === $code))[0] ?? null;
+        if (!$point) throw new RuntimeException('Пункт СДЭК недоступен');
+        $quote = $cdek->quote($point, $priceValue);
+        $deliveryCost = round($quote['cost'], 2);
+        if (($input['deliveryQuoteMode'] ?? '') !== $cdek->mode()
+            || abs((float)($input['deliveryQuoteCost'] ?? -1) - $deliveryCost) > 0.009) {
+            throw new RuntimeException('Условия доставки изменились. Выберите пункт ещё раз.');
+        }
+        // Sandbox shipments must not be coupled to a real payment.
+        if ($cdek->mode() === 'sandbox' && !str_starts_with((string)env_get('YOOKASSA_SECRET_KEY'), 'test_')) {
+            throw new RuntimeException('Для тестового СДЭК включите тестовый магазин ЮKassa. Реальная оплата отключена.');
+        }
+        $input['deliveryMode'] = $cdek->mode();
+        $input['deliveryCost'] = $deliveryCost;
+        $input['fivepostPointName'] = $point['name'];
+        $input['fivepostPointAddress'] = $point['full_address'];
+        $input['fivepostPointType'] = $point['type'];
+    } catch (Throwable $e) {
+        http_response_code(422);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+}
+$totalValue = $priceValue + $deliveryCost;
+
 $orderId = $input['orderId'] ?? 'new';
 $productName = $input['productName'] ?? 'Товар BOYFORGE';
 $gender = $input['gender'] ?? '';
@@ -86,7 +146,7 @@ $vatCode = (int) (env_get('YOOKASSA_VAT_CODE') ?: '1');
 
 $paymentData = [
     'amount' => [
-        'value' => number_format($priceValue, 2, '.', ''),
+        'value' => number_format($totalValue, 2, '.', ''),
         'currency' => 'RUB'
     ],
     'capture' => true,
@@ -118,6 +178,14 @@ $paymentData = [
         'tax_system_code' => $taxSystemCode
     ]
 ];
+
+if ($deliveryCost > 0) {
+    $paymentData['receipt']['items'][] = [
+        'description' => 'Доставка СДЭК до пункта выдачи', 'quantity' => 1.000,
+        'amount' => ['value' => number_format($deliveryCost, 2, '.', ''), 'currency' => 'RUB'],
+        'vat_code' => $vatCode, 'payment_mode' => 'full_prepayment', 'payment_subject' => 'service',
+    ];
+}
 
 $idempotenceKey = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
     mt_rand(0, 0xffff), mt_rand(0, 0xffff),
@@ -163,6 +231,8 @@ if ($httpCode >= 200 && $httpCode < 300 && isset($responseData['confirmation']['
 
     echo json_encode([
         'success' => true,
+        'total_amount' => number_format($totalValue, 2, '.', ''),
+        'delivery_cost' => number_format($deliveryCost, 2, '.', ''),
         'confirmation_token' => $responseData['confirmation']['confirmation_token'],
         'payment_id' => $responseData['id']
     ]);

@@ -4,7 +4,10 @@ $orderId = htmlspecialchars((string)($order['order_id'] ?? 'N/A'));
 $fio = htmlspecialchars((string)($order['fio'] ?? 'Клиент'));
 $productName = htmlspecialchars((string)($order['product_name'] ?? 'Товар'));
 $size = htmlspecialchars((string)($order['size'] ?? '-'));
-$price = number_format((float)($order['price'] ?? 0), 0, '', ' ') . ' ₽';
+$price = number_format((float)($order['price'] ?? 0) + (float)($order['delivery_cost'] ?? 0), 2, '.', ' ') . ' ₽';
+$carrier = ($order['delivery_provider'] ?? 'fivepost') === 'cdek' ? 'СДЭК' : '5Post';
+$trackingUrl = $carrier === 'СДЭК' ? 'https://www.cdek.ru/ru/tracking/' : 'https://fivepost.ru';
+$testDelivery = $carrier === 'СДЭК' && ($order['delivery_mode'] ?? '') === 'sandbox';
 $pointAddress = htmlspecialchars((string)($order['fivepost_point_address'] ?? '-'));
 $date = date('d.m.Y H:i');
 
@@ -51,19 +54,27 @@ $date = date('d.m.Y H:i');
                                         <td align="right" style="padding: 8px 0; font-size: 15px; font-weight: 600; border-bottom: 1px solid #eeeeee;"><?= $size ?></td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 8px 0; font-size: 15px; border-bottom: 1px solid #eeeeee; color: #555555;">Доставка (5Post):</td>
+                                        <td style="padding: 8px 0; font-size: 15px; border-bottom: 1px solid #eeeeee; color: #555555;">Доставка (<?= $carrier ?>):</td>
                                         <td align="right" style="padding: 8px 0; font-size: 15px; font-weight: 600; border-bottom: 1px solid #eeeeee; text-align: right; line-height: 1.4;"><?= $pointAddress ?></td>
                                     </tr>
                                     <tr>
                                         <td style="padding: 15px 0 0 0; font-size: 16px; font-weight: bold; color: #111111;">Итого оплачено:</td>
                                         <td align="right" style="padding: 15px 0 0 0; font-size: 18px; font-weight: bold; color: #111111;"><?= $price ?></td>
                                     </tr>
+                                    <?php if ((float)($order['delivery_cost'] ?? 0) > 0): ?>
+                                    <tr>
+                                        <td style="padding-top: 8px; font-size: 13px; color: #555555;">В том числе доставка:</td>
+                                        <td align="right" style="padding-top: 8px; font-size: 13px;"><?= number_format((float)$order['delivery_cost'], 2, '.', ' ') ?> ₽</td>
+                                    </tr>
+                                    <?php endif; ?>
                                 </table>
                             </div>
 
                             <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.5; color: #555555;">
-                                В ближайшее время (3-4 дня) мы передадим заказ в службу доставки 5POST.<br>
-                                Отслеживать заказ можете на сайте: <a href="https://fivepost.ru" style="color: #111111; font-weight: 500;">https://fivepost.ru</a>
+                                <?= $testDelivery ? 'Это тестовый заказ.' : 'В ближайшее время передадим заказ в службу доставки.' ?><br>
+                                Служба доставки: <?= $carrier ?><?= $testDelivery ? ' (тестовое отправление, посылка не будет отправлена)' : '' ?>.<br>
+                                <?= $testDelivery ? 'Тестовый трек не предназначен для реальной доставки.' : 'После регистрации посылки отслеживать заказ можно на сайте:' ?>
+                                <a href="<?= $trackingUrl ?>" style="color: #111111; font-weight: 500;"><?= $carrier ?></a>
                             </p>
                         </td>
                     </tr>

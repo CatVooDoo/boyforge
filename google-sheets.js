@@ -137,18 +137,18 @@ function ensureHeaders(sheet) {
   var headers = [
     "Дата",
     "ID Заказа (BOYFORGE)",
-    "Штрихкод / Трек 5Post",
+    "Трек доставки",
     "Статус заказа",
     "Транзакция ЮKassa",
     "Товар",
     "Пол",
     "Размер",
     "Сумма",
-    "Адрес ПВЗ 5Post",
+    "Адрес ПВЗ",
     "ФИО получателя",
     "Телефон",
     "Telegram",
-    "5Post Order ID"
+    "ID отправления"
   ];
   
   if (sheet.getLastRow() === 0) {

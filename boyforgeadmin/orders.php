@@ -261,7 +261,7 @@ tr.order-color-teal td:first-child {
     <div style="padding: 20px;">
         <p style="margin-bottom: 0; color: #4b5563;">
             Здесь отображаются все оплаченные заказы. Для товаров, подлежащих маркировке (одежда), 
-            перед передачей в 5Post необходимо пробить закрывающий чек («Полный расчет») с указанием кода Честного ЗНАКа.
+            перед передачей в службу доставки необходимо пробить закрывающий чек («Полный расчет») с указанием кода Честного ЗНАКа.
         </p>
     </div>
 
@@ -281,7 +281,7 @@ tr.order-color-teal td:first-child {
               <th>Дата и Заказ</th>
               <th>Покупатель</th>
               <th>Товар</th>
-              <th>Доставка 5Post</th>
+              <th>Доставка</th>
               <th>Закрывающий чек (Маркировка)</th>
             </tr>
           </thead>
@@ -338,11 +338,21 @@ tr.order-color-teal td:first-child {
                 <td>
                   <div style="font-weight:500;"><?= htmlspecialchars($order['product_name']) ?></div>
                   <div style="font-size:12px; color:#6b7280;">
-                    <?= htmlspecialchars($order['size']) ?> — <?= number_format((float)$order['price'], 0, '', ' ') ?> ₽
+                    <?= htmlspecialchars($order['size']) ?> — <?= number_format((float)$order['price'] + (float)($order['delivery_cost'] ?? 0), 2, '.', ' ') ?> ₽
                   </div>
                 </td>
                 <td>
-                  <?php if (!empty($order['fivepost_barcode'])): ?>
+                  <?php if (($order['delivery_provider'] ?? 'fivepost') === 'cdek'): ?>
+                    <div style="font-weight:600;">СДЭК<?= ($order['delivery_mode'] ?? '') === 'sandbox' ? ' · ТЕСТ' : '' ?></div>
+                    <div><?= htmlspecialchars((string)($order['cdek_number'] ?? 'Ожидает регистрации')) ?></div>
+                    <div style="font-size:12px; color:#6b7280;"><?= htmlspecialchars($order['fivepost_point_address']) ?></div>
+                    <div style="font-size:12px;">Доставка: <?= number_format((float)($order['delivery_cost'] ?? 0), 2, '.', ' ') ?> ₽</div>
+                    <div style="font-size:12px;"><?= htmlspecialchars((string)($order['cdek_status'] ?? 'PENDING')) ?></div>
+                    <?php if (!empty($order['cdek_error'])): ?><div style="font-size:12px; color:#b91c1c;"><?= htmlspecialchars($order['cdek_error']) ?></div><?php endif; ?>
+                    <?php if (!empty($order['cdek_uuid'])): ?>
+                      <button type="button" class="btn btn-sm" data-cdek-refresh="<?= htmlspecialchars($order['order_id']) ?>">Обновить статус</button>
+                    <?php endif; ?>
+                  <?php elseif (!empty($order['fivepost_barcode'])): ?>
                     <div style="font-weight:600; color:#10b981;"><?= htmlspecialchars($order['fivepost_barcode']) ?></div>
                     <div style="font-size:12px; color:#6b7280;"><?= htmlspecialchars($order['fivepost_point_address']) ?></div>
                   <?php else: ?>
@@ -487,6 +497,23 @@ tr.order-color-teal td:first-child {
 </div>
 
 <script>
+document.querySelectorAll('[data-cdek-refresh]').forEach(button => {
+    button.addEventListener('click', async () => {
+        button.disabled = true;
+        try {
+            const response = await fetch('api_cdek_status.php', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({order_id: button.dataset.cdekRefresh, csrf_token: document.querySelector('meta[name="csrf-token"]').content})
+            });
+            const data = await response.json();
+            if (!data.success) throw new Error(data.error);
+            window.location.reload();
+        } catch (error) {
+            alert(error.message || 'Не удалось обновить статус СДЭК');
+            button.disabled = false;
+        }
+    });
+});
 document.addEventListener('DOMContentLoaded', function() {
     const tgToggle = document.getElementById('tgNotificationToggle');
     if (tgToggle) {
