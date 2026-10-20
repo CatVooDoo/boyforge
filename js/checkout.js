@@ -188,7 +188,7 @@
 
       const pointId = point.id || "";
       const pointType = point.type || "POSTAMAT";
-      const pointName = point.name || (pointType === "POSTAMAT" ? "Постамат 5Post" : "Касса «Пятёрочка»");
+      const pointName = point.name || (deliveryProvider === 'cdek' ? 'Пункт выдачи СДЭК' : (pointType === "POSTAMAT" ? "Постамат 5Post" : "Касса «Пятёрочка»"));
       const pointAddr = point.full_address || point.resultAddress || point.address || "";
       const pointExtra = [point.additional, point.work_hours].filter(Boolean).join(" · ");
 
@@ -213,7 +213,14 @@
 
     function createCustomPinLayout() {
       if (deliveryProvider === 'cdek' && typeof ymaps !== 'undefined') {
-        if (!cdekPinLayout) cdekPinLayout = ymaps.templateLayoutFactory.createClass('<div class="bf-cdek-pin">СДЭК</div>');
+        if (!cdekPinLayout) cdekPinLayout = ymaps.templateLayoutFactory.createClass(
+          '<div class="bf-map-pin cdek-pin" title="$[properties.hintContent]">' +
+            '<div class="bf-pin-body">' +
+              '<img src="/images/cdek.png" alt="СДЭК" class="bf-pin-img" width="36" height="36">' +
+            '</div>' +
+            '<div class="bf-pin-tail"></div>' +
+          '</div>'
+        );
         return cdekPinLayout;
       }
       if (customPinLayout || typeof ymaps === "undefined") return customPinLayout;
@@ -230,7 +237,7 @@
 
     function createPointPlacemark(point, pinLayout) {
       const isPostamat = (point.type === "POSTAMAT");
-      const titleName = point.name || (isPostamat ? "Постамат 5Post" : "Касса «Пятёрочка»");
+      const titleName = point.name || (deliveryProvider === 'cdek' ? 'Пункт выдачи СДЭК' : (isPostamat ? "Постамат 5Post" : "Касса «Пятёрочка»"));
       const fullAddr = point.full_address || point.street || "";
 
       const balloonHtml = `

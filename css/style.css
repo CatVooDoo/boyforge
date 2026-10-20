@@ -3178,7 +3178,6 @@ body:not(.home){
 .delivery-notice, .delivery-quote { font-size:12px; line-height:1.5; margin:10px 0; color:#4b5563; }
 .delivery-notice { padding:10px 12px; border-radius:8px; background:#f3f4f6; }
 .delivery-quote { font-weight:600; color:#111; }
-.bf-cdek-pin { display:flex; align-items:center; justify-content:center; width:42px; height:30px; margin:-38px 0 0 -21px; border-radius:8px; background:#111; color:#fff; font:700 10px Arial,sans-serif; box-shadow:0 3px 8px #0003; }
 .delivery-point-list { max-height:190px; overflow:auto; margin-top:10px; border:1px solid #e5e7eb; border-radius:10px; }
 .delivery-point-choice { display:block; width:100%; border:0; border-bottom:1px solid #eee; padding:12px; background:#fff; color:#111; text-align:left; font:inherit; font-size:12px; cursor:pointer; }
 .delivery-point-choice:hover { background:#f2f3f5; }
