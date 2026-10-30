@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once dirname(__DIR__) . '/includes/order_items.php';
 
 requireAdminAuth();
 
@@ -336,10 +337,34 @@ tr.order-color-teal td:first-child {
                   <div style="font-size:12px; color:#6b7280;"><?= htmlspecialchars($order['phone']) ?></div>
                 </td>
                 <td>
-                  <div style="font-weight:500;"><?= htmlspecialchars($order['product_name']) ?></div>
-                  <div style="font-size:12px; color:#6b7280;">
-                    <?= htmlspecialchars($order['size']) ?> — <?= number_format((float)$order['price'] + (float)($order['delivery_cost'] ?? 0), 2, '.', ' ') ?> ₽
-                  </div>
+                  <?php
+                    $orderItems = normalizeOrderItems($order);
+                    $orderUnits = expandOrderItemsToUnits($order);
+                    $isMultiOrderRow = count($orderItems) > 1 || count($orderUnits) > 1;
+                    $orderTotalPaid = number_format((float)$order['price'] + (float)($order['delivery_cost'] ?? 0), 2, '.', ' ');
+                  ?>
+                  <?php if (!$isMultiOrderRow): ?>
+                    <div style="font-weight:500;"><?= htmlspecialchars((string)$orderItems[0]['name']) ?></div>
+                    <div style="font-size:12px; color:#6b7280;">
+                      <?= htmlspecialchars(implode(', ', array_filter([(string)$orderItems[0]['gender'], (string)$orderItems[0]['size']]))) ?: htmlspecialchars((string)$order['size']) ?> — <?= $orderTotalPaid ?> ₽
+                    </div>
+                  <?php else: ?>
+                    <div style="display:inline-block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; background:#141414; color:#fff; padding:2px 7px; border-radius:4px; margin-bottom:6px;">
+                      Корзина · <?= count($orderUnits) ?> шт.
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:6px;">
+                      <?php foreach ($orderItems as $oi): ?>
+                        <div style="font-size:12.5px; line-height:1.35;">
+                          <span style="font-weight:500;"><?= htmlspecialchars((string)$oi['name']) ?></span>
+                          <span style="color:#6b7280;">(<?= htmlspecialchars(implode(', ', array_filter([(string)$oi['gender'], (string)$oi['size']]))) ?>)</span>
+                          <?php if ((int)$oi['qty'] > 1): ?>
+                            <strong>× <?= (int)$oi['qty'] ?></strong>
+                          <?php endif; ?>
+                        </div>
+                      <?php endforeach; ?>
+                    </div>
+                    <div style="font-size:12px; font-weight:600; color:#111827;">Итого: <?= $orderTotalPaid ?> ₽</div>
+                  <?php endif; ?>
                 </td>
                 <td>
                   <?php if (($order['delivery_provider'] ?? 'fivepost') === 'cdek'): ?>
@@ -359,14 +384,17 @@ tr.order-color-teal td:first-child {
                     <span style="color:#ef4444; font-size:13px;">Ошибка 5Post</span>
                   <?php endif; ?>
                 </td>
-                <td style="min-width: 320px;">
+                <td style="min-width: 340px;">
                   <?php if ($order['receipt_sent'] == 1): ?>
                     <div style="display:inline-flex; align-items:center; gap:6px; color:#10b981; font-size:14px; font-weight:500;">
                         <?= renderSvgIcon('check', 'icon') ?> Чек пробит
                     </div>
-                    <?php if (!empty($order['mark_code'])): ?>
-                        <div style="font-size:11px; color:#6b7280; margin-top:4px; word-break: break-all; max-width: 250px;">
-                            <?= htmlspecialchars($order['mark_code']) ?>
+                    <?php $savedMarks = getOrderMarkCodes($order); ?>
+                    <?php if (!empty($savedMarks)): ?>
+                        <div style="font-size:11px; color:#6b7280; margin-top:4px; word-break: break-all; max-width: 280px; display:flex; flex-direction:column; gap:3px;">
+                            <?php foreach ($savedMarks as $mIdx => $mcItem): ?>
+                                <div><?= count($savedMarks) > 1 ? ('#' . ($mIdx + 1) . ': ') : '' ?><?= htmlspecialchars($mcItem) ?></div>
+                            <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
                   <?php elseif ($isCancelled): ?>
@@ -375,15 +403,35 @@ tr.order-color-teal td:first-child {
                     </div>
                   <?php else: ?>
                     <div class="receipt-form-container">
-                        <div style="display:flex; gap: 8px; margin-bottom: 8px;">
-                            <input type="text" class="form-input mark-input" placeholder="Пикните сканером код маркировки" style="font-family: monospace; font-size:12px; flex: 1;" data-order="<?= htmlspecialchars($order['order_id']) ?>">
-                            <button type="button" class="btn btn-danger btn-sm cancel-order-btn" data-order="<?= htmlspecialchars($order['order_id']) ?>">
-                                Отменить
+                        <?php if (count($orderUnits) <= 1): ?>
+                            <div style="display:flex; gap: 8px; margin-bottom: 8px;">
+                                <input type="text" class="form-input mark-input" placeholder="Пикните сканером код маркировки" style="font-family: monospace; font-size:12px; flex: 1;" data-order="<?= htmlspecialchars($order['order_id']) ?>" data-unit-index="0">
+                                <button type="button" class="btn btn-danger btn-sm cancel-order-btn" data-order="<?= htmlspecialchars($order['order_id']) ?>">
+                                    Отменить
+                                </button>
+                            </div>
+                        <?php else: ?>
+                            <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;">
+                                <?php foreach ($orderUnits as $uIdx => $unit): ?>
+                                    <div>
+                                        <div style="font-size:11px; color:#4b5563; margin-bottom:2px; font-weight:500;">
+                                            #<?= $uIdx + 1 ?> · <?= htmlspecialchars($unit['label']) ?>
+                                        </div>
+                                        <input type="text" class="form-input mark-input" placeholder="Код маркировки #<?= $uIdx + 1 ?>" style="font-family: monospace; font-size:12px; width:100%;" data-order="<?= htmlspecialchars($order['order_id']) ?>" data-unit-index="<?= $uIdx ?>">
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" class="btn-primary btn-sm send-receipt-btn" data-order="<?= htmlspecialchars($order['order_id']) ?>" style="flex: 1;">
+                                <?= count($orderUnits) > 1 ? ('Отправить чек (' . count($orderUnits) . ' шт.)') : 'Отправить чек' ?>
                             </button>
+                            <?php if (count($orderUnits) > 1): ?>
+                                <button type="button" class="btn btn-danger btn-sm cancel-order-btn" data-order="<?= htmlspecialchars($order['order_id']) ?>">
+                                    Отменить
+                                </button>
+                            <?php endif; ?>
                         </div>
-                        <button type="button" class="btn-primary btn-sm send-receipt-btn" data-order="<?= htmlspecialchars($order['order_id']) ?>" style="width: 100%;">
-                            Отправить чек
-                        </button>
                         <div class="receipt-status" style="font-size: 12px; margin-top: 6px; display: none;"></div>
                     </div>
                   <?php endif; ?>
@@ -776,22 +824,56 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Автопереход сканера штрихкодов (Enter) к следующему полю маркировки в заказе
+    document.querySelectorAll('.mark-input').forEach(inp => {
+        inp.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const row = this.closest('.order-row');
+                if (!row) return;
+                const inputs = Array.from(row.querySelectorAll('.mark-input'));
+                const nextEmpty = inputs.find(el => el !== this && !el.value.trim());
+                if (nextEmpty) {
+                    nextEmpty.focus();
+                } else {
+                    const idx = inputs.indexOf(this);
+                    if (idx >= 0 && idx < inputs.length - 1) {
+                        inputs[idx + 1].focus();
+                    }
+                }
+            }
+        });
+    });
+
     const buttons = document.querySelectorAll('.send-receipt-btn');
     
     buttons.forEach(btn => {
         btn.addEventListener('click', function() {
             const orderId = this.getAttribute('data-order');
             const row = document.getElementById('order-row-' + orderId);
-            const input = row.querySelector('.mark-input');
+            const inputs = Array.from(row.querySelectorAll('.mark-input'));
             const statusDiv = row.querySelector('.receipt-status');
+            const originalLabel = this.textContent;
             
-            const markCode = input.value.trim();
-            
-            if (!markCode) {
+            const markCodes = [];
+            for (let i = 0; i < inputs.length; i++) {
+                const val = inputs[i].value.trim();
+                if (!val) {
+                    statusDiv.style.display = 'block';
+                    statusDiv.style.color = '#ef4444';
+                    statusDiv.textContent = inputs.length > 1
+                        ? `Ошибка: отсканируйте код маркировки для позиции #${i + 1}.`
+                        : 'Ошибка: отсканируйте код маркировки.';
+                    inputs[i].focus();
+                    return;
+                }
+                markCodes.push(val);
+            }
+
+            if (new Set(markCodes).size !== markCodes.length) {
                 statusDiv.style.display = 'block';
                 statusDiv.style.color = '#ef4444';
-                statusDiv.textContent = 'Ошибка: отсканируйте код маркировки.';
-                input.focus();
+                statusDiv.textContent = 'Ошибка: коды маркировки повторяются. У каждой вещи должен быть свой DataMatrix.';
                 return;
             }
             
@@ -804,24 +886,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     order_id: orderId,
-                    mark_code: markCode
+                    mark_codes: markCodes,
+                    mark_code: markCodes[0]
                 })
             })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
+                    const codesHtml = markCodes.map((c, idx) => {
+                        const safe = c.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        return `<div>${markCodes.length > 1 ? '#' + (idx + 1) + ': ' : ''}${safe}</div>`;
+                    }).join('');
                     row.querySelector('.receipt-form-container').innerHTML = `
                         <div style="display:inline-flex; align-items:center; gap:6px; color:#10b981; font-size:14px; font-weight:500;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 
                             Чек пробит
                         </div>
-                        <div style="font-size:11px; color:#6b7280; margin-top:4px; word-break: break-all; max-width: 250px;">
-                            ${markCode.replace(/</g, '&lt;')}
+                        <div style="font-size:11px; color:#6b7280; margin-top:4px; word-break: break-all; max-width: 280px; display:flex; flex-direction:column; gap:3px;">
+                            ${codesHtml}
                         </div>
                     `;
                 } else {
                     this.disabled = false;
-                    this.textContent = 'Отправить чек';
+                    this.textContent = originalLabel;
                     statusDiv.style.display = 'block';
                     statusDiv.style.color = '#ef4444';
                     statusDiv.textContent = data.error || 'Произошла ошибка при отправке.';
@@ -829,7 +916,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(err => {
                 this.disabled = false;
-                this.textContent = 'Отправить чек';
+                this.textContent = originalLabel;
                 statusDiv.style.display = 'block';
                 statusDiv.style.color = '#ef4444';
                 statusDiv.textContent = 'Сетевая ошибка.';

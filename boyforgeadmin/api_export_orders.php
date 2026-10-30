@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once dirname(__DIR__) . '/includes/order_items.php';
 require_once dirname(__DIR__) . '/includes/telegram.php';
 require_once dirname(__DIR__) . '/vendor/simplexlsxgen/SimpleXLSXGen.php';
 
@@ -130,6 +131,15 @@ foreach ($orders as $o) {
         $totalSum += $price;
     }
 
+    $items = normalizeOrderItems($o);
+    $isMultiExport = count($items) > 1 || (int)($items[0]['qty'] ?? 1) > 1;
+    $exportProductTitle = $isMultiExport
+        ? implode('; ', array_map(static fn(array $it): string => formatOrderItemTitle($it, true), $items))
+        : (string)($o['product_name'] ?? '');
+    $exportMarks = $isCancelled
+        ? '__CANCELLED__'
+        : implode('; ', getOrderMarkCodes($o));
+
     $rows[] = [
         (string)($o['order_id'] ?? ''),
         (string)($o['created_at'] ?? ''),
@@ -138,7 +148,7 @@ foreach ($orders as $o) {
         (string)($o['phone'] ?? ''),
         (string)($o['email'] ?? ''),
         (string)($o['tg_username'] ?? ''),
-        (string)($o['product_name'] ?? ''),
+        $exportProductTitle,
         (string)($o['size'] ?? ''),
         (string)($o['gender'] ?? ''),
         $price,
@@ -147,7 +157,7 @@ foreach ($orders as $o) {
         (string)($o['fivepost_point_address'] ?? ''),
         (string)($o['fivepost_point_name'] ?? ''),
         $receiptStatusRu,
-        (string)($o['mark_code'] ?? ''),
+        $exportMarks !== '' ? $exportMarks : (string)($o['mark_code'] ?? ''),
         (string)($o['payment_transaction_id'] ?? '')
     ];
 }

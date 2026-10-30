@@ -2,6 +2,8 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/bootstrap.php';
+require_once __DIR__ . '/../../includes/order_items.php';
+require_once __DIR__ . '/../../includes/order_logger.php';
 
 header('Content-Type: application/json');
 
@@ -104,12 +106,12 @@ try {
         error_log('[Refund] Order ' . $orderId . ' already has refund status');
     }
     
+    $orderAmount = round((float)$order['price'] + (float)($order['delivery_cost'] ?? 0), 2);
     if ($amount === null || $amount <= 0) {
-        $amount = (float)$order['price'];
+        $amount = $orderAmount;
     }
     
-    $orderAmount = (float)$order['price'];
-    if ($amount > $orderAmount) {
+    if ($amount > $orderAmount + 0.009) {
         throw new Exception('Сумма возврата (' . $amount . ') превышает сумму заказа (' . $orderAmount . ')');
     }
 
@@ -121,69 +123,18 @@ try {
     }
 
     $taxSystemCode = (int)(env_get('YOOKASSA_TAX_SYSTEM') ?: '1');
-    
     $vatCode = (int)(env_get('YOOKASSA_VAT_CODE') ?: '1');
-    
-    $customerEmail = !empty($order['email']) ? $order['email'] : 'no-reply@boyforge.com';
-    
-    $isMarked = !empty($order['mark_code']);
-
-    $paymentSubject = $isMarked ? 'marked' : 'commodity';
-    
+    $markCodes = getOrderMarkCodes($order);
+    $isMarked = !empty($markCodes);
     $amountValue = number_format($amount, 2, '.', '');
 
-    $receiptPayload = [
-        
-        'internet' => true,
-
-        'timezone' => 2,
-        
-        'customer' => [
-            'email' => $customerEmail
-        ],
-
-        'type' => 'refund',
-        
-        'send' => true,
-        
-        'payment_id' => $paymentId,
-        
-        'tax_system_code' => $taxSystemCode,
-
-        'settlements' => [
-            [
-                'type' => 'prepayment',
-                'amount' => [
-                    'value' => $amountValue,
-                    'currency' => 'RUB'
-                ]
-            ]
-        ],
-
-        'items' => [
-            [
-                'description' => mb_substr('Возврат: ' . $order['product_name'], 0, 128),
-                'quantity' => '1.000',
-                'amount' => [
-                    'value' => $amountValue,
-                    'currency' => 'RUB'
-                ],
-                'vat_code' => $vatCode,
-
-                'payment_subject' => $paymentSubject,
-
-                'payment_mode' => 'full_payment',
-                
-                'measure' => 'piece'
-            ]
-        ]
-    ];
-    
-    if ($isMarked) {
-        $receiptPayload['items'][0]['mark_code_info'] = [
-            'gs_1m' => $order['mark_code']
-        ];
-    }
+    $receiptPayload = buildYookassaRefundReceiptPayload(
+        $order,
+        $amount,
+        $paymentId,
+        $taxSystemCode,
+        $vatCode
+    );
 
     $refundPayload = [
         'amount' => [
@@ -222,7 +173,13 @@ try {
         throw new Exception('Ошибка сети при отправке запроса на возврат: ' . $curlErr);
     }
     
-    $resData = json_decode($response, true);
+    $resData = json_decode((string)$response, true);
+
+    logOrderEvent($orderId, 'yookassa_refund_response', [
+        'http_code' => $httpCode,
+        'amount'    => $amountValue,
+        'response'  => $resData ?: $response
+    ]);
 
     if ($httpCode >= 200 && $httpCode < 300 && isset($resData['id'])) {
         $refundId = $resData['id'];
