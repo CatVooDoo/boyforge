@@ -365,6 +365,9 @@ tr.order-color-teal td:first-child {
                     </div>
                     <div style="font-size:12px; font-weight:600; color:#111827;">Итого: <?= $orderTotalPaid ?> ₽</div>
                   <?php endif; ?>
+                  <?php if (!empty($order['promo_code'])): ?>
+                    <div style="font-size:11px; color:#2e7d32; margin-top:6px;">Промокод <?= htmlspecialchars((string)$order['promo_code']) ?> · −<?= number_format((float)($order['discount_amount'] ?? 0), 2, '.', ' ') ?> ₽</div>
+                  <?php endif; ?>
                 </td>
                 <td>
                   <?php if (($order['delivery_provider'] ?? 'fivepost') === 'cdek'): ?>
