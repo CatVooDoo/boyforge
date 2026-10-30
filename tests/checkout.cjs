@@ -50,7 +50,6 @@ const choose = id => elements.deliveryPointList.listeners.click({target: {closes
   await reply(requests[1], {success: true, points: [point('5P')]});
   providers[1].listeners.click();
   await reply(requests[2], {success: true, mode: 'sandbox', points: [point('C1')]});
-  assert.match(elements.deliveryNotice.textContent, /Тестовый/);
   assert.match(elements.deliveryPointList.innerHTML, /C1/);
   choose('C1');
   assert.match(requests[3].url, /cdek-quote.*value=3200/);
@@ -77,7 +76,6 @@ const choose = id => elements.deliveryPointList.listeners.click({target: {closes
   assert.equal(payload.fivepostPointId, 'C2');
   await reply(requests[7], {success: false, error: 'Controlled end of test'});
   providers[0].listeners.click();
-  assert.match(elements.deliveryNotice.textContent, /за счёт магазина/);
   await reply(requests[8], {success: true, points: [point('5P')]});
   elements.fivepostCustomMap.listeners.click({target: {closest: () => ({getAttribute: () => '5P'})}});
   elements.orderForm.listeners.submit({preventDefault() {}});

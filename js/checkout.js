@@ -3,12 +3,85 @@
 (function () {
   "use strict";
 
+  let yandexScriptPromise = null;
+  let yookassaScriptPromise = null;
+
+  function loadExternalScript(src, isReadyFn) {
+    if (isReadyFn()) return Promise.resolve(true);
+    if (typeof document === "undefined" || typeof document.createElement !== "function" || !document.head) {
+      return Promise.resolve(false);
+    }
+
+    return new Promise(function (resolve) {
+      const existing = Array.from(document.querySelectorAll("script")).find(function (s) {
+        return s.src && s.src.indexOf(src.split("?")[0]) !== -1;
+      });
+      if (existing) {
+        if (isReadyFn()) {
+          resolve(true);
+          return;
+        }
+        existing.addEventListener("load", function () { resolve(true); }, { once: true });
+        existing.addEventListener("error", function () { resolve(false); }, { once: true });
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      script.onload = function () { resolve(true); };
+      script.onerror = function () { resolve(false); };
+      document.head.appendChild(script);
+    });
+  }
+
+  function ensureYandexMapsScript() {
+    if (typeof ymaps !== "undefined") return Promise.resolve(true);
+    if (!yandexScriptPromise) {
+      const apiKey = (typeof window !== "undefined" && window.BF_CONFIG && window.BF_CONFIG.yandexMapsApiKey)
+        ? String(window.BF_CONFIG.yandexMapsApiKey)
+        : "";
+      const url = "https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=" + encodeURIComponent(apiKey);
+      yandexScriptPromise = loadExternalScript(url, function () { return typeof ymaps !== "undefined"; });
+    }
+    return yandexScriptPromise;
+  }
+
+  function ensureYookassaWidgetScript() {
+    if (typeof window !== "undefined" && typeof window.YooMoneyCheckoutWidget !== "undefined") {
+      return Promise.resolve(true);
+    }
+    if (!yookassaScriptPromise) {
+      yookassaScriptPromise = loadExternalScript(
+        "https://yookassa.ru/checkout-widget/v1/checkout-widget.js",
+        function () { return typeof window !== "undefined" && typeof window.YooMoneyCheckoutWidget !== "undefined"; }
+      );
+    }
+    return yookassaScriptPromise;
+  }
+
+  function ensureScriptsLoaded() {
+    ensureYandexMapsScript();
+    ensureYookassaWidgetScript();
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     const orderBtn = document.getElementById("orderModalBtn") || document.getElementById("ozonOrderBtn");
     const modal = document.getElementById("orderModal") || document.getElementById("ozonModal");
-    if (!orderBtn || !modal) return;
+    if (!modal) return;
 
     const closeBtn = document.getElementById("orderModalClose") || document.getElementById("ozonModalClose");
+    const modalTitleEl = document.getElementById("orderModalTitle");
+    const singleSummaryEl = document.getElementById("orderModalSingleSummary");
+    const cartSummaryEl = document.getElementById("orderModalCartSummary");
+    const cartCountEl = document.getElementById("orderModalCartCount");
+    const cartItemsEl = document.getElementById("orderModalCartItems");
+    const cartSubtotalEl = document.getElementById("orderModalCartSubtotal");
+    const backToCartBtn = document.getElementById("checkoutBackToCartBtn");
+    const widgetContainer = document.getElementById("yookassaWidgetContainer");
+    const orderDetailsSections = document.getElementById("orderDetailsSections") || (modal.querySelector ? modal.querySelector(".order-details-sections") : null);
+    const orderAgreeWrap = document.getElementById("orderAgreeWrap");
+
     const form = document.getElementById("orderForm") || document.getElementById("ozonOrderForm");
     const fioInput = document.getElementById("orderFio");
     const emailInput = document.getElementById("orderEmail");
@@ -36,6 +109,10 @@
     const addrEl = document.getElementById("fivepostPointAddressDisplay");
     const extraEl = document.getElementById("fivepostPointExtraDisplay");
 
+    let checkoutMode = "single";
+    let cartCheckoutItems = [];
+    let activeYookassaWidget = null;
+
     let yandexMap = null;
     let pointsCollection = null;
     let currentPoints = [];
@@ -45,97 +122,18 @@
     const renderedPointIds = new Set();
     let boundsDebounceTimer = null;
     let isProgrammaticMove = false;
-    let deliveryProvider = 'fivepost';
+    let deliveryProvider = "fivepost";
     let deliveryQuote = null;
+    let deliveryQuoteSignature = "";
     let deliveryMode = null;
     let pointsRequest = 0;
     let selectionRequest = 0;
     let cdekPinLayout = null;
-    const providerButtons = document.querySelectorAll('[data-delivery-provider]');
-    const deliveryNotice = document.getElementById('deliveryNotice');
-    const quoteEl = document.getElementById('deliveryQuote');
-    const pointList = document.getElementById('deliveryPointList');
-    const carrierName = () => deliveryProvider === 'cdek' ? 'СДЭК' : '5Post';
-    const pointsEndpoint = () => deliveryProvider === 'cdek' ? '/api/cdek-points.php?' : '/api/fivepost-points.php?';
-
-    function clearDeliverySelection() {
-      selectionRequest++;
-      deliveryQuote = null;
-      [fivepostIdInput, fivepostNameInput, fivepostAddrInput, fivepostTypeInput, fivepostDetailsInput].forEach(input => { if (input) input.value = ''; });
-      if (fivepostCard) fivepostCard.style.display = 'none';
-      if (fivepostMapWrapper) fivepostMapWrapper.style.display = 'block';
-      if (quoteEl) quoteEl.hidden = true;
-      if (submitBtn) submitBtn.textContent = 'Оплатить онлайн картой / СБП';
-    }
-
-    providerButtons.forEach(button => button.addEventListener('click', function () {
-      const next = button.dataset.deliveryProvider;
-      if (next === deliveryProvider) return;
-      deliveryProvider = next;
-      pointsRequest++;
-      clearTimeout(searchDebounceTimer);
-      clearTimeout(boundsDebounceTimer);
-      clearDeliverySelection();
-      deliveryMode = null;
-      currentPoints = [];
-      renderedPointIds.clear();
-      if (pointsCollection) pointsCollection.removeAll();
-      if (yandexMap?.balloon) yandexMap.balloon.close();
-      providerButtons.forEach(btn => {
-        const active = btn.dataset.deliveryProvider === next;
-        btn.classList.toggle('is-active', active);
-        btn.setAttribute('aria-pressed', String(active));
-      });
-      if (deliveryNotice) {
-        deliveryNotice.hidden = false;
-        deliveryNotice.textContent = next === 'cdek' ? 'Загружаем пункты СДЭК…' : 'Доставка 5Post за счёт магазина.';
-      }
-      if (pointList) { pointList.hidden = true; pointList.innerHTML = ''; }
-      if (yandexMap) setTimeout(() => yandexMap.container.fitToViewport(), 50);
-      loadPoints('', searchInput?.value.trim() || currentCity, true);
-    }));
-
-    function updateDeliveryMode(mode) {
-      deliveryMode = mode;
-      if (deliveryNotice && deliveryProvider === 'cdek') {
-        deliveryNotice.hidden = false;
-        deliveryNotice.textContent = mode === 'sandbox'
-          ? 'Тестовый режим СДЭК: можно выбрать пункт и оформить тестовый заказ. Посылка не будет отправлена. Для оплаты нужен тестовый магазин ЮKassa.'
-          : 'Доставку СДЭК оплачиваете вы вместе с товаром. Стоимость и срок появятся после выбора пункта.';
-      }
-    }
-
-    async function chooseDeliveryPoint(point) {
-      if (deliveryProvider !== 'cdek') { handleSelect5PostPoint(point); return; }
-      clearDeliverySelection();
-      const request = selectionRequest;
-      showStatus('Рассчитываем стоимость доставки СДЭК…', 'info');
-      try {
-        const value = parseFloat(getProductState().price.replace(/[^\d.]/g, '')) || 3200;
-        const res = await fetch('/api/cdek-quote.php?point=' + encodeURIComponent(point.id) + '&value=' + encodeURIComponent(value));
-        const data = await res.json();
-        if (request !== selectionRequest || deliveryProvider !== 'cdek') return;
-        if (!res.ok || !data.success) throw new Error(data.error || 'Не удалось рассчитать доставку');
-        deliveryQuote = data.quote;
-        updateDeliveryMode(data.mode);
-        handleSelect5PostPoint(data.point);
-        const total = (parseFloat(getProductState().price.replace(/[^\d.]/g, '')) || 3200) + data.quote.cost;
-        if (quoteEl) {
-          quoteEl.hidden = false;
-          quoteEl.textContent = `Доставка: ${data.quote.cost.toLocaleString('ru-RU')} ₽ · ${data.quote.days_min}–${data.quote.days_max} дн. Итого с товаром: ${total.toLocaleString('ru-RU')} ₽`;
-        }
-        if (submitBtn) submitBtn.textContent = 'Оплатить ' + total.toLocaleString('ru-RU') + ' ₽ онлайн';
-      } catch (err) {
-        if (request === selectionRequest) showStatus(escapeHtml(err.message), 'error');
-      }
-    }
-
-    function setProgrammaticMove() {
-      isProgrammaticMove = true;
-      setTimeout(function () {
-        isProgrammaticMove = false;
-      }, 700);
-    }
+    const providerButtons = document.querySelectorAll("[data-delivery-provider]");
+    const quoteEl = document.getElementById("deliveryQuote");
+    const pointList = document.getElementById("deliveryPointList");
+    const carrierName = () => deliveryProvider === "cdek" ? "СДЭК" : "5Post";
+    const pointsEndpoint = () => deliveryProvider === "cdek" ? "/api/cdek-points.php?" : "/api/fivepost-points.php?";
 
     function escapeHtml(str) {
       if (!str) return "";
@@ -145,6 +143,15 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+    }
+
+    function formatRub(amount) {
+      const num = Math.round((Number(amount) || 0) * 100) / 100;
+      const hasDec = Math.abs(num - Math.round(num)) > 0.001;
+      return num.toLocaleString("ru-RU", {
+        minimumFractionDigits: hasDec ? 2 : 0,
+        maximumFractionDigits: hasDec ? 2 : 0
+      }) + " ₽";
     }
 
     function getProductState() {
@@ -161,6 +168,141 @@
         size: sActive ? sActive.textContent.trim() : "",
         img: mainImgEl ? mainImgEl.src : ""
       };
+    }
+
+    function getCheckoutTotals() {
+      if (checkoutMode === "cart") {
+        const goodsTotal = Math.round(cartCheckoutItems.reduce(function (sum, it) {
+          const unit = Number(it.priceNumeric) || parseFloat(String(it.price || "").replace(/[^\d.]/g, "")) || 0;
+          return sum + unit * (Number(it.qty) || 1);
+        }, 0) * 100) / 100;
+        const totalUnits = cartCheckoutItems.reduce(function (sum, it) {
+          return sum + (Number(it.qty) || 1);
+        }, 0);
+        return {
+          mode: "cart",
+          goodsTotal: goodsTotal,
+          totalUnits: Math.max(1, totalUnits),
+          items: cartCheckoutItems
+        };
+      }
+
+      const state = getProductState();
+      const goodsTotal = parseFloat(String(state.price || "").replace(/[^\d.]/g, "")) || 3200;
+      return {
+        mode: "single",
+        goodsTotal: goodsTotal,
+        totalUnits: 1,
+        state: state
+      };
+    }
+
+    function resetPaymentWidgetView() {
+      if (activeYookassaWidget) {
+        try { activeYookassaWidget.destroy(); } catch (e) {}
+        activeYookassaWidget = null;
+      }
+      if (widgetContainer) {
+        widgetContainer.style.display = "none";
+        widgetContainer.innerHTML = "";
+      }
+      if (orderDetailsSections) orderDetailsSections.style.display = "";
+      if (orderAgreeWrap) orderAgreeWrap.style.display = "";
+      if (submitBtn) {
+        submitBtn.style.display = "";
+        submitBtn.disabled = false;
+      }
+      providerButtons.forEach(function (btn) { btn.disabled = false; });
+      if (fivepostIdInput && fivepostIdInput.value) {
+        if (fivepostCard) fivepostCard.style.display = "flex";
+        if (fivepostMapWrapper) fivepostMapWrapper.style.display = "none";
+      } else {
+        if (fivepostCard) fivepostCard.style.display = "none";
+        if (fivepostMapWrapper) fivepostMapWrapper.style.display = "block";
+      }
+    }
+
+    function clearDeliverySelection() {
+      selectionRequest++;
+      deliveryQuote = null;
+      deliveryQuoteSignature = "";
+      [fivepostIdInput, fivepostNameInput, fivepostAddrInput, fivepostTypeInput, fivepostDetailsInput].forEach(input => { if (input) input.value = ""; });
+      if (fivepostCard) fivepostCard.style.display = "none";
+      if (fivepostMapWrapper) fivepostMapWrapper.style.display = "block";
+      if (quoteEl) quoteEl.hidden = true;
+      if (submitBtn) submitBtn.textContent = "Оплатить онлайн картой / СБП";
+    }
+
+    providerButtons.forEach(button => button.addEventListener("click", function () {
+      const next = button.dataset.deliveryProvider;
+      if (next === deliveryProvider) return;
+      deliveryProvider = next;
+      pointsRequest++;
+      clearTimeout(searchDebounceTimer);
+      clearTimeout(boundsDebounceTimer);
+      clearDeliverySelection();
+      deliveryMode = null;
+      currentPoints = [];
+      renderedPointIds.clear();
+      if (pointsCollection) pointsCollection.removeAll();
+      if (yandexMap?.balloon) yandexMap.balloon.close();
+      providerButtons.forEach(btn => {
+        const active = btn.dataset.deliveryProvider === next;
+        btn.classList.toggle("is-active", active);
+        btn.setAttribute("aria-pressed", String(active));
+      });
+      if (pointList) { pointList.hidden = true; pointList.innerHTML = ""; }
+      if (yandexMap) setTimeout(() => yandexMap.container.fitToViewport(), 50);
+      loadPoints("", searchInput?.value.trim() || currentCity, true);
+    }));
+
+    function updateDeliveryMode(mode) {
+      deliveryMode = mode;
+    }
+
+    async function chooseDeliveryPoint(point) {
+      if (deliveryProvider !== "cdek") {
+        handleSelect5PostPoint(point);
+        if (submitBtn) {
+          const totals = getCheckoutTotals();
+          submitBtn.textContent = "Оплатить " + totals.goodsTotal.toLocaleString("ru-RU") + " ₽ онлайн";
+        }
+        return;
+      }
+      clearDeliverySelection();
+      const request = selectionRequest;
+      showStatus("Рассчитываем стоимость доставки СДЭК…", "info");
+      try {
+        const totals = getCheckoutTotals();
+        const value = totals.goodsTotal || 3200;
+        const quoteUrl = "/api/cdek-quote.php?point=" + encodeURIComponent(point.id)
+          + "&value=" + encodeURIComponent(value)
+          + (totals.totalUnits > 1 ? "&qty=" + encodeURIComponent(totals.totalUnits) : "");
+        const res = await fetch(quoteUrl);
+        const data = await res.json();
+        if (request !== selectionRequest || deliveryProvider !== "cdek") return;
+        if (!res.ok || !data.success) throw new Error(data.error || "Не удалось рассчитать доставку");
+        deliveryQuote = data.quote;
+        deliveryQuoteSignature = value + ":" + totals.totalUnits;
+        updateDeliveryMode(data.mode);
+        handleSelect5PostPoint(data.point);
+        const total = Math.round((value + data.quote.cost) * 100) / 100;
+        if (quoteEl) {
+          quoteEl.hidden = false;
+          const itemsWord = totals.totalUnits > 1 ? "Итого с товарами" : "Итого с товаром";
+          quoteEl.textContent = `Доставка: ${data.quote.cost.toLocaleString("ru-RU")} ₽ · ${data.quote.days_min}–${data.quote.days_max} дн. ${itemsWord}: ${total.toLocaleString("ru-RU")} ₽`;
+        }
+        if (submitBtn) submitBtn.textContent = "Оплатить " + total.toLocaleString("ru-RU") + " ₽ онлайн";
+      } catch (err) {
+        if (request === selectionRequest) showStatus(escapeHtml(err.message), "error");
+      }
+    }
+
+    function setProgrammaticMove() {
+      isProgrammaticMove = true;
+      setTimeout(function () {
+        isProgrammaticMove = false;
+      }, 700);
     }
 
     function flagGenderError() {
@@ -188,7 +330,7 @@
 
       const pointId = point.id || "";
       const pointType = point.type || "POSTAMAT";
-      const pointName = point.name || (deliveryProvider === 'cdek' ? 'Пункт выдачи СДЭК' : (pointType === "POSTAMAT" ? "Постамат 5Post" : "Касса «Пятёрочка»"));
+      const pointName = point.name || (deliveryProvider === "cdek" ? "Пункт выдачи СДЭК" : (pointType === "POSTAMAT" ? "Постамат 5Post" : "Касса «Пятёрочка»"));
       const pointAddr = point.full_address || point.resultAddress || point.address || "";
       const pointExtra = [point.additional, point.work_hours].filter(Boolean).join(" · ");
 
@@ -199,11 +341,11 @@
       if (fivepostDetailsInput) fivepostDetailsInput.value = pointExtra;
 
       if (badgeEl) {
-        badgeEl.textContent = pointType === 'PVZ' ? 'Пункт выдачи' : (pointType === "POSTAMAT" ? "Постамат" : "Касса");
+        badgeEl.textContent = pointType === "PVZ" ? "Пункт выдачи" : (pointType === "POSTAMAT" ? "Постамат" : "Касса");
       }
       if (nameEl) nameEl.textContent = pointName;
       if (addrEl) addrEl.textContent = pointAddr;
-      if (extraEl) extraEl.textContent = pointExtra || ('Выдача заказа ' + carrierName());
+      if (extraEl) extraEl.textContent = pointExtra || ("Выдача заказа " + carrierName());
 
       if (fivepostCard) fivepostCard.style.display = "flex";
       if (fivepostMapWrapper) fivepostMapWrapper.style.display = "none";
@@ -212,7 +354,7 @@
     }
 
     function createCustomPinLayout() {
-      if (deliveryProvider === 'cdek' && typeof ymaps !== 'undefined') {
+      if (deliveryProvider === "cdek" && typeof ymaps !== "undefined") {
         if (!cdekPinLayout) cdekPinLayout = ymaps.templateLayoutFactory.createClass(
           '<div class="bf-map-pin cdek-pin" title="$[properties.hintContent]">' +
             '<div class="bf-pin-body">' +
@@ -237,7 +379,7 @@
 
     function createPointPlacemark(point, pinLayout) {
       const isPostamat = (point.type === "POSTAMAT");
-      const titleName = point.name || (deliveryProvider === 'cdek' ? 'Пункт выдачи СДЭК' : (isPostamat ? "Постамат 5Post" : "Касса «Пятёрочка»"));
+      const titleName = point.name || (deliveryProvider === "cdek" ? "Пункт выдачи СДЭК" : (isPostamat ? "Постамат 5Post" : "Касса «Пятёрочка»"));
       const fullAddr = point.full_address || point.street || "";
 
       const balloonHtml = `
@@ -246,8 +388,8 @@
             <strong class="bf-balloon-name">${escapeHtml(titleName)}</strong>
           </div>
           <div class="bf-balloon-address">${escapeHtml(fullAddr)}</div>
-          ${point.work_hours ? `<div class="bf-balloon-extra">${escapeHtml(point.work_hours)}</div>` : ''}
-          ${point.additional ? `<div class="bf-balloon-extra">${escapeHtml(point.additional)}</div>` : ''}
+          ${point.work_hours ? `<div class="bf-balloon-extra">${escapeHtml(point.work_hours)}</div>` : ""}
+          ${point.additional ? `<div class="bf-balloon-extra">${escapeHtml(point.additional)}</div>` : ""}
           <button type="button" class="bf-balloon-select-btn" data-point-id="${escapeHtml(point.id)}">Выбрать эту точку</button>
         </div>
       `;
@@ -271,8 +413,8 @@
 
     function renderMarkers(points, adjustViewport) {
       if (pointList) {
-        pointList.hidden = deliveryProvider !== 'cdek' || !points?.length;
-        pointList.innerHTML = deliveryProvider === 'cdek' ? (points || []).map(p => `<button type="button" class="delivery-point-choice" data-point-id="${escapeHtml(p.id)}"><strong>${escapeHtml(p.name)}</strong><span>${escapeHtml(p.full_address)}</span><span>${escapeHtml(p.work_hours)}</span></button>`).join('') : '';
+        pointList.hidden = deliveryProvider !== "cdek" || !points?.length;
+        pointList.innerHTML = deliveryProvider === "cdek" ? (points || []).map(p => `<button type="button" class="delivery-point-choice" data-point-id="${escapeHtml(p.id)}"><strong>${escapeHtml(p.name)}</strong><span>${escapeHtml(p.full_address)}</span><span>${escapeHtml(p.work_hours)}</span></button>`).join("") : "";
       }
       currentPoints = points || [];
       if (typeof adjustViewport === "undefined") adjustViewport = true;
@@ -364,8 +506,8 @@
         .then(function (res) { return res.json(); })
         .then(function (data) {
           if (request !== pointsRequest || provider !== deliveryProvider) return;
-          if (!data?.success) throw new Error(data?.error || 'Не удалось загрузить пункты выдачи');
-          if (provider === 'cdek') updateDeliveryMode(data.mode);
+          if (!data?.success) throw new Error(data?.error || "Не удалось загрузить пункты выдачи");
+          if (provider === "cdek") updateDeliveryMode(data.mode);
           if (data && data.success && Array.isArray(data.points)) {
             currentPoints = data.points;
             renderMarkers(data.points);
@@ -375,7 +517,7 @@
             }
 
             if (data.points.length === 0) {
-              showStatus('Пункты ' + carrierName() + ' не найдены. Укажите город или город и улицу через запятую.', 'info');
+              showStatus("Пункты " + carrierName() + " не найдены. Укажите город или город и улицу через запятую.", "info");
               if (yandexMap && typeof ymaps !== "undefined" && ymaps.geocode) {
                 ymaps.geocode(data.city || search).then(function (res) {
                   const firstGeo = res.geoObjects.get(0);
@@ -393,7 +535,7 @@
         })
         .catch(function (err) {
           if (request !== pointsRequest || provider !== deliveryProvider) return;
-          showStatus(escapeHtml(err.message || 'Не удалось загрузить пункты выдачи. Попробуйте ещё раз.'), 'error');
+          showStatus(escapeHtml(err.message || "Не удалось загрузить пункты выдачи. Попробуйте ещё раз."), "error");
         })
         .finally(function () {
           if (request === pointsRequest && mapLoader) mapLoader.style.display = "none";
@@ -402,6 +544,8 @@
 
     function initCustomYandexMap() {
       if (!fivepostMapContainer) return;
+
+      ensureYandexMapsScript();
 
       if (mapInitialized && yandexMap) {
         setTimeout(function () {
@@ -438,7 +582,7 @@
             }, 300);
           });
 
-          if (navigator.geolocation) {
+          if (typeof navigator !== "undefined" && navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
               function (pos) {
                 const lat = pos.coords.latitude;
@@ -488,7 +632,7 @@
           if (typeof ymaps !== "undefined") {
             clearInterval(checkInterval);
             setupYandexMap();
-          } else if (attempts > 50) {
+          } else if (attempts > 60) {
             clearInterval(checkInterval);
             if (mapLoader) {
               mapLoader.innerHTML = `<span style="color:#ef4444; font-size:12px;">Не удалось загрузить Яндекс.Карты. Проверьте соединение.</span>`;
@@ -515,8 +659,8 @@
     }
 
     let searchDebounceTimer = null;
-    if (pointList) pointList.addEventListener('click', e => {
-      const button = e.target.closest('[data-point-id]');
+    if (pointList) pointList.addEventListener("click", e => {
+      const button = e.target.closest("[data-point-id]");
       const point = button && currentPoints.find(p => String(p.id) === button.dataset.pointId);
       if (point) chooseDeliveryPoint(point);
     });
@@ -577,7 +721,31 @@
       });
     }
 
-    function openModal() {
+    function finalizeModalOpen() {
+      ensureScriptsLoaded();
+      resetPaymentWidgetView();
+      showStatus("", null);
+
+      const totals = getCheckoutTotals();
+      const sig = totals.goodsTotal + ":" + totals.totalUnits;
+      if (deliveryProvider === "cdek" && deliveryQuote && deliveryQuoteSignature !== sig) {
+        clearDeliverySelection();
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        const total = Math.round((totals.goodsTotal + (deliveryQuote?.cost || 0)) * 100) / 100;
+        submitBtn.textContent = "Оплатить " + total.toLocaleString("ru-RU") + " ₽ онлайн";
+      }
+
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden", "false");
+      document.body.classList.add("no-scroll");
+
+      initCustomYandexMap();
+    }
+
+    function openSingleModal() {
       const state = getProductState();
       if (!state.gender) {
         flagGenderError();
@@ -588,39 +756,95 @@
         return;
       }
 
-      const nameEl = document.getElementById("orderModalProdName") || document.getElementById("ozonModalProdName");
-      const priceEl = document.getElementById("orderModalProdPrice") || document.getElementById("ozonModalProdPrice");
-      const genderEl = document.getElementById("orderModalProdGender") || document.getElementById("ozonModalProdGender");
-      const sizeEl = document.getElementById("orderModalProdSize") || document.getElementById("ozonModalProdSize");
-      const thumbEl = document.getElementById("orderModalProdImg") || document.getElementById("ozonModalProdImg");
+      checkoutMode = "single";
+      cartCheckoutItems = [];
 
-      if (nameEl) nameEl.textContent = state.name;
-      if (priceEl) priceEl.textContent = state.price;
-      if (genderEl) genderEl.textContent = state.gender;
-      if (sizeEl) sizeEl.textContent = state.size || "M";
-      if (thumbEl && state.img) thumbEl.src = state.img;
+      if (singleSummaryEl) singleSummaryEl.hidden = false;
+      if (cartSummaryEl) cartSummaryEl.hidden = true;
+      if (modalTitleEl) modalTitleEl.textContent = "Оформление заказа";
 
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        const total = (parseFloat(state.price.replace(/[^\d.]/g, '')) || 3200) + (deliveryQuote?.cost || 0);
-        submitBtn.textContent = 'Оплатить ' + total.toLocaleString('ru-RU') + ' ₽ онлайн';
+      const prodNameEl = document.getElementById("orderModalProdName") || document.getElementById("ozonModalProdName");
+      const prodPriceEl = document.getElementById("orderModalProdPrice") || document.getElementById("ozonModalProdPrice");
+      const prodGenderEl = document.getElementById("orderModalProdGender") || document.getElementById("ozonModalProdGender");
+      const prodSizeEl = document.getElementById("orderModalProdSize") || document.getElementById("ozonModalProdSize");
+      const prodThumbEl = document.getElementById("orderModalProdImg") || document.getElementById("ozonModalProdImg");
+
+      if (prodNameEl) prodNameEl.textContent = state.name;
+      if (prodPriceEl) prodPriceEl.textContent = state.price;
+      if (prodGenderEl) prodGenderEl.textContent = state.gender;
+      if (prodSizeEl) prodSizeEl.textContent = state.size || "M";
+      if (prodThumbEl && state.img) prodThumbEl.src = state.img;
+
+      finalizeModalOpen();
+    }
+
+    function openCartCheckout(items) {
+      const validItems = Array.isArray(items)
+        ? items.filter(function (it) { return it && it.available !== false && Number(it.qty) > 0; })
+        : [];
+      if (validItems.length === 0) return;
+
+      checkoutMode = "cart";
+      cartCheckoutItems = validItems.map(function (it) { return Object.assign({}, it); });
+
+      if (singleSummaryEl) singleSummaryEl.hidden = true;
+      if (cartSummaryEl) cartSummaryEl.hidden = false;
+
+      const totals = getCheckoutTotals();
+      if (modalTitleEl) {
+        modalTitleEl.textContent = "Оформление заказа (" + totals.totalUnits + " шт.)";
+      }
+      if (cartCountEl) {
+        cartCountEl.textContent = "Состав заказа · " + totals.totalUnits + " шт.";
+      }
+      if (cartItemsEl) {
+        cartItemsEl.innerHTML = cartCheckoutItems.map(function (it) {
+          const unit = Number(it.priceNumeric) || parseFloat(String(it.price || "").replace(/[^\d.]/g, "")) || 0;
+          const lineSum = Math.round(unit * (Number(it.qty) || 1) * 100) / 100;
+          const meta = [it.gender, it.size ? ("размер " + it.size) : "", it.qty > 1 ? ("× " + it.qty + " шт.") : ""].filter(Boolean).join(", ");
+          const thumb = it.img
+            ? `<img src="${escapeHtml(it.img)}" alt="${escapeHtml(it.name)}" class="checkout-cart-thumb">`
+            : `<div class="checkout-cart-thumb checkout-cart-thumb--placeholder">BF</div>`;
+
+          return `
+            <div class="checkout-cart-row">
+              ${thumb}
+              <div class="checkout-cart-row-info">
+                <div class="checkout-cart-row-name">${escapeHtml(it.name)}</div>
+                ${meta ? `<div class="checkout-cart-row-meta">${escapeHtml(meta)}</div>` : ""}
+              </div>
+              <div class="checkout-cart-row-price">${formatRub(lineSum)}</div>
+            </div>
+          `;
+        }).join("");
+      }
+      if (cartSubtotalEl) {
+        cartSubtotalEl.textContent = formatRub(totals.goodsTotal);
       }
 
-      modal.classList.add("is-open");
-      modal.setAttribute("aria-hidden", "false");
-      document.body.classList.add("no-scroll");
-
-      initCustomYandexMap();
+      finalizeModalOpen();
     }
 
     function closeModal() {
+      resetPaymentWidgetView();
       modal.classList.remove("is-open");
       modal.setAttribute("aria-hidden", "true");
-      document.body.classList.remove("no-scroll");
+      const drawer = document.getElementById("cartDrawer");
+      if (!drawer || !drawer.classList.contains("is-open")) {
+        document.body.classList.remove("no-scroll");
+      }
     }
 
-    orderBtn.addEventListener("click", openModal);
+    if (orderBtn) orderBtn.addEventListener("click", openSingleModal);
     if (closeBtn) closeBtn.addEventListener("click", closeModal);
+    if (backToCartBtn) {
+      backToCartBtn.addEventListener("click", function () {
+        closeModal();
+        if (window.BFCart && typeof window.BFCart.openDrawer === "function") {
+          window.BFCart.openDrawer();
+        }
+      });
+    }
 
     modal.addEventListener("click", function (e) {
       if (e.target === modal) closeModal();
@@ -639,32 +863,39 @@
     }
 
     function showSuccessScreen(orderId, order) {
-      const modalBody = modal.querySelector(".order-modal-body") || modal.querySelector(".ozon-modal-body");
+      const modalBody = modal.querySelector ? (modal.querySelector(".order-modal-body") || modal.querySelector(".ozon-modal-body")) : null;
       if (!modalBody) return;
 
       const pointTypeRu = order.fivepostPointType === "POSTAMAT" ? "Постамат" : (order.fivepostPointType === "TOBACCO" ? "Касса" : "Пункт выдачи");
+      const itemsHtml = Array.isArray(order.items) && order.items.length > 0
+        ? order.items.map(function (it) {
+            const meta = [it.gender, it.size ? ("размер " + it.size) : ""].filter(Boolean).join(", ");
+            const qtySuffix = Number(it.qty) > 1 ? ` × ${Number(it.qty)} шт.` : "";
+            return `<div><span>Товар:</span> ${escapeHtml(it.name || it.productName)}${meta ? ` (${escapeHtml(meta)})` : ""}${qtySuffix}</div>`;
+          }).join("")
+        : `<div><span>Товар:</span> ${escapeHtml(order.productName)} (${escapeHtml(order.gender)}, размер ${escapeHtml(order.size)})</div>`;
 
       modalBody.innerHTML = `
         <div class="ozon-success-box order-success-box">
           <div class="ozon-success-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
           <h3>Заказ успешно оплачен!</h3>
-          <div class="ozon-order-id">Номер заказа: <strong>${orderId}</strong></div>
-          ${order.fivepostBarcode ? `<div class="ozon-order-id" style="margin-top:6px; font-size:13px; color:#10b981;">Трек 5Post: <strong>${escapeHtml(order.fivepostBarcode)}</strong></div>` : ''}
+          <div class="ozon-order-id">Номер заказа: <strong>${escapeHtml(orderId)}</strong></div>
+          ${order.fivepostBarcode ? `<div class="ozon-order-id" style="margin-top:6px; font-size:13px; color:#10b981;">Трек 5Post: <strong>${escapeHtml(order.fivepostBarcode)}</strong></div>` : ""}
           <p class="ozon-success-desc">
             Спасибо! Заказ передан в обработку. Служба доставки: <strong>${carrierName()}</strong>.
           </p>
           <div class="ozon-success-summary">
-            <div><span>Товар:</span> ${escapeHtml(order.productName)} (${escapeHtml(order.gender)}, размер ${escapeHtml(order.size)})</div>
+            ${itemsHtml}
             <div><span>Итого с доставкой:</span> <strong>${escapeHtml(order.totalAmount)} ₽</strong> <span style="color:#10b981; font-weight:600;">(Оплачено)</span></div>
-            ${Number(order.deliveryCost) > 0 ? `<div><span>В том числе доставка:</span> ${escapeHtml(order.deliveryCost)} ₽</div>` : ''}
-            ${order.fio ? `<div><span>ФИО получателя:</span> <strong>${escapeHtml(order.fio)}</strong></div>` : ''}
-            ${order.email ? `<div><span>Email:</span> <strong>${escapeHtml(order.email)}</strong></div>` : ''}
+            ${Number(order.deliveryCost) > 0 ? `<div><span>В том числе доставка:</span> ${escapeHtml(order.deliveryCost)} ₽</div>` : ""}
+            ${order.fio ? `<div><span>ФИО получателя:</span> <strong>${escapeHtml(order.fio)}</strong></div>` : ""}
+            ${order.email ? `<div><span>Email:</span> <strong>${escapeHtml(order.email)}</strong></div>` : ""}
             <div><span>Телефон:</span> ${escapeHtml(order.phone)}</div>
-            ${order.fivepostPointAddress ? `<div><span>Доставка ${carrierName()}:</span> <strong>${escapeHtml(order.fivepostPointAddress)}</strong> (${pointTypeRu})</div>` : ''}
-            ${order.transactionId ? `<div><span>ID транзакции:</span> #${escapeHtml(order.transactionId)}</div>` : ''}
+            ${order.fivepostPointAddress ? `<div><span>Доставка ${carrierName()}:</span> <strong>${escapeHtml(order.fivepostPointAddress)}</strong> (${pointTypeRu})</div>` : ""}
+            ${order.transactionId ? `<div><span>ID транзакции:</span> #${escapeHtml(order.transactionId)}</div>` : ""}
           </div>
           <p class="ozon-sms-note">
-            ${deliveryMode === 'sandbox' ? 'Тестовый заказ СДЭК: посылка не будет отправлена.' : 'Уведомим вас о доставке заказа в выбранный пункт выдачи.'}
+            ${deliveryMode === "sandbox" ? "Тестовый заказ СДЭК: посылка не будет отправлена." : "Уведомим вас о доставке заказа в выбранный пункт выдачи."}
           </p>
           <button type="button" class="btn-primary btn-block" id="orderDoneBtn" style="margin-top:12px;">Отлично</button>
         </div>
@@ -689,7 +920,7 @@
 
         const fioWords = fio.split(/\s+/).filter(Boolean);
         if (fioWords.length < 2) {
-          showStatus('Укажите как минимум Имя и Фамилию для получения посылки в ' + carrierName(), 'error');
+          showStatus("Укажите как минимум Имя и Фамилию для получения посылки в " + carrierName(), "error");
           fioInput?.focus();
           return;
         }
@@ -709,7 +940,7 @@
 
         const pointId = (fivepostIdInput?.value || "").trim();
         if (!pointId) {
-          showStatus('Пожалуйста, выберите пункт выдачи ' + carrierName(), 'error');
+          showStatus("Пожалуйста, выберите пункт выдачи " + carrierName(), "error");
           if (fivepostMapWrapper) {
             fivepostMapWrapper.style.display = "block";
             if (fivepostCard) fivepostCard.style.display = "none";
@@ -732,36 +963,79 @@
           return;
         }
 
-        const state = getProductState();
-        if (deliveryProvider === 'cdek' && !deliveryQuote) {
-          showStatus('Выберите пункт СДЭК и дождитесь расчёта доставки', 'error');
+        if (deliveryProvider === "cdek" && !deliveryQuote) {
+          showStatus("Выберите пункт СДЭК и дождитесь расчёта доставки", "error");
           return;
         }
-        const numPrice = parseFloat(state.price.replace(/[^\d.]/g, "")) || 3200;
+
+        const isCartOrder = checkoutMode === "cart";
+        const totals = getCheckoutTotals();
+        if (isCartOrder && (!cartCheckoutItems || cartCheckoutItems.length === 0)) {
+          showStatus("Корзина пуста. Добавьте товары для оформления заказа.", "error");
+          return;
+        }
+
         const random = new Uint8Array(8);
         window.crypto.getRandomValues(random);
-        const orderId = 'BF-' + Array.from(random, n => n.toString(16).padStart(2, '0')).join('').toUpperCase();
+        const orderId = "BF-" + Array.from(random, n => n.toString(16).padStart(2, "0")).join("").toUpperCase();
 
-        const orderPayload = {
-          orderId: orderId,
-          productId: state.id,
-          productName: state.name,
-          price: state.price,
-          gender: state.gender,
-          size: state.size,
-          fio: fio,
-          email: email,
-          phone: phone.replace(/[^\d+]/g, ""),
-          deliveryProvider: deliveryProvider,
-          deliveryQuoteMode: deliveryMode,
-          deliveryQuoteCost: deliveryQuote?.cost,
-          fivepostPointId: pointId,
-          fivepostPointName: (fivepostNameInput?.value || "").trim(),
-          fivepostPointAddress: (fivepostAddrInput?.value || "").trim(),
-          fivepostPointType: (fivepostTypeInput?.value || "").trim(),
-          fivepostPointDetails: (fivepostDetailsInput?.value || "").trim(),
-          source: 'Онлайн-оплата (' + carrierName() + ' + ЮKassa)'
-        };
+        let orderPayload;
+        if (isCartOrder) {
+          const firstItem = cartCheckoutItems[0];
+          orderPayload = {
+            orderId: orderId,
+            items: cartCheckoutItems.map(function (it) {
+              return {
+                productId: it.productId,
+                name: it.name,
+                gender: it.gender,
+                size: it.size,
+                qty: Number(it.qty) || 1
+              };
+            }),
+            productId: firstItem.productId,
+            productName: cartCheckoutItems.length > 1
+              ? firstItem.name + " и ещё " + (cartCheckoutItems.length - 1) + " поз."
+              : firstItem.name,
+            price: String(totals.goodsTotal),
+            gender: firstItem.gender,
+            size: firstItem.size,
+            fio: fio,
+            email: email,
+            phone: phone.replace(/[^\d+]/g, ""),
+            deliveryProvider: deliveryProvider,
+            deliveryQuoteMode: deliveryMode,
+            deliveryQuoteCost: deliveryQuote?.cost,
+            fivepostPointId: pointId,
+            fivepostPointName: (fivepostNameInput?.value || "").trim(),
+            fivepostPointAddress: (fivepostAddrInput?.value || "").trim(),
+            fivepostPointType: (fivepostTypeInput?.value || "").trim(),
+            fivepostPointDetails: (fivepostDetailsInput?.value || "").trim(),
+            source: "Корзина (" + carrierName() + " + ЮKassa)"
+          };
+        } else {
+          const state = totals.state;
+          orderPayload = {
+            orderId: orderId,
+            productId: state.id,
+            productName: state.name,
+            price: state.price,
+            gender: state.gender,
+            size: state.size,
+            fio: fio,
+            email: email,
+            phone: phone.replace(/[^\d+]/g, ""),
+            deliveryProvider: deliveryProvider,
+            deliveryQuoteMode: deliveryMode,
+            deliveryQuoteCost: deliveryQuote?.cost,
+            fivepostPointId: pointId,
+            fivepostPointName: (fivepostNameInput?.value || "").trim(),
+            fivepostPointAddress: (fivepostAddrInput?.value || "").trim(),
+            fivepostPointType: (fivepostTypeInput?.value || "").trim(),
+            fivepostPointDetails: (fivepostDetailsInput?.value || "").trim(),
+            source: "Онлайн-оплата (" + carrierName() + " + ЮKassa)"
+          };
+        }
 
         if (submitBtn) {
           submitBtn.disabled = true;
@@ -770,110 +1044,132 @@
         showStatus("Соединение с платежным шлюзом...", "info");
 
         fetch("/api/yookassa/create.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(orderPayload)
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orderPayload)
         })
-        .then(res => res.json())
-        .then(data => {
+          .then(res => res.json())
+          .then(data => {
             if (data.success && data.confirmation_token) {
-                if (typeof window.YooMoneyCheckoutWidget === 'undefined') {
-                    showStatus("Не удалось загрузить форму оплаты. Возможно, она заблокирована расширением (AdBlock) или антивирусом. Пожалуйста, отключите блокировщик и обновите страницу.", "error");
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = "Оплатить онлайн";
-                    }
-                    return;
+              if (typeof window.YooMoneyCheckoutWidget === "undefined") {
+                showStatus("Не удалось загрузить форму оплаты. Возможно, она заблокирована расширением (AdBlock) или антивирусом. Пожалуйста, отключите блокировщик и обновите страницу.", "error");
+                if (submitBtn) {
+                  submitBtn.disabled = false;
+                  submitBtn.textContent = "Оплатить онлайн";
                 }
+                return;
+              }
 
-                const checkout = new window.YooMoneyCheckoutWidget({
-                    confirmation_token: data.confirmation_token,
-                    return_url: window.location.origin + '/payment-success.php?orderId=' + encodeURIComponent(orderId),
-                    customization: {
-                        colors: {
-                            control_primary: '#000000',
-                            background: '#F2F3F5'
-                        }
-                    },
-                    error_callback: function(error) {
-                        console.error("YooKassa Widget Error:", error);
-                        let errMsg = "Ошибка виджета оплаты";
-                        if (error) {
-                            if (typeof error === 'string') errMsg += ": " + error;
-                            else if (error.error) errMsg += ": " + error.error;
-                            else if (error.message) errMsg += ": " + error.message;
-                        }
-                        let supportMsg = "<br><br><span style='color: #3b82f6; font-size: 0.95em; display: block; margin-top: 5px;'>Если у вас возникает такая ошибка, пожалуйста, отправьте скриншот нам в Telegram (чтобы было видно всю ошибку) <a href='https://t.me/theboyforge' target='_blank' style='color: inherit; text-decoration: underline;'>@theboyforge</a>. После этого обновите страницу и попробуйте ещё раз.</span>";
-                        showStatus(errMsg + supportMsg, "error");
-                        if (submitBtn) {
-                            submitBtn.disabled = false;
-                            submitBtn.textContent = "Оплатить онлайн";
-                        }
-                    }
-                });
-                
-                checkout.on('success', () => {
-                    fetch("/api/yookassa/confirm.php", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            paymentId: data.payment_id,
-                            orderId: orderId
-                        })
-                    }).finally(() => {
-                        const finalPayload = Object.assign({}, orderPayload, {
-                            totalAmount: data.total_amount,
-                            deliveryCost: data.delivery_cost,
-                            paymentStatus: "paid",
-                            transactionId: data.payment_id || ""
-                        });
-                        
-                        showSuccessScreen(orderId, finalPayload);
-                        checkout.destroy();
-                        window.location.href = "/payment-success.php?orderId=" + orderId;
-                    });
-                });
-                
-                checkout.on('fail', () => {
-                    showStatus("Оплата не прошла", "error");
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = "Оплатить онлайн";
-                    }
-                    checkout.destroy();
-                });
+              const origin = (window.location && window.location.origin) ? window.location.origin : "";
+              if (isCartOrder) {
+                try {
+                  if (window.localStorage) {
+                    window.localStorage.setItem("bf_pending_cart_order", orderId);
+                  }
+                } catch (err) {}
+              }
 
+              const checkout = new window.YooMoneyCheckoutWidget({
+                confirmation_token: data.confirmation_token,
+                return_url: origin + "/payment-success.php?orderId=" + encodeURIComponent(orderId),
+                customization: {
+                  colors: {
+                    control_primary: "#000000",
+                    background: "#F2F3F5"
+                  }
+                },
+                error_callback: function (error) {
+                  console.error("YooKassa Widget Error:", error);
+                  let errMsg = "Ошибка виджета оплаты";
+                  if (error) {
+                    if (typeof error === "string") errMsg += ": " + error;
+                    else if (error.error) errMsg += ": " + error.error;
+                    else if (error.message) errMsg += ": " + error.message;
+                  }
+                  let supportMsg = "<br><br><span style='color: #3b82f6; font-size: 0.95em; display: block; margin-top: 5px;'>Если у вас возникает такая ошибка, пожалуйста, отправьте скриншот нам в Telegram (чтобы было видно всю ошибку) <a href='https://t.me/theboyforge' target='_blank' style='color: inherit; text-decoration: underline;'>@theboyforge</a>. После этого обновите страницу и попробуйте ещё раз.</span>";
+                  resetPaymentWidgetView();
+                  showStatus(errMsg + supportMsg, "error");
+                }
+              });
+
+              activeYookassaWidget = checkout;
+
+              checkout.on("success", () => {
+                fetch("/api/yookassa/confirm.php", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    paymentId: data.payment_id,
+                    orderId: orderId
+                  })
+                }).then(res => {
+                  if (!res.ok) throw new Error("Не удалось подтвердить платёж");
+                  return res.json();
+                }).then(result => {
+                  if (result.success && isCartOrder && window.BFCart) window.BFCart.clear();
+                }).catch(() => {
+                  // На странице возврата повторим проверку; корзину сохраняем до подтверждения.
+                }).finally(() => {
+                  checkout.destroy();
+                  activeYookassaWidget = null;
+                  if (window.location) {
+                    window.location.href = "/payment-success.php?orderId=" + orderId;
+                  }
+                });
+              });
+
+              checkout.on("fail", () => {
+                resetPaymentWidgetView();
+                showStatus("Оплата не прошла", "error");
+              });
+
+              providerButtons.forEach(button => { button.disabled = true; });
+              pointsRequest++;
+              selectionRequest++;
+
+              if (submitBtn) submitBtn.style.display = "none";
+              if (orderAgreeWrap) orderAgreeWrap.style.display = "none";
+              if (orderDetailsSections) orderDetailsSections.style.display = "none";
+
+              showStatus("", null);
+              document.cookie = "last_order_id=" + orderId + "; max-age=300; path=/";
+
+              if (widgetContainer) {
+                widgetContainer.style.display = "block";
+                widgetContainer.innerHTML = "";
+                checkout.render("yookassaWidgetContainer");
+              } else {
                 if (fivepostCard) fivepostCard.style.display = "none";
-                providerButtons.forEach(button => { button.disabled = true; });
-                pointsRequest++;
-                selectionRequest++;
                 if (fivepostMapWrapper) {
-                    fivepostMapWrapper.style.display = "block";
-                    fivepostMapWrapper.innerHTML = '';
+                  fivepostMapWrapper.style.display = "block";
+                  fivepostMapWrapper.innerHTML = "";
                 }
-                
-                if (submitBtn) submitBtn.style.display = "none";
-                const formSection = document.querySelector(".order-details-sections");
-                if (formSection) formSection.style.display = "none";
-                
-                showStatus("", null);
-                document.cookie = "last_order_id=" + orderId + "; max-age=300; path=/";
-                checkout.render('fivepostMapWrapper');
+                checkout.render("fivepostMapWrapper");
+              }
             } else {
-                throw new Error(data.error || "Ошибка создания платежа");
+              throw new Error(data.error || "Ошибка создания платежа");
             }
-        })
-        .catch(err => {
+          })
+          .catch(err => {
             console.error(err);
             let supportMsg = "<br><br><span style='color: #3b82f6; font-size: 0.95em; display: block; margin-top: 5px;'>Если у вас возникает такая ошибка, пожалуйста, отправьте скриншот нам в Telegram (чтобы было видно всю ошибку) <a href='https://t.me/theboyforge' target='_blank' style='color: inherit; text-decoration: underline;'>@theboyforge</a>. После этого обновите страницу и попробуйте ещё раз.</span>";
             showStatus((err.message || "Не удалось инициировать оплату") + supportMsg, "error");
             if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.textContent = "Оплатить онлайн";
+              submitBtn.disabled = false;
+              const totalsNow = getCheckoutTotals();
+              const retrySum = Math.round((totalsNow.goodsTotal + (deliveryQuote?.cost || 0)) * 100) / 100;
+              submitBtn.textContent = "Оплатить " + retrySum.toLocaleString("ru-RU") + " ₽ онлайн";
             }
-        });
+          });
       });
     }
 
+    if (typeof window !== "undefined") {
+      window.BFCheckout = {
+        openCartCheckout: openCartCheckout,
+        openSingleModal: openSingleModal,
+        ensureScriptsLoaded: ensureScriptsLoaded
+      };
+    }
   });
 })();

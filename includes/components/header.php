@@ -55,9 +55,19 @@ if (isset($_COOKIE['last_order_id']) && $currentScript !== 'payment-success.php'
         <img class="logo-dark" src="/images/logo.png" alt="BOYFORGE"
              onerror="this.replaceWith(document.createTextNode('BOYFORGE'))">
       </a>
-      <button class="burger" aria-label="Открыть меню" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
+      <div class="header-actions">
+        <button type="button" class="header-cart-btn" id="cartToggleBtn" aria-label="Открыть корзину" aria-expanded="false">
+          <svg class="header-cart-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <span class="header-cart-badge" id="cartCountBadge" hidden>0</span>
+        </button>
+        <button class="burger" aria-label="Открыть меню" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -69,6 +79,10 @@ if (isset($_COOKIE['last_order_id']) && $currentScript !== 'payment-success.php'
     <div class="menu-group">
       <a href="/">Главная</a>
       <a href="/catalog">Каталог</a>
+      <a href="#cart" class="mobile-menu-cart-link" data-open-cart>
+        <span>Корзина</span>
+        <span class="mobile-menu-cart-count" id="mobileMenuCartCount" hidden>0</span>
+      </a>
     </div>
 
     <span class="menu-divider" aria-hidden="true"></span>

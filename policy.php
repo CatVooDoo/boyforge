@@ -1,58 +1,11 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Политика в отношении обработки персональных данных — BOYFORGE</title>
-  <meta name="description" content="Политика в отношении обработки персональных данных интернет-магазина BOYFORGE (ИП Бояров Т. П.).">
-  <link rel="icon" href="/images/favicon.png" type="image/png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=28">
-</head>
-<body>
+<?php
+declare(strict_types=1);
 
-  <!-- ===== HEADER ===== -->
-  <header class="site-header">
-    <div class="container header-inner">
-      <a href="/" class="logo-photo" aria-label="BOYFORGE — на главную">
-        <img class="logo-dark" src="/images/logo.png" alt="BOYFORGE"
-             onerror="this.replaceWith(document.createTextNode('BOYFORGE'))">
-      </a>
-      <button class="burger" aria-label="Открыть меню" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-  </header>
+$pageTitle = 'Политика в отношении обработки персональных данных — BOYFORGE';
+$bodyClass = 'page-policy';
 
-  <!-- ===== SIDE MENU ===== -->
-  <div class="menu-overlay overlay" hidden></div>
-  <nav class="mobile-menu" aria-hidden="true" aria-label="Основное меню">
-    <button class="menu-close" aria-label="Закрыть меню">&times;</button>
-
-    <div class="menu-group">
-      <a href="/">Главная</a>
-      <a href="/catalog">Каталог</a>
-    </div>
-
-    <span class="menu-divider" aria-hidden="true"></span>
-
-    <div class="menu-group">
-      <a href="/delivery">Доставка</a>
-      <a href="/payment">Оплата</a>
-      <a href="/returns">Возврат</a>
-    </div>
-
-    <span class="menu-divider" aria-hidden="true"></span>
-
-    <div class="menu-group">
-      <a href="/about">О бренде</a>
-      <a href="/reviews">Отзывы</a>
-      <a href="/contacts">Контакты</a>
-    </div>
-
-  </nav>
+require __DIR__ . '/includes/components/header.php';
+?>
 
   <main class="container">
     <nav class="breadcrumbs" aria-label="Хлебные крошки">

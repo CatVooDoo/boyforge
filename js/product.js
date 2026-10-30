@@ -195,6 +195,9 @@
     })();
 
     var orderBtn = document.getElementById("orderBtn");
+    var addToCartBtn = document.getElementById("addToCartBtn");
+    var addToCartBtnText = document.getElementById("addToCartBtnText");
+    var addFeedbackTimer = null;
     var gendersWrap = document.getElementById("genders");
     var sizesWrap = document.querySelector(".sizes");
 
@@ -297,6 +300,72 @@
         }
         refreshHref();
 
+      });
+    }
+
+    if (addToCartBtn) {
+      addToCartBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        var gender = getGender();
+        if (!gender) {
+          flagGenderError();
+          if (gendersWrap) gendersWrap.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+        var size = getSize();
+        if (!size) {
+          flagSizeError();
+          return;
+        }
+        if (!window.BFCart || typeof window.BFCart.addItem !== "function") {
+          return;
+        }
+
+        var rawImg = (mainImg && mainImg.getAttribute("src")) || imgs[0] || "";
+        try {
+          if (rawImg && rawImg.indexOf("http") === 0) {
+            var parsedImg = new URL(rawImg, window.location.origin);
+            if (parsedImg.origin === window.location.origin) {
+              rawImg = parsedImg.pathname;
+            }
+          }
+        } catch (err) {}
+
+        var numericPrice = parseFloat(main.dataset.productPriceNumeric || "");
+        var result = window.BFCart.addItem({
+          productId: productId,
+          name: productName,
+          price: productPrice,
+          priceNumeric: isFinite(numericPrice) && numericPrice > 0 ? numericPrice : undefined,
+          gender: gender,
+          size: size,
+          qty: 1,
+          img: rawImg,
+          url: main.dataset.productUrl || window.location.pathname
+        });
+
+        if (!result || !result.added) {
+          if (window.BFCart.showToast) {
+            window.BFCart.showToast((result && result.error) || "Не удалось добавить товар");
+          }
+          return;
+        }
+
+        addToCartBtn.classList.add("is-added");
+        if (addToCartBtnText) {
+          addToCartBtnText.textContent = "Добавлено в корзину ✓";
+        }
+        clearTimeout(addFeedbackTimer);
+        addFeedbackTimer = setTimeout(function () {
+          addToCartBtn.classList.remove("is-added");
+          if (addToCartBtnText) {
+            addToCartBtnText.textContent = "Добавить в корзину";
+          }
+        }, 1600);
+
+        if (window.BFCart.showToast) {
+          window.BFCart.showToast(productName + " · " + gender + ", " + size);
+        }
       });
     }
 

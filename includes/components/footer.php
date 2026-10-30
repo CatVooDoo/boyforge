@@ -31,6 +31,8 @@ declare(strict_types=1);
     </div>
   </footer>
 
+<?php require __DIR__ . '/cart_modal.php'; ?>
+
   <script>
     function applyFilter(key, val) {
       const url = new URL(window.location.href);
@@ -39,12 +41,13 @@ declare(strict_types=1);
     }
   </script>
   <script src="/js/main.js?v=<?= filemtime(__DIR__ . '/../../js/main.js') ?>"></script>
+  <script src="/js/cart.js?v=<?= file_exists(__DIR__ . '/../../js/cart.js') ? filemtime(__DIR__ . '/../../js/cart.js') : time() ?>"></script>
 <?php
 $currentPage = basename($_SERVER['PHP_SELF']);
 if ($currentPage === 'product.php') {
     echo '  <script src="/js/product.js?v=' . filemtime(__DIR__ . '/../../js/product.js') . '"></script>' . "\n";
-    echo '  <script src="/js/checkout.js?v=' . filemtime(__DIR__ . '/../../js/checkout.js') . '"></script>' . "\n";
 }
 ?>
+  <script src="/js/checkout.js?v=<?= filemtime(__DIR__ . '/../../js/checkout.js') ?>"></script>
 </body>
 </html>
