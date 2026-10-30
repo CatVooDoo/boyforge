@@ -1,10 +1,18 @@
 <?php
+declare(strict_types=1);
+
+require_once dirname(__DIR__) . '/order_items.php';
 
 $orderId = htmlspecialchars((string)($order['order_id'] ?? 'N/A'));
 $fio = htmlspecialchars((string)($order['fio'] ?? 'Клиент'));
-$productName = htmlspecialchars((string)($order['product_name'] ?? 'Товар'));
-$size = htmlspecialchars((string)($order['size'] ?? '-'));
-$price = number_format((float)($order['price'] ?? 0) + (float)($order['delivery_cost'] ?? 0), 2, '.', ' ') . ' ₽';
+$items = normalizeOrderItems($order);
+$isMultiOrder = count($items) > 1 || (int)($items[0]['qty'] ?? 1) > 1;
+$goodsSum = orderItemsGoodsTotal($items);
+if ($goodsSum <= 0) {
+    $goodsSum = (float)($order['price'] ?? 0);
+}
+$deliveryCostVal = (float)($order['delivery_cost'] ?? 0);
+$price = number_format($goodsSum + $deliveryCostVal, 2, '.', ' ') . ' ₽';
 $carrier = ($order['delivery_provider'] ?? 'fivepost') === 'cdek' ? 'СДЭК' : '5Post';
 $trackingUrl = $carrier === 'СДЭК' ? 'https://www.cdek.ru/ru/tracking/' : 'https://fivepost.ru';
 $testDelivery = $carrier === 'СДЭК' && ($order['delivery_mode'] ?? '') === 'sandbox';
@@ -36,7 +44,7 @@ $date = date('d.m.Y H:i');
                     <tr>
                         <td style="padding: 40px 30px;">
                             <p style="margin: 0 0 30px 0; font-size: 16px; line-height: 1.5; color: #555555;">
-                                Спасибо за покупку!<br>
+                                Спасибо за покупку, <?= $fio ?>!<br>
                                 Ваш заказ успешно оплачен и передан в обработку.
                             </p>
 
@@ -45,14 +53,50 @@ $date = date('d.m.Y H:i');
                                 <h3 style="margin: 0 0 15px 0; font-size: 14px; text-transform: uppercase; color: #888888; letter-spacing: 1px;">Детали заказа #<?= $orderId ?></h3>
                                 
                                 <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                    <tr>
-                                        <td style="padding: 8px 0; font-size: 15px; border-bottom: 1px solid #eeeeee; color: #555555;">Товар:</td>
-                                        <td align="right" style="padding: 8px 0; font-size: 15px; font-weight: 600; border-bottom: 1px solid #eeeeee;"><?= $productName ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px 0; font-size: 15px; border-bottom: 1px solid #eeeeee; color: #555555;">Размер:</td>
-                                        <td align="right" style="padding: 8px 0; font-size: 15px; font-weight: 600; border-bottom: 1px solid #eeeeee;"><?= $size ?></td>
-                                    </tr>
+                                    <?php if (!$isMultiOrder): ?>
+                                        <?php
+                                            $single = $items[0];
+                                            $singleName = htmlspecialchars((string)$single['name']);
+                                            $singleVariant = implode(', ', array_filter([(string)$single['gender'], (string)$single['size']], static fn($v) => $v !== ''));
+                                            if ($singleVariant === '') {
+                                                $singleVariant = (string)($order['size'] ?? '-');
+                                            }
+                                        ?>
+                                        <tr>
+                                            <td style="padding: 8px 0; font-size: 15px; border-bottom: 1px solid #eeeeee; color: #555555;">Товар:</td>
+                                            <td align="right" style="padding: 8px 0; font-size: 15px; font-weight: 600; border-bottom: 1px solid #eeeeee;"><?= $singleName ?></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px 0; font-size: 15px; border-bottom: 1px solid #eeeeee; color: #555555;">Параметры:</td>
+                                            <td align="right" style="padding: 8px 0; font-size: 15px; font-weight: 600; border-bottom: 1px solid #eeeeee;"><?= htmlspecialchars($singleVariant) ?></td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="2" style="padding: 4px 0 10px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #888888; border-bottom: 1px solid #e5e5e5;">
+                                                Состав заказа (<?= orderTotalUnits($order) ?> шт.)
+                                            </td>
+                                        </tr>
+                                        <?php foreach ($items as $item): ?>
+                                            <?php
+                                                $iName = htmlspecialchars((string)$item['name']);
+                                                $iVariant = implode(', ', array_filter([(string)$item['gender'], (string)$item['size']], static fn($v) => $v !== ''));
+                                                $iQty = max(1, (int)$item['qty']);
+                                                $iUnitPrice = (float)$item['price'];
+                                                $iLineSum = number_format($iUnitPrice * $iQty, 2, '.', ' ') . ' ₽';
+                                            ?>
+                                            <tr>
+                                                <td style="padding: 10px 8px 10px 0; font-size: 14px; border-bottom: 1px solid #eeeeee; color: #111111; line-height: 1.4;">
+                                                    <div style="font-weight: 600;"><?= $iName ?></div>
+                                                    <?php if ($iVariant !== ''): ?>
+                                                        <div style="font-size: 12px; color: #666666; margin-top: 2px;"><?= htmlspecialchars($iVariant) ?> · <?= $iQty ?> шт. × <?= number_format($iUnitPrice, 0, '.', ' ') ?> ₽</div>
+                                                    <?php else: ?>
+                                                        <div style="font-size: 12px; color: #666666; margin-top: 2px;"><?= $iQty ?> шт. × <?= number_format($iUnitPrice, 0, '.', ' ') ?> ₽</div>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td align="right" valign="top" style="padding: 10px 0; font-size: 14px; font-weight: 600; border-bottom: 1px solid #eeeeee; white-space: nowrap;"><?= $iLineSum ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
                                     <tr>
                                         <td style="padding: 8px 0; font-size: 15px; border-bottom: 1px solid #eeeeee; color: #555555;">Доставка (<?= $carrier ?>):</td>
                                         <td align="right" style="padding: 8px 0; font-size: 15px; font-weight: 600; border-bottom: 1px solid #eeeeee; text-align: right; line-height: 1.4;"><?= $pointAddress ?></td>
@@ -61,10 +105,10 @@ $date = date('d.m.Y H:i');
                                         <td style="padding: 15px 0 0 0; font-size: 16px; font-weight: bold; color: #111111;">Итого оплачено:</td>
                                         <td align="right" style="padding: 15px 0 0 0; font-size: 18px; font-weight: bold; color: #111111;"><?= $price ?></td>
                                     </tr>
-                                    <?php if ((float)($order['delivery_cost'] ?? 0) > 0): ?>
+                                    <?php if ($deliveryCostVal > 0): ?>
                                     <tr>
                                         <td style="padding-top: 8px; font-size: 13px; color: #555555;">В том числе доставка:</td>
-                                        <td align="right" style="padding-top: 8px; font-size: 13px;"><?= number_format((float)$order['delivery_cost'], 2, '.', ' ') ?> ₽</td>
+                                        <td align="right" style="padding-top: 8px; font-size: 13px;"><?= number_format($deliveryCostVal, 2, '.', ' ') ?> ₽</td>
                                     </tr>
                                     <?php endif; ?>
                                 </table>

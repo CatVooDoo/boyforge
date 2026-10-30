@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/env.php';
+require_once __DIR__ . '/order_items.php';
 
 function sendTelegramNotification(array $order): void {
     $settingsFile = __DIR__ . '/settings.json';
@@ -27,12 +28,28 @@ function sendTelegramNotification(array $order): void {
     
     $apiUrl = rtrim($apiUrl, '/') . '/';
 
+    $items = normalizeOrderItems($order);
+    $totalUnits = orderTotalUnits($order);
+    $isMulti = count($items) > 1 || $totalUnits > 1;
+
     $text = "<b>Новый заказ #" . htmlspecialchars((string)($order['order_id'] ?? '')) . "</b>\n\n";
     $text .= "<b>Покупатель:</b> " . htmlspecialchars((string)($order['fio'] ?? 'Не указано')) . "\n";
     $text .= "<b>Телефон:</b> " . htmlspecialchars((string)($order['phone'] ?? 'Не указано')) . "\n";
     $text .= "<b>Email:</b> " . htmlspecialchars((string)($order['email'] ?? 'Не указано')) . "\n";
-    $text .= "<b>Товар:</b> " . htmlspecialchars((string)($order['product_name'] ?? 'Не указано')) . "\n";
-    $text .= "<b>Размер:</b> " . htmlspecialchars((string)($order['size'] ?? 'Не указано')) . "\n";
+
+    if (!$isMulti) {
+        $it0 = $items[0];
+        $variant0 = implode(', ', array_filter([(string)$it0['gender'], (string)$it0['size']], static fn($v) => $v !== ''));
+        $text .= "<b>Товар:</b> " . htmlspecialchars((string)$it0['name']) . "\n";
+        $text .= "<b>Размер:</b> " . htmlspecialchars($variant0 !== '' ? $variant0 : (string)($order['size'] ?? 'Не указано')) . "\n";
+    } else {
+        $text .= "\n<b>Состав заказа ({$totalUnits} шт.):</b>\n";
+        foreach ($items as $it) {
+            $lineSum = number_format((float)$it['price'] * max(1, (int)$it['qty']), 0, '.', ' ');
+            $text .= "• " . htmlspecialchars(formatOrderItemTitle($it, true)) . " — {$lineSum} ₽\n";
+        }
+    }
+
     $text .= "<b>Итого оплачено:</b> " . number_format((float)($order['price'] ?? 0) + (float)($order['delivery_cost'] ?? 0), 2, '.', ' ') . " руб.\n\n";
     $carrier = ($order['delivery_provider'] ?? 'fivepost') === 'cdek' ? 'СДЭК' : '5Post';
     $text .= '<b>Доставка (' . $carrier . "):</b>\n" . htmlspecialchars((string)($order['fivepost_point_address'] ?? 'Не указано'));

@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/order_items.php';
+
 /** API v2. Public sandbox credentials are published at https://apidoc.cdek.ru/. */
 class CdekClient
 {
@@ -91,15 +93,19 @@ class CdekClient
         return isset($cities[0]['code']) ? (int)$cities[0]['code'] : null;
     }
 
-    public function package(): array
+    public function package(int $totalUnits = 1): array
     {
-        return ['weight' => max(1, (int)(env_get('CDEK_WEIGHT_G') ?: 350)),
+        $units = max(1, $totalUnits);
+        $unitWeight = max(1, (int)(env_get('CDEK_WEIGHT_G') ?: 350));
+        $baseHeight = max(1, (int)(env_get('CDEK_HEIGHT_CM') ?: 5));
+        $height = $units === 1 ? $baseHeight : min(45, $baseHeight + ($units - 1) * 3);
+        return ['weight' => $unitWeight * $units,
             'length' => max(1, (int)(env_get('CDEK_LENGTH_CM') ?: 25)),
             'width' => max(1, (int)(env_get('CDEK_WIDTH_CM') ?: 20)),
-            'height' => max(1, (int)(env_get('CDEK_HEIGHT_CM') ?: 5))];
+            'height' => $height];
     }
 
-    public function quote(array $point, float $declaredValue = 0): array
+    public function quote(array $point, float $declaredValue = 0, int $totalUnits = 1): array
     {
         $senderPoint = (string)(env_get('CDEK_SENDER_POINT') ?: ($this->mode === 'sandbox' ? 'MSK1' : ''));
         $fromCode = (int)(env_get('CDEK_FROM_CITY_CODE') ?: ($this->mode === 'sandbox' ? 44 : 0));
@@ -110,7 +116,7 @@ class CdekClient
             'shipment_point' => $senderPoint,
             'delivery_point' => $point['id'],
             'services' => [['code' => 'INSURANCE', 'parameter' => (string)$declaredValue]],
-            'to_location' => ['code' => (int)$point['city_code']], 'packages' => [$this->package()],
+            'to_location' => ['code' => (int)$point['city_code']], 'packages' => [$this->package($totalUnits)],
         ]);
         if (!isset($body['total_sum'], $body['period_min'], $body['period_max']) || (float)$body['total_sum'] <= 0) {
             throw new RuntimeException('СДЭК: тариф недоступен для выбранного пункта');
@@ -123,15 +129,25 @@ class CdekClient
     {
         $senderPoint = (string)(env_get('CDEK_SENDER_POINT') ?: ($this->mode === 'sandbox' ? 'MSK1' : ''));
         if ($senderPoint === '') throw new RuntimeException('Не настроен пункт отправления CDEK_SENDER_POINT');
+        $items = normalizeOrderItems($order);
+        $totalUnits = orderTotalUnits($order);
+        $unitWeight = max(1, (int)(env_get('CDEK_WEIGHT_G') ?: 350));
+        $cdekItems = [];
+        foreach ($items as $it) {
+            $cdekItems[] = [
+                'name'     => mb_substr(formatOrderItemTitle($it, false), 0, 255),
+                'ware_key' => mb_substr((string)$it['product_id'], 0, 64),
+                'payment'  => ['value' => 0],
+                'cost'     => round((float)$it['price'], 2),
+                'weight'   => $unitWeight,
+                'amount'   => max(1, (int)$it['qty']),
+            ];
+        }
         return $this->http('POST', '/orders', [
             'type' => 1, 'number' => $order['order_id'], 'tariff_code' => 136,
             'shipment_point' => $senderPoint, 'delivery_point' => $order['fivepost_point_id'],
             'recipient' => ['name' => $order['fio'], 'phones' => [['number' => $order['phone']]]],
-            'packages' => [$this->package() + ['number' => '1', 'items' => [[
-                'name' => $order['product_name'], 'ware_key' => (string)$order['product_id'],
-                'payment' => ['value' => 0], 'cost' => (float)$order['price'],
-                'weight' => $this->package()['weight'], 'amount' => 1,
-            ]]]],
+            'packages' => [$this->package($totalUnits) + ['number' => '1', 'items' => $cdekItems]],
         ]);
     }
 

@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/order_items.php';
+
 class FivePostClient {
     private string $apiKey;
     private string $env;
@@ -227,28 +229,36 @@ class FivePostClient {
 
         $receiverName = trim((string)($order['fio'] ?? 'Покупатель BOYFORGE'));
         $receiverEmail = !empty($order['email']) ? trim((string)$order['email']) : null;
-        $productName = (string)($order['product_name'] ?? 'Товар BOYFORGE');
-        $itemPrice = (float)($order['price'] ?? 3200);
-        $weightGrams = (int)($order['weight_g'] ?? 350);
-        $weightMg = $weightGrams * 1000;
-        $heightMm = (int)($order['height_mm'] ?? 50);
+        $items = normalizeOrderItems($order);
+        $totalUnits = orderTotalUnits($order);
+        $itemPrice = orderItemsGoodsTotal($items);
+        if ($itemPrice <= 0) {
+            $itemPrice = (float)($order['price'] ?? 3200);
+        }
+        $weightGrams = (int)($order['weight_g'] ?? (350 * $totalUnits));
+        $weightMg = max(1000, $weightGrams * 1000);
+        $heightMm = (int)($order['height_mm'] ?? min(350, 50 + ($totalUnits - 1) * 30));
         $lengthMm = (int)($order['length_mm'] ?? 300);
         $widthMm  = (int)($order['width_mm'] ?? 250);
+
+        $productValues = [];
+        foreach ($items as $it) {
+            $productValues[] = [
+                'name'       => mb_substr(formatOrderItemTitle($it, false), 0, 250),
+                'price'      => round((float)$it['price'], 2),
+                'value'      => max(1, (int)$it['qty']),
+                'vat'        => -1,
+                'vendorCode' => mb_substr((string)($it['product_id'] ?: 'BF-ITEM'), 0, 64),
+            ];
+        }
+
         $cargoData = [
             'height'        => $heightMm,
             'length'        => $lengthMm,
             'width'         => $widthMm,
             'weight'        => $weightMg,
             'price'         => $itemPrice,
-            'productValues' => [
-                [
-                    'name'       => $productName,
-                    'price'      => $itemPrice,
-                    'value'      => 1,
-                    'vat'        => -1,
-                    'vendorCode' => (string)($order['product_id'] ?? 'BF-ITEM')
-                ]
-            ]
+            'productValues' => $productValues
         ];
         $senderCargoId = !empty($order['sender_cargo_id']) ? (string)$order['sender_cargo_id'] : ($senderOrderId . '-1');
         $cargoData['senderCargoId'] = $senderCargoId;

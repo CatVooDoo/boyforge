@@ -2,18 +2,22 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/order_items.php';
 require_once __DIR__ . '/fivepost.php';
 require_once __DIR__ . '/order_logger.php';
 require_once __DIR__ . '/cdek_orders.php';
 
 function saveOrderToDb(PDO $pdo, array $data, string $paymentStatus, string $transactionId = ''): void {
+    $items = normalizeOrderItems($data);
+    $summary = summarizeOrderFields($items);
+
     $stmt = $pdo->prepare("
         INSERT INTO orders (
-            order_id, client_order_id, product_id, product_name, price, gender, size,
+            order_id, client_order_id, product_id, product_name, price, gender, size, items_json,
             fio, phone, tg_username, email, fivepost_point_id, fivepost_point_name, fivepost_point_address,
             fivepost_point_type, delivery_provider, delivery_mode, delivery_cost, payment_status, payment_transaction_id, created_at
         ) VALUES (
-            :order_id, :client_order_id, :product_id, :product_name, :price, :gender, :size,
+            :order_id, :client_order_id, :product_id, :product_name, :price, :gender, :size, :items_json,
             :fio, :phone, :tg_username, :email, :fivepost_point_id, :fivepost_point_name, :fivepost_point_address,
             :fivepost_point_type, :delivery_provider, :delivery_mode, :delivery_cost, :payment_status, :payment_transaction_id, NOW()
         )
@@ -24,16 +28,19 @@ function saveOrderToDb(PDO $pdo, array $data, string $paymentStatus, string $tra
             updated_at = NOW()
     ");
 
-    $numPrice = (float)preg_replace('/[^\d.]/', '', (string)($data['price'] ?? '3200')) ?: 3200.0;
+    $numPrice = $summary['price'] > 0
+        ? $summary['price']
+        : ((float)preg_replace('/[^\d.]/', '', (string)($data['price'] ?? '3200')) ?: 3200.0);
 
     $stmt->execute([
         ':order_id'               => $data['orderId'],
         ':client_order_id'        => $data['orderId'],
-        ':product_id'             => $data['productId'] ?? 'BF-1',
-        ':product_name'           => $data['productName'] ?? 'Товар BOYFORGE',
+        ':product_id'             => $summary['product_id'],
+        ':product_name'           => $summary['product_name'],
         ':price'                  => $numPrice,
-        ':gender'                 => $data['gender'] ?? '',
-        ':size'                   => $data['size'] ?? '',
+        ':gender'                 => $summary['gender'],
+        ':size'                   => $summary['size'],
+        ':items_json'             => json_encode($items, JSON_UNESCAPED_UNICODE),
         ':fio'                    => $data['fio'] ?? '',
         ':phone'                  => $data['phone'] ?? '',
         ':tg_username'            => $data['tgUsername'] ?? '',
@@ -89,6 +96,7 @@ function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): voi
                 ->execute([':oid' => $orderId, ':tx' => $transactionId]);
 
             $fpClient = new FivePostClient();
+            $totalUnits = orderTotalUnits($order);
             $c2cResponse = $fpClient->createC2COrder([
                 'order_id'          => $order['order_id'],
                 'client_order_id'   => $order['client_order_id'],
@@ -96,10 +104,14 @@ function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): voi
                 'fivepost_point_id' => $order['fivepost_point_id'],
                 'fio'               => $order['fio'],
                 'phone'             => $order['phone'],
+                'email'             => $order['email'] ?? '',
                 'product_name'      => $order['product_name'],
                 'product_id'        => $order['product_id'],
+                'gender'            => $order['gender'] ?? '',
+                'size'              => $order['size'] ?? '',
+                'items_json'        => $order['items_json'] ?? null,
                 'price'             => (float)$order['price'],
-                'weight_g'          => 350
+                'weight_g'          => 350 * $totalUnits
             ]);
 
             logOrderEvent($orderId, '5post_c2c_order_creation', [
@@ -159,6 +171,11 @@ function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): voi
                 $safePhone = (strpos($order['phone'], '+') === 0) ? ("'" . $order['phone']) : $order['phone'];
                 
                 $contactInfo = !empty($order['email']) ? $order['email'] : $order['tg_username'];
+                $sheetItems = normalizeOrderItems($order);
+                $isMultiSheet = count($sheetItems) > 1 || (int)($sheetItems[0]['qty'] ?? 1) > 1;
+                $sheetProductName = $isMultiSheet
+                    ? implode("\n", array_map(static fn(array $i): string => formatOrderItemTitle($i, true), $sheetItems))
+                    : (string)$order['product_name'];
 
                 $googlePayload = [
                     'date'                 => date('d.m.Y H:i:s'),
@@ -169,7 +186,7 @@ function processPaidOrder(PDO $pdo, string $orderId, string $transactionId): voi
                     'phone'                => $safePhone,
                     'tgUsername'           => $contactInfo,
                     'fivepostPointAddress' => $carrier . ': ' . $order['fivepost_point_address'] . " ({$pointTypeRu})",
-                    'productName'          => $order['product_name'],
+                    'productName'          => $sheetProductName,
                     'gender'               => $order['gender'],
                     'size'                 => $order['size'],
                     'price'                => number_format((float)$order['price'] + (float)($order['delivery_cost'] ?? 0), 2, '.', ' ') . ' ₽',

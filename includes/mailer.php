@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/order_items.php';
 require_once dirname(__DIR__) . '/vendor/phpmailer/src/Exception.php';
 require_once dirname(__DIR__) . '/vendor/phpmailer/src/PHPMailer.php';
 require_once dirname(__DIR__) . '/vendor/phpmailer/src/SMTP.php';
@@ -45,8 +46,14 @@ function sendOrderReceipt(array $order): void {
         $mail->Subject = 'Ваш заказ #' . ($order['order_id'] ?? 'N/A') . ' в BOYFORGE';
         $mail->Body    = $htmlBody;
         
+        $items = normalizeOrderItems($order);
+        $itemsLines = array_map(static function (array $it): string {
+            $qty = max(1, (int)$it['qty']);
+            $sum = number_format((float)$it['price'] * $qty, 2, '.', ' ');
+            return '- ' . formatOrderItemTitle($it, true) . " — {$sum} руб.";
+        }, $items);
         $total = number_format((float)$order['price'] + (float)($order['delivery_cost'] ?? 0), 2, '.', ' ');
-        $mail->AltBody = "Спасибо за покупку!\nВаш заказ #{$order['order_id']} оплачен и передан в обработку.\nТовар: {$order['product_name']}\nСумма: {$total} руб.\nДоставка: {$carrier}.\n" . ($testDelivery ? 'ТЕСТ: посылка не будет отправлена.' : "Отслеживание после регистрации: {$trackingUrl}");
+        $mail->AltBody = "Спасибо за покупку!\nВаш заказ #{$order['order_id']} оплачен и передан в обработку.\nСостав заказа:\n" . implode("\n", $itemsLines) . "\nИтого: {$total} руб.\nДоставка: {$carrier} ({$order['fivepost_point_address']}).\n" . ($testDelivery ? 'ТЕСТ: посылка не будет отправлена.' : "Отслеживание после регистрации: {$trackingUrl}");
 
         $mail->send();
     } catch (Exception $e) {

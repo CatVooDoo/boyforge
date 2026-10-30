@@ -12,6 +12,23 @@ function sizesByGender(): array {
     ];
 }
 
+/** Единая проверка варианта товара для корзины и создания платежа. */
+function productVariantError(array $product, string $gender, string $size): string {
+    $sizes = sizesByGender();
+    $name = (string)($product['name'] ?? 'Товар BOYFORGE');
+    if (!isset($sizes[$gender])) {
+        return 'Выберите пол для товара «' . $name . '»';
+    }
+    if ($size === '' || !in_array($size, $sizes[$gender], true)) {
+        return 'Выберите доступный размер для товара «' . $name . '»';
+    }
+    $unavailable = productUnavailableSizes($product['sizes'] ?? null);
+    if (in_array($size, $unavailable[$gender] ?? [], true)) {
+        return sprintf('Размер %s (%s) для товара «%s» закончился', $size, $gender, $name);
+    }
+    return '';
+}
+
 function productUnavailableSizes($sizesRaw): array {
     if (is_array($sizesRaw)) {
         $parsed = $sizesRaw;
