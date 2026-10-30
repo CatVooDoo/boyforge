@@ -276,6 +276,8 @@ function initDatabase(PDO $pdo): void {
 }
 
 initDatabase($pdo);
+require_once dirname(__DIR__, 2) . '/includes/promocodes.php';
+ensurePromoSchema($pdo);
 
 function getCsrfToken(): string {
     if (empty($_SESSION['boyforge_csrf_token'])) {

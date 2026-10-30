@@ -13,11 +13,11 @@ function saveOrderToDb(PDO $pdo, array $data, string $paymentStatus, string $tra
 
     $stmt = $pdo->prepare("
         INSERT INTO orders (
-            order_id, client_order_id, product_id, product_name, price, gender, size, items_json,
+            order_id, client_order_id, product_id, product_name, price, gender, size, items_json, promo_code, discount_amount,
             fio, phone, tg_username, email, fivepost_point_id, fivepost_point_name, fivepost_point_address,
             fivepost_point_type, delivery_provider, delivery_mode, delivery_cost, payment_status, payment_transaction_id, created_at
         ) VALUES (
-            :order_id, :client_order_id, :product_id, :product_name, :price, :gender, :size, :items_json,
+            :order_id, :client_order_id, :product_id, :product_name, :price, :gender, :size, :items_json, :promo_code, :discount_amount,
             :fio, :phone, :tg_username, :email, :fivepost_point_id, :fivepost_point_name, :fivepost_point_address,
             :fivepost_point_type, :delivery_provider, :delivery_mode, :delivery_cost, :payment_status, :payment_transaction_id, NOW()
         )
@@ -41,6 +41,8 @@ function saveOrderToDb(PDO $pdo, array $data, string $paymentStatus, string $tra
         ':gender'                 => $summary['gender'],
         ':size'                   => $summary['size'],
         ':items_json'             => json_encode($items, JSON_UNESCAPED_UNICODE),
+        ':promo_code'              => $data['promoCode'] ?? null,
+        ':discount_amount'         => (float)($data['discountAmount'] ?? 0),
         ':fio'                    => $data['fio'] ?? '',
         ':phone'                  => $data['phone'] ?? '',
         ':tg_username'            => $data['tgUsername'] ?? '',

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../includes/bootstrap.php';
 require_once __DIR__ . '/../../includes/order_logic.php';
+require_once __DIR__ . '/../../includes/checkout_pricing.php';
 require_once __DIR__ . '/../../includes/order_logger.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -26,118 +27,30 @@ if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     exit;
 }
 
-$rawItems = [];
-if (!empty($input['items']) && is_array($input['items'])) {
-    $rawItems = $input['items'];
-} else {
-    $singleId = trim((string)($input['productId'] ?? ''));
-    if ($singleId === '') {
-        echo json_encode(['success' => false, 'error' => 'Product ID is missing'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-    $rawItems = [[
-        'productId' => $singleId,
-        'gender'    => trim((string)($input['gender'] ?? '')),
-        'size'      => trim((string)($input['size'] ?? '')),
-        'qty'       => max(1, (int)($input['qty'] ?? 1)),
-    ]];
-}
-
-if (count($rawItems) > 50) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Слишком много позиций в заказе'], JSON_UNESCAPED_UNICODE);
+try {
+    $pricing = priceCheckout($pdo, $input);
+} catch (InvalidArgumentException $e) {
+    http_response_code(422);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    exit;
+} catch (Throwable $e) {
+    http_response_code(503);
+    error_log('[Checkout] Pricing failed: ' . $e->getMessage());
+    echo json_encode(['success' => false, 'error' => 'Не удалось рассчитать заказ. Повторите попытку.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
-
-global $pdo;
-$stmtProd = $pdo->prepare("SELECT id, cat_id, name, price, price_numeric, img, sizes, is_active FROM products WHERE (id = :id OR cat_id = :cat_id) AND is_active = 1 LIMIT 1");
-
-$mergedItemsMap = [];
-foreach ($rawItems as $rawRow) {
-    if (!is_array($rawRow)) {
-        continue;
-    }
-    $pidRaw = trim((string)($rawRow['productId'] ?? $rawRow['product_id'] ?? $rawRow['id'] ?? ''));
-    if ($pidRaw === '') {
-        echo json_encode(['success' => false, 'error' => 'Product ID is missing'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    if (is_numeric($pidRaw)) {
-        $stmtProd->execute([':id' => (int)$pidRaw, ':cat_id' => '']);
-    } else {
-        $stmtProd->execute([':id' => 0, ':cat_id' => $pidRaw]);
-    }
-    $product = $stmtProd->fetch(PDO::FETCH_ASSOC);
-
-    if (!$product) {
-        echo json_encode(['success' => false, 'error' => 'Товар не найден или снят с публикации'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    $priceStr = (string)($product['price'] ?? '3200');
-    $unitPrice = round((float)preg_replace('/[^\d.]/', '', str_replace(',', '.', $priceStr)), 2);
-    if ($unitPrice <= 0 && !empty($product['price_numeric'])) {
-        $unitPrice = round((float)$product['price_numeric'], 2);
-    }
-    if ($unitPrice <= 0) {
-        echo json_encode(['success' => false, 'error' => 'Некорректная цена товара в базе данных'], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    $itemGender = trim((string)($rawRow['gender'] ?? ''));
-    $itemSize = trim((string)($rawRow['size'] ?? ''));
-    $itemQty = max(1, min(20, (int)($rawRow['qty'] ?? $rawRow['quantity'] ?? 1)));
-
-    $variantError = productVariantError($product, $itemGender, $itemSize);
-    if ($variantError !== '') {
-        http_response_code(422);
-        echo json_encode(['success' => false, 'error' => $variantError], JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-
-    $imgRaw = (string)($product['img'] ?? '');
-    $img = $imgRaw !== '' ? ('/' . ltrim($imgRaw, '/')) : '';
-    $resolvedPid = (string)$product['id'];
-    $mergeKey = $resolvedPid . '__' . $itemGender . '__' . $itemSize;
-
-    if (isset($mergedItemsMap[$mergeKey])) {
-        $mergedItemsMap[$mergeKey]['qty'] = min(20, $mergedItemsMap[$mergeKey]['qty'] + $itemQty);
-    } else {
-        $mergedItemsMap[$mergeKey] = [
-            'product_id' => $resolvedPid,
-            'name'       => (string)$product['name'],
-            'gender'     => $itemGender,
-            'size'       => $itemSize,
-            'qty'        => $itemQty,
-            'price'      => $unitPrice,
-            'img'        => $img,
-        ];
-    }
-}
-
-$verifiedItems = array_values($mergedItemsMap);
-if (empty($verifiedItems)) {
-    echo json_encode(['success' => false, 'error' => 'Корзина пуста'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
+$verifiedItems = $pricing['items'];
 $summary = summarizeOrderFields($verifiedItems);
 $priceValue = $summary['price'];
 $totalUnits = orderTotalUnits(['items' => $verifiedItems]);
-
-if ($totalUnits > 50) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Превышено максимальное количество единиц в одном заказе (50 шт.)'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
 $input['items'] = $verifiedItems;
 $input['price'] = (string)$priceValue;
 $input['productId'] = $summary['product_id'];
 $input['productName'] = $summary['product_name'];
 $input['gender'] = $summary['gender'];
 $input['size'] = $summary['size'];
+$input['promoCode'] = $pricing['promo']['code'] ?? null;
+$input['discountAmount'] = $pricing['discount'];
 
 $newOrderId = (string)($input['orderId'] ?? '');
 if (!preg_match('/^BF-[A-Z0-9]{6,32}$/', $newOrderId)) {
@@ -176,7 +89,7 @@ if ($provider === 'cdek') {
         $points = $cdek->points(['code' => $code]);
         $point = array_values(array_filter($points, static fn($p) => $p['id'] === $code))[0] ?? null;
         if (!$point) throw new RuntimeException('Пункт СДЭК недоступен');
-        $quote = $cdek->quote($point, $priceValue, $totalUnits);
+        $quote = $cdek->quote($point, $pricing['subtotal'], $totalUnits);
         $deliveryCost = round($quote['cost'], 2);
         if (($input['deliveryQuoteMode'] ?? '') !== $cdek->mode()
             || abs((float)($input['deliveryQuoteCost'] ?? -1) - $deliveryCost) > 0.009) {
@@ -226,6 +139,9 @@ logOrderEvent($orderId, 'order_created', [
     'total_units'  => $totalUnits,
     'price'        => $priceValue,
     'delivery'     => $deliveryCost,
+    'promo_code'    => $input['promoCode'],
+    'discount'     => $pricing['discount'],
+    'subtotal'     => $pricing['subtotal'],
 ]);
 
 $taxSystemCode = (int)(env_get('YOOKASSA_TAX_SYSTEM') ?: '1');

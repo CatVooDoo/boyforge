@@ -36,7 +36,7 @@ function normalizeOrderItems(array $order): array {
                 $name = 'Товар BOYFORGE';
             }
 
-            $normalized[] = [
+            $normalizedItem = [
                 'product_id' => (string)($row['product_id'] ?? $row['productId'] ?? $row['id'] ?? 'BF-1'),
                 'name'       => $name,
                 'gender'     => trim((string)($row['gender'] ?? '')),
@@ -45,6 +45,11 @@ function normalizeOrderItems(array $order): array {
                 'price'      => $price > 0 ? $price : 0.0,
                 'img'        => trim((string)($row['img'] ?? '')),
             ];
+            if (isset($row['original_price'], $row['discount_percent'])) {
+                $normalizedItem['original_price'] = round((float)$row['original_price'], 2);
+                $normalizedItem['discount_percent'] = (int)$row['discount_percent'];
+            }
+            $normalized[] = $normalizedItem;
         }
 
         if (!empty($normalized)) {

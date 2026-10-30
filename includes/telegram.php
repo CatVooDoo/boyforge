@@ -45,7 +45,7 @@ function sendTelegramNotification(array $order): void {
     } else {
         $text .= "\n<b>Состав заказа ({$totalUnits} шт.):</b>\n";
         foreach ($items as $it) {
-            $lineSum = number_format((float)$it['price'] * max(1, (int)$it['qty']), 0, '.', ' ');
+            $lineSum = number_format((float)$it['price'] * max(1, (int)$it['qty']), 2, '.', ' ');
             $text .= "• " . htmlspecialchars(formatOrderItemTitle($it, true)) . " — {$lineSum} ₽\n";
         }
     }

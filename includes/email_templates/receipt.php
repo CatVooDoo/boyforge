@@ -88,14 +88,17 @@ $date = date('d.m.Y H:i');
                                                 <td style="padding: 10px 8px 10px 0; font-size: 14px; border-bottom: 1px solid #eeeeee; color: #111111; line-height: 1.4;">
                                                     <div style="font-weight: 600;"><?= $iName ?></div>
                                                     <?php if ($iVariant !== ''): ?>
-                                                        <div style="font-size: 12px; color: #666666; margin-top: 2px;"><?= htmlspecialchars($iVariant) ?> · <?= $iQty ?> шт. × <?= number_format($iUnitPrice, 0, '.', ' ') ?> ₽</div>
+                                                        <div style="font-size: 12px; color: #666666; margin-top: 2px;"><?= htmlspecialchars($iVariant) ?> · <?= $iQty ?> шт. × <?= number_format($iUnitPrice, 2, '.', ' ') ?> ₽</div>
                                                     <?php else: ?>
-                                                        <div style="font-size: 12px; color: #666666; margin-top: 2px;"><?= $iQty ?> шт. × <?= number_format($iUnitPrice, 0, '.', ' ') ?> ₽</div>
+                                                        <div style="font-size: 12px; color: #666666; margin-top: 2px;"><?= $iQty ?> шт. × <?= number_format($iUnitPrice, 2, '.', ' ') ?> ₽</div>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td align="right" valign="top" style="padding: 10px 0; font-size: 14px; font-weight: 600; border-bottom: 1px solid #eeeeee; white-space: nowrap;"><?= $iLineSum ?></td>
                                             </tr>
                                         <?php endforeach; ?>
+                                    <?php endif; ?>
+                                    <?php if (!empty($order['promo_code'])): ?>
+                                    <tr><td colspan="2" style="padding:10px 0; font-size:12px; color:#2e7d32;">Промокод <?= htmlspecialchars((string)$order['promo_code']) ?>: скидка <?= number_format((float)($order['discount_amount'] ?? 0), 2, '.', ' ') ?> ₽ уже учтена в ценах товаров.</td></tr>
                                     <?php endif; ?>
                                     <tr>
                                         <td style="padding: 8px 0; font-size: 15px; border-bottom: 1px solid #eeeeee; color: #555555;">Доставка (<?= $carrier ?>):</td>
