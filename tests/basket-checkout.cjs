@@ -66,6 +66,8 @@ const elementIds = [
   'fivepostPointId', 'fivepostPointName', 'fivepostPointAddress', 'fivepostPointType', 'fivepostPointDetails',
   'fivepostSelectedCard', 'fivepostMapWrapper', 'fivepostCustomMap', 'fivepostCitySearch', 'fivepostCityClear',
   'fivepostMapLoader', 'deliveryNotice', 'deliveryQuote', 'deliveryPointList',
+  'checkoutPromoCode', 'checkoutPromoApply', 'checkoutPromoRemove', 'checkoutPromoStatus', 'checkoutPromoBreakdown',
+  'checkoutPromoOriginal', 'checkoutPromoDiscount', 'checkoutPromoDelivery', 'checkoutPromoTotal',
   'fivepostPointNameDisplay', 'fivepostPointAddressDisplay', 'fivepostPointExtraDisplay'
 ];
 
@@ -215,6 +217,40 @@ const reply = async (req, body) => { req.resolve({ ok: true, json: async () => b
   });
   assert.match(elements.orderConfirmBtn.textContent, /13.550/, 'submit button shows goods + CDEK delivery (13 550 ₽)');
 
+  const withPromo = process.argv.includes('--promo');
+  if (withPromo) {
+    // Responses to earlier codes cannot reinstate a removed or edited discount.
+    elements.checkoutPromoCode.value = 'OLD';
+    elements.checkoutPromoApply.trigger('click');
+    const stalePromoRequest = requests.at(-1);
+    elements.checkoutPromoCode.value = 'ХУДИ10';
+    elements.checkoutPromoCode.trigger('input');
+    elements.checkoutPromoApply.trigger('click');
+    const activePromoRequest = requests.at(-1);
+    assert.equal(activePromoRequest.url, '/api/promo-validate.php');
+    assert.equal(JSON.parse(activePromoRequest.options.body).items[0].qty, 2);
+    const promoResponse = { success: true, subtotal: 13000, total: 12020, discount: 980,
+      promo: {code: 'ХУДИ10', percent: 10, category: 'Худи'} };
+    await reply(activePromoRequest, promoResponse);
+    assert.match(elements.orderConfirmBtn.textContent, /12.570/, 'discount reduces goods; delivery stays 550');
+    assert.match(elements.checkoutPromoDiscount.textContent, /980/);
+    assert.match(elements.checkoutPromoDelivery.textContent, /550/);
+    assert.match(elements.checkoutPromoTotal.textContent, /12.570/);
+    await reply(stalePromoRequest, {...promoResponse, total: 1000, discount: 12000});
+    assert.match(elements.orderConfirmBtn.textContent, /12.570/, 'stale promo response ignored');
+    elements.checkoutPromoRemove.trigger('click');
+    assert.match(elements.orderConfirmBtn.textContent, /13.550/, 'removing promo restores original goods plus delivery');
+    assert.equal(elements.checkoutPromoCode.value, '');
+    elements.checkoutPromoCode.value = 'INVALID';
+    elements.checkoutPromoApply.trigger('click');
+    await reply(requests.at(-1), {success: false, error: 'Промокод не найден'});
+    assert.equal(elements.checkoutPromoStatus.classList.contains('is-error'), true);
+    assert.match(elements.orderConfirmBtn.textContent, /13.550/, 'invalid code never changes total');
+    // Typing a code and submitting applies it automatically before payment creation.
+    elements.checkoutPromoCode.value = 'ХУДИ10';
+    elements.checkoutPromoCode.trigger('input');
+  }
+
   // 5. Submit multi-item cart order -> verify payload, widget render & automatic cart clear on payment success
   elements.orderFio.value = 'Иванов Иван Иванович';
   elements.orderEmail.value = 'buyer@example.com';
@@ -222,8 +258,14 @@ const reply = async (req, body) => { req.resolve({ ok: true, json: async () => b
   elements.orderPolicyAgree.checked = true;
   elements.orderForm.trigger('submit', { preventDefault() {} });
 
-  assert.equal(requests[4].url, '/api/yookassa/create.php');
-  const createPayload = JSON.parse(requests[4].options.body);
+  if (withPromo) {
+    assert.equal(requests.at(-1).url, '/api/promo-validate.php', 'typed code is checked before creating a payment');
+    await reply(requests.at(-1), {success: true, subtotal: 13000, total: 12020, discount: 980, promo: {code: 'ХУДИ10', percent: 10, category: 'Худи'}});
+  }
+  const createRequest = requests.at(-1);
+  assert.equal(createRequest.url, '/api/yookassa/create.php');
+  const createPayload = JSON.parse(createRequest.options.body);
+  assert.equal(createPayload.promoCode, withPromo ? 'ХУДИ10' : '');
   assert.equal(Array.isArray(createPayload.items), true);
   assert.equal(createPayload.items.length, 2);
   assert.deepEqual(createPayload.items[0], { productId: '10', name: 'Худи Кузница', gender: 'Мужской', size: 'L', qty: 2 });
@@ -231,11 +273,11 @@ const reply = async (req, body) => { req.resolve({ ok: true, json: async () => b
   assert.equal(createPayload.deliveryProvider, 'cdek');
   assert.equal(createPayload.deliveryQuoteCost, 550);
 
-  await reply(requests[4], {
+  await reply(createRequest, {
     success: true,
     confirmation_token: 'ct-test-token',
     payment_id: 'pay_test_123',
-    total_amount: '13550.00',
+    total_amount: withPromo ? '12570.00' : '13550.00',
     delivery_cost: '550.00'
   });
 
@@ -247,9 +289,10 @@ const reply = async (req, body) => { req.resolve({ ok: true, json: async () => b
   // Widget success is not sufficient: preserve the cart until server confirmation.
   widgetInstance.handlers.success();
   assert.equal(BFCart.getTotalUnits(), 3, 'cart preserved while server confirmation is pending');
-  assert.equal(requests[5].url, '/api/yookassa/confirm.php');
+  const confirmRequest = requests.at(-1);
+  assert.equal(confirmRequest.url, '/api/yookassa/confirm.php');
   const confirmed = !process.argv.includes('--unconfirmed');
-  await reply(requests[5], { success: confirmed });
+  await reply(confirmRequest, { success: confirmed });
   assert.equal(BFCart.getTotalUnits(), confirmed ? 0 : 3, 'cart clears only after server confirms payment');
   assert.equal(elements.cartCountBadge.hidden, confirmed, 'header badge follows confirmed payment status');
   assert.equal(windowObj.location.href, '/payment-success.php?orderId=' + createPayload.orderId);

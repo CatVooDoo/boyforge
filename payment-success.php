@@ -50,7 +50,7 @@ if ($orderId !== '') {
               <?php foreach ($orderItems as $it): ?>
                   <div style="display: flex; justify-content: space-between; gap: 12px; padding: 3px 0;">
                       <span><?= htmlspecialchars(formatOrderItemTitle($it, true)) ?></span>
-                      <strong style="white-space: nowrap;"><?= number_format((float)$it['price'] * max(1, (int)$it['qty']), 0, '.', ' ') ?> ₽</strong>
+                      <strong style="white-space: nowrap;"><?= number_format((float)$it['price'] * max(1, (int)$it['qty']), 2, '.', ' ') ?> ₽</strong>
                   </div>
               <?php endforeach; ?>
               <?php if ($orderRow && (float)($orderRow['delivery_cost'] ?? 0) > 0): ?>
@@ -60,6 +60,9 @@ if ($orderId !== '') {
                   </div>
               <?php endif; ?>
               <?php if ($orderRow): ?>
+                  <?php if (!empty($orderRow['promo_code'])): ?>
+                  <div style="padding:4px 0; color:#2e7d32; font-size:12px;">Промокод <?= htmlspecialchars((string)$orderRow['promo_code']) ?>: скидка <?= number_format((float)$orderRow['discount_amount'], 2, '.', ' ') ?> ₽ уже учтена в ценах товаров.</div>
+                  <?php endif; ?>
                   <div style="display: flex; justify-content: space-between; gap: 12px; padding-top: 6px; margin-top: 4px; border-top: 1px dashed #d1d5db; font-weight: 700;">
                       <span>Итого</span>
                       <span><?= number_format((float)$orderRow['price'] + (float)($orderRow['delivery_cost'] ?? 0), 2, '.', ' ') ?> ₽</span>

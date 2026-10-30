@@ -93,6 +93,20 @@ $bfYandexApiKey = function_exists('env_get') ? (env_get('YANDEX_MAPS_API_KEY') ?
 
         <form id="orderForm" novalidate>
           <div class="order-details-sections" id="orderDetailsSections">
+            <section class="checkout-promo" aria-label="Промокод">
+              <label for="checkoutPromoCode">Есть промокод?</label>
+              <div class="checkout-promo-controls">
+                <input class="ozon-input" id="checkoutPromoCode" maxlength="32" placeholder="Введите промокод" autocomplete="off" autocapitalize="characters" spellcheck="false">
+                <button class="checkout-promo-apply" type="button" id="checkoutPromoApply">Применить</button>
+              </div>
+              <div class="checkout-promo-feedback"><p id="checkoutPromoStatus" role="status" aria-live="polite"></p><button type="button" id="checkoutPromoRemove" hidden>Убрать</button></div>
+              <div class="checkout-promo-breakdown" id="checkoutPromoBreakdown" hidden>
+                <div><span>Товары без скидки</span><span id="checkoutPromoOriginal"></span></div>
+                <div class="checkout-promo-saving"><span>Скидка на товары</span><span id="checkoutPromoDiscount"></span></div>
+                <div><span>Доставка</span><span id="checkoutPromoDelivery"></span></div>
+                <div class="checkout-promo-total"><strong>К оплате</strong><strong id="checkoutPromoTotal"></strong></div>
+              </div>
+            </section>
             <!-- 1. Контактные данные -->
             <div class="ozon-section">
               <div class="ozon-section-title">1. Контактные данные покупателя</div>

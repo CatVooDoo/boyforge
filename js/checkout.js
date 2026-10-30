@@ -112,6 +112,14 @@
     let checkoutMode = "single";
     let cartCheckoutItems = [];
     let activeYookassaWidget = null;
+    const promoInput = document.getElementById("checkoutPromoCode");
+    const promoApplyBtn = document.getElementById("checkoutPromoApply");
+    const promoRemoveBtn = document.getElementById("checkoutPromoRemove");
+    const promoStatus = document.getElementById("checkoutPromoStatus");
+    let appliedPromo = null;
+    let promoRequest = 0;
+    let promoBusy = false;
+
 
     let yandexMap = null;
     let pointsCollection = null;
@@ -181,7 +189,8 @@
         }, 0);
         return {
           mode: "cart",
-          goodsTotal: goodsTotal,
+          originalGoodsTotal: goodsTotal,
+          goodsTotal: appliedPromo ? appliedPromo.total : goodsTotal,
           totalUnits: Math.max(1, totalUnits),
           items: cartCheckoutItems
         };
@@ -191,10 +200,95 @@
       const goodsTotal = parseFloat(String(state.price || "").replace(/[^\d.]/g, "")) || 3200;
       return {
         mode: "single",
-        goodsTotal: goodsTotal,
+        originalGoodsTotal: goodsTotal,
+        goodsTotal: appliedPromo ? appliedPromo.total : goodsTotal,
         totalUnits: 1,
         state: state
       };
+    }
+
+    function promoItemsPayload() {
+      if (checkoutMode === "cart") {
+        return cartCheckoutItems.map(it => ({productId: it.productId, gender: it.gender, size: it.size, qty: Number(it.qty) || 1}));
+      }
+      const state = getProductState();
+      return [{productId: state.id, gender: state.gender, size: state.size, qty: 1}];
+    }
+
+    function promoCodeValue() { return promoInput ? promoInput.value.trim().toUpperCase() : ""; }
+
+    function refreshPromoTotals() {
+      const totals = getCheckoutTotals();
+      const breakdown = document.getElementById("checkoutPromoBreakdown");
+      if (breakdown) breakdown.hidden = !appliedPromo;
+      if (promoRemoveBtn) promoRemoveBtn.hidden = !appliedPromo;
+      const delivery = deliveryQuote ? deliveryQuote.cost : 0;
+      const values = {
+        checkoutPromoOriginal: formatRub(appliedPromo ? appliedPromo.subtotal : totals.originalGoodsTotal),
+        checkoutPromoDiscount: "−" + formatRub(appliedPromo ? appliedPromo.discount : 0),
+        checkoutPromoDelivery: fivepostIdInput && fivepostIdInput.value ? formatRub(delivery) : "После выбора ПВЗ",
+        checkoutPromoTotal: formatRub(totals.goodsTotal + delivery)
+      };
+      Object.keys(values).forEach(id => { const el = document.getElementById(id); if (el) el.textContent = values[id]; });
+      if (submitBtn && !activeYookassaWidget) submitBtn.textContent = "Оплатить " + formatRub(totals.goodsTotal + delivery) + " онлайн";
+      if (quoteEl && deliveryQuote) {
+        quoteEl.textContent = "Доставка: " + formatRub(delivery) + " · " + deliveryQuote.days_min + "–" + deliveryQuote.days_max + " дн. Итого: " + formatRub(totals.goodsTotal + delivery);
+      }
+    }
+
+    function resetPromo(clearInput) {
+      promoRequest++;
+      appliedPromo = null;
+      promoBusy = false;
+      if (promoApplyBtn) promoApplyBtn.disabled = false;
+      if (clearInput && promoInput) promoInput.value = "";
+      if (promoStatus) { promoStatus.textContent = ""; promoStatus.classList.remove("is-error"); }
+      refreshPromoTotals();
+    }
+
+    async function applyCheckoutPromo() {
+      const code = promoCodeValue();
+      if (!code) { resetPromo(false); return true; }
+      const items = promoItemsPayload();
+      const signature = JSON.stringify(items);
+      const request = ++promoRequest;
+      promoBusy = true;
+      if (promoApplyBtn) promoApplyBtn.disabled = true;
+      if (promoStatus) { promoStatus.textContent = "Проверяем промокод…"; promoStatus.classList.remove("is-error"); }
+      try {
+        const response = await fetch("/api/promo-validate.php", {
+          method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({promoCode: code, items: items})
+        });
+        const data = await response.json();
+        if (request !== promoRequest || code !== promoCodeValue() || signature !== JSON.stringify(promoItemsPayload())) return false;
+        if (!response.ok || !data.success) throw new Error(data.error || "Не удалось проверить промокод.");
+        appliedPromo = data;
+        if (promoInput) promoInput.value = data.promo.code;
+        if (promoStatus) promoStatus.textContent = "Промокод " + data.promo.code + ": −" + data.promo.percent + "% на категорию «" + data.promo.category + "».";
+        refreshPromoTotals();
+        return true;
+      } catch (error) {
+        if (request === promoRequest) {
+          appliedPromo = null;
+          if (promoStatus) { promoStatus.textContent = error.message || "Не удалось проверить промокод."; promoStatus.classList.add("is-error"); }
+          refreshPromoTotals();
+        }
+        return false;
+      } finally {
+        if (request === promoRequest) {
+          promoBusy = false;
+          if (promoApplyBtn) promoApplyBtn.disabled = false;
+        }
+      }
+    }
+
+    if (promoApplyBtn) promoApplyBtn.addEventListener("click", applyCheckoutPromo);
+    if (promoRemoveBtn) promoRemoveBtn.addEventListener("click", () => resetPromo(true));
+    if (promoInput) {
+      promoInput.addEventListener("input", () => resetPromo(false));
+      promoInput.addEventListener("keydown", event => {
+        if (event.key === "Enter") { event.preventDefault(); applyCheckoutPromo(); }
+      });
     }
 
     function resetPaymentWidgetView() {
@@ -231,6 +325,7 @@
       if (fivepostMapWrapper) fivepostMapWrapper.style.display = "block";
       if (quoteEl) quoteEl.hidden = true;
       if (submitBtn) submitBtn.textContent = "Оплатить онлайн картой / СБП";
+      refreshPromoTotals();
     }
 
     providerButtons.forEach(button => button.addEventListener("click", function () {
@@ -267,6 +362,7 @@
           const totals = getCheckoutTotals();
           submitBtn.textContent = "Оплатить " + totals.goodsTotal.toLocaleString("ru-RU") + " ₽ онлайн";
         }
+        refreshPromoTotals();
         return;
       }
       clearDeliverySelection();
@@ -274,7 +370,7 @@
       showStatus("Рассчитываем стоимость доставки СДЭК…", "info");
       try {
         const totals = getCheckoutTotals();
-        const value = totals.goodsTotal || 3200;
+        const value = totals.originalGoodsTotal || 3200;
         const quoteUrl = "/api/cdek-quote.php?point=" + encodeURIComponent(point.id)
           + "&value=" + encodeURIComponent(value)
           + (totals.totalUnits > 1 ? "&qty=" + encodeURIComponent(totals.totalUnits) : "");
@@ -286,13 +382,14 @@
         deliveryQuoteSignature = value + ":" + totals.totalUnits;
         updateDeliveryMode(data.mode);
         handleSelect5PostPoint(data.point);
-        const total = Math.round((value + data.quote.cost) * 100) / 100;
+        const total = Math.round((totals.goodsTotal + data.quote.cost) * 100) / 100;
         if (quoteEl) {
           quoteEl.hidden = false;
           const itemsWord = totals.totalUnits > 1 ? "Итого с товарами" : "Итого с товаром";
           quoteEl.textContent = `Доставка: ${data.quote.cost.toLocaleString("ru-RU")} ₽ · ${data.quote.days_min}–${data.quote.days_max} дн. ${itemsWord}: ${total.toLocaleString("ru-RU")} ₽`;
         }
         if (submitBtn) submitBtn.textContent = "Оплатить " + total.toLocaleString("ru-RU") + " ₽ онлайн";
+        refreshPromoTotals();
       } catch (err) {
         if (request === selectionRequest) showStatus(escapeHtml(err.message), "error");
       }
@@ -722,12 +819,13 @@
     }
 
     function finalizeModalOpen() {
+      resetPromo(true);
       ensureScriptsLoaded();
       resetPaymentWidgetView();
       showStatus("", null);
 
       const totals = getCheckoutTotals();
-      const sig = totals.goodsTotal + ":" + totals.totalUnits;
+      const sig = totals.originalGoodsTotal + ":" + totals.totalUnits;
       if (deliveryProvider === "cdek" && deliveryQuote && deliveryQuoteSignature !== sig) {
         clearDeliverySelection();
       }
@@ -827,6 +925,7 @@
 
     function closeModal() {
       resetPaymentWidgetView();
+      resetPromo(true);
       modal.classList.remove("is-open");
       modal.setAttribute("aria-hidden", "true");
       const drawer = document.getElementById("cartDrawer");
@@ -905,7 +1004,7 @@
     }
 
     if (form) {
-      form.addEventListener("submit", function (e) {
+      form.addEventListener("submit", async function (e) {
         e.preventDefault();
 
         const fio = (fioInput?.value || "").trim();
@@ -966,6 +1065,11 @@
         if (deliveryProvider === "cdek" && !deliveryQuote) {
           showStatus("Выберите пункт СДЭК и дождитесь расчёта доставки", "error");
           return;
+        }
+
+        if (promoBusy) return;
+        if (promoCodeValue() && (!appliedPromo || appliedPromo.promo.code !== promoCodeValue())) {
+          if (!(await applyCheckoutPromo())) return;
         }
 
         const isCartOrder = checkoutMode === "cart";
@@ -1037,6 +1141,7 @@
           };
         }
 
+        orderPayload.promoCode = appliedPromo ? appliedPromo.promo.code : "";
         if (submitBtn) {
           submitBtn.disabled = true;
           submitBtn.textContent = "Создание платежа...";

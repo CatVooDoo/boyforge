@@ -3848,3 +3848,14 @@ body:not(.home){
     width:auto;
   }
 }
+
+/* Промокод в общей форме оформления заказа */
+.checkout-promo{padding:18px;margin:0 0 24px;border:1px solid var(--border-color,#e5e7eb);border-radius:14px;background:#fafaf8}
+.checkout-promo>label{display:block;font-size:12px;font-weight:700;margin-bottom:10px}
+.checkout-promo-controls{display:flex;gap:8px}.checkout-promo-controls .ozon-input{flex:1;min-width:0;margin:0}
+.checkout-promo-apply{background:var(--black,#141414);color:#fff;border-radius:8px;padding:12px 14px;font:inherit;font-size:11px;font-weight:600;white-space:nowrap}
+.checkout-promo-apply:disabled{opacity:.5;cursor:wait}.checkout-promo-feedback{display:flex;align-items:baseline;gap:10px}
+.checkout-promo-feedback p{font-size:11px;line-height:1.7;color:#4b5563;margin:8px 0 0;overflow-wrap:anywhere}.checkout-promo-feedback p.is-error{color:#b91c1c}
+.checkout-promo-feedback button{font:inherit;font-size:10px;text-decoration:underline;flex-shrink:0}.checkout-promo-breakdown{display:grid;gap:8px;padding-top:14px;margin-top:14px;border-top:1px solid #e5e7eb;font-size:11px}
+.checkout-promo-breakdown>div{display:flex;justify-content:space-between;gap:12px}.checkout-promo-saving{color:#2e7d32}.checkout-promo-total{padding-top:10px;border-top:1px solid #e5e7eb;font-size:13px}
+@media(max-width:380px){.checkout-promo{padding:12px}.checkout-promo-controls{flex-wrap:wrap}.checkout-promo-controls .ozon-input{flex-basis:100%}.checkout-promo-apply{width:100%}}
