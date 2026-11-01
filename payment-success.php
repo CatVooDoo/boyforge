@@ -55,7 +55,7 @@ if ($orderId !== '') {
               <?php endforeach; ?>
               <?php if ($orderRow && (float)($orderRow['delivery_cost'] ?? 0) > 0): ?>
                   <div style="display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; color: #4b5563; font-size: 12.5px;">
-                      <span>Доставка СДЭК</span>
+                      <span>Доставка</span>
                       <span><?= number_format((float)$orderRow['delivery_cost'], 2, '.', ' ') ?> ₽</span>
                   </div>
               <?php endif; ?>

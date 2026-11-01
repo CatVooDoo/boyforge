@@ -91,7 +91,7 @@ require __DIR__ . '/includes/components/header.php';
     <?php else: ?>
 
       <nav class="breadcrumbs" aria-label="Хлебные крошки">
-        <a href="/">Главная</a> <span>/</span>
+        <a href="/" class="breadcrumb-home">Главная</a> <span class="breadcrumb-home" aria-hidden="true">/</span>
         <a href="/catalog">Каталог</a> <span>/</span>
         <span id="crumbName"><?= $pName ?></span>
       </nav>
@@ -194,8 +194,8 @@ require __DIR__ . '/includes/components/header.php';
             <div class="accordion-item">
               <button class="accordion-head" type="button">Доставка и оплата <span class="plus">+</span></button>
               <div class="accordion-body"><div class="accordion-body-inner">
-                <p>Выберите 5Post или СДЭК и удобный пункт выдачи на карте при оформлении заказа.
-                Стоимость и срок доставки СДЭК рассчитываются после выбора пункта; доставка оплачивается вместе с товаром.
+                <p>Выберите удобный пункт выдачи 5Post на карте при оформлении заказа.
+                Доставку оплачивает магазин.
                 Оплата — онлайн картой или СБП, электронный чек придёт на email. Доставку за пределы России согласуем в Telegram.</p>
               </div></div>
             </div>

@@ -1,10 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../includes/bootstrap.php';
-require_once __DIR__ . '/../../includes/order_logic.php';
-require_once __DIR__ . '/../../includes/checkout_pricing.php';
-require_once __DIR__ . '/../../includes/order_logger.php';
+require_once __DIR__ . '/../../includes/delivery_availability.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -20,6 +17,19 @@ if (!is_array($input)) {
     echo json_encode(['success' => false, 'error' => 'Invalid JSON'], JSON_UNESCAPED_UNICODE);
     exit;
 }
+
+$provider = $input['deliveryProvider'] ?? 'fivepost';
+if (!in_array($provider, ['fivepost', 'cdek'], true)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Неизвестная служба доставки'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+if ($provider === 'cdek') requireCdekCheckoutEnabled();
+
+require_once __DIR__ . '/../../includes/bootstrap.php';
+require_once __DIR__ . '/../../includes/order_logic.php';
+require_once __DIR__ . '/../../includes/checkout_pricing.php';
+require_once __DIR__ . '/../../includes/order_logger.php';
 
 $email = trim((string)($input['email'] ?? ''));
 if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -67,12 +77,6 @@ if ($existingOrder->fetchColumn()) {
 }
 
 // Resolve the office and tariff on the server; never trust browser prices or addresses.
-$provider = $input['deliveryProvider'] ?? 'fivepost';
-if (!in_array($provider, ['fivepost', 'cdek'], true)) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Неизвестная служба доставки'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
 $input['deliveryProvider'] = $provider;
 $input['deliveryCost'] = 0;
 $input['deliveryMode'] = 'production';

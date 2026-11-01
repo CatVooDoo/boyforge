@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/includes/delivery_availability.php';
 
 $pageTitle = 'Доставка — BOYFORGE';
 $bodyClass = 'page-delivery';
@@ -16,7 +17,7 @@ require __DIR__ . '/includes/components/header.php';
       <!-- ===== HERO ===== -->
       <section class="svc-hero reveal">
         <h1>Как посылка<br>доедет до вас</h1>
-        <p>Выбирайте 5Post или СДЭК и удобный пункт выдачи при оформлении заказа. Доставку за пределы России обсудим в Telegram.</p>
+        <p>Выбирайте <?= CDEK_CHECKOUT_ENABLED ? '5Post или СДЭК и удобный пункт выдачи' : 'удобный пункт выдачи 5Post' ?> при оформлении заказа. Доставку за пределы России обсудим в Telegram.</p>
       </section>
 
       <!-- ===== FACTS ===== -->
@@ -26,8 +27,8 @@ require __DIR__ . '/includes/components/header.php';
           <span class="fact-label">дней по России в среднем</span>
         </div>
         <div class="delivery-fact">
-          <span class="fact-num">2</span>
-          <span class="fact-label">службы доставки: 5Post и СДЭК</span>
+          <span class="fact-num"><?= CDEK_CHECKOUT_ENABLED ? '2' : '1' ?></span>
+          <span class="fact-label"><?= CDEK_CHECKOUT_ENABLED ? 'службы доставки: 5Post и СДЭК' : 'служба доставки: 5Post' ?></span>
         </div>
         <div class="delivery-fact">
           <span class="fact-num">СНГ</span>
@@ -42,7 +43,7 @@ require __DIR__ . '/includes/components/header.php';
           <div class="delivery-num">1</div>
           <div class="delivery-body">
             <h3>Оформление заказа</h3>
-            <p>Выберите вещь, размер, службу доставки и пункт выдачи на карте. Оплатите заказ онлайн; электронный чек придёт на email.</p>
+            <p>Выберите вещь, размер и пункт выдачи на карте. Оплатите заказ онлайн; электронный чек придёт на email.</p>
           </div>
         </div>
         <div class="delivery-step reveal">
@@ -63,7 +64,7 @@ require __DIR__ . '/includes/components/header.php';
           <div class="delivery-num">4</div>
           <div class="delivery-body">
             <h3>Получение</h3>
-            <p>Забираете посылку в выбранном пункте 5Post или СДЭК. Служба доставки сообщит о готовности к выдаче.</p>
+            <p>Забираете посылку в выбранном пункте <?= CDEK_CHECKOUT_ENABLED ? '5Post или СДЭК' : '5Post' ?>. Служба доставки сообщит о готовности к выдаче.</p>
           </div>
         </div>
       </div>
@@ -76,18 +77,23 @@ require __DIR__ . '/includes/components/header.php';
           <p class="svc-card-tag">Пятёрочка / Перекрёсток</p>
           <p>Получайте заказы в магазинах и постаматах сети. Выберите удобную точку на карте при оформлении.</p>
         </div>
+        <?php if (CDEK_CHECKOUT_ENABLED): ?>
         <div class="svc-card reveal">
           <h3>СДЭК</h3>
           <p class="svc-card-tag">Пункты выдачи</p>
           <p>Переключите службу на СДЭК на карте. После выбора пункта покажем стоимость и срок доставки до оплаты заказа.</p>
         </div>
+        <?php endif; ?>
       </div>
 
       <!-- ===== CONDITIONS ===== -->
       <div class="delivery-note reveal">
-        <p><strong>Условия доставки:</strong> службу доставки выбираете вы при оформлении заказа.</p>
+        <p><strong>Условия доставки:</strong> <?= CDEK_CHECKOUT_ENABLED ? 'службу доставки выбираете вы' : 'выберите удобный пункт выдачи 5Post' ?> при оформлении заказа.</p>
         <p>Доставку 5Post оплачивает магазин.</p>
-        <p>Стоимость доставки СДЭК добавляется к стоимости товара и оплачивается онлайн. Доставку в страны СНГ согласуем индивидуально.</p>
+        <?php if (CDEK_CHECKOUT_ENABLED): ?>
+        <p>Стоимость доставки СДЭК добавляется к стоимости товара и оплачивается онлайн.</p>
+        <?php endif; ?>
+        <p>Доставку в страны СНГ согласуем индивидуально.</p>
         <p>Сроки по предзаказу устанавливаются индивидуально и составляют от 21 дня с момента оплаты. Подробности — в Публичной оферте.</p>
       </div>
 

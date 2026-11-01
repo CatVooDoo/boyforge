@@ -1328,6 +1328,7 @@ body:not(.home){
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
 }
+.svc-cards > .svc-card:only-child { grid-column: 1 / -1; }
 .svc-card{
   position: relative;
   overflow: hidden;
@@ -3196,6 +3197,13 @@ body:not(.home){
 }
 .header-actions .burger{
   margin-left:0;
+}
+
+@media (max-width:768px){
+  .header-actions{ display:contents; }
+  .header-actions .burger{ order:-1; }
+  .header-cart-btn{ margin-left:auto; }
+  .page-product .breadcrumbs .breadcrumb-home{ display:none; }
 }
 
 .header-cart-btn{

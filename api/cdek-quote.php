@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/../includes/delivery_availability.php';
+requireCdekCheckoutEnabled();
 require_once __DIR__ . '/../includes/env.php';
 require_once __DIR__ . '/../includes/cdek.php';
 env_load();

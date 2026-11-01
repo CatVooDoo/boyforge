@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/../delivery_availability.php';
 $bfYandexApiKey = function_exists('env_get') ? (env_get('YANDEX_MAPS_API_KEY') ?: '') : '';
 ?>
   <!-- ===== БОКОВАЯ ПАНЕЛЬ КОРЗИНЫ ===== -->
@@ -26,7 +27,7 @@ $bfYandexApiKey = function_exists('env_get') ? (env_get('YANDEX_MAPS_API_KEY') ?
           </svg>
         </div>
         <div class="cart-empty-title">В корзине пока пусто</div>
-        <p class="cart-empty-sub">Выберите модель, пол и размер в каталоге — доставим через 5Post или СДЭК по всей России.</p>
+        <p class="cart-empty-sub">Выберите модель, пол и размер в каталоге — доставим через 5Post по всей России.</p>
         <a href="/catalog" class="btn-primary cart-empty-cta">Перейти в каталог</a>
       </div>
 
@@ -134,7 +135,9 @@ $bfYandexApiKey = function_exists('env_get') ? (env_get('YANDEX_MAPS_API_KEY') ?
 
               <div class="delivery-switch" role="group" aria-label="Служба доставки">
                 <button type="button" class="delivery-option is-active" data-delivery-provider="fivepost" aria-pressed="true"><strong>5Post</strong><span>Пятёрочка / Перекрёсток</span></button>
+                <?php if (CDEK_CHECKOUT_ENABLED): ?>
                 <button type="button" class="delivery-option" data-delivery-provider="cdek" aria-pressed="false"><strong>СДЭК</strong><span>Пункты выдачи</span></button>
+                <?php endif; ?>
               </div>
               <p id="deliveryQuote" class="delivery-quote" role="status" hidden></p>
 
@@ -174,7 +177,7 @@ $bfYandexApiKey = function_exists('env_get') ? (env_get('YANDEX_MAPS_API_KEY') ?
                   </div>
                 </div>
 
-                <div id="deliveryPointList" class="delivery-point-list" aria-label="Пункты выдачи СДЭК" hidden></div>
+                <div id="deliveryPointList" class="delivery-point-list" aria-label="Пункты выдачи" hidden></div>
               </div>
             </div>
           </div>
