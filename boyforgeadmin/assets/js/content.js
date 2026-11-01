@@ -214,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await request("update", { id, alt_text: text });
       altInput.value = text;
       image.alt = text;
-      toast("Описание сохранено");
+      toast("Alt-текст сохранён");
     });
     $(".btn-save-alt", card).addEventListener("click", saveAlt);
     altInput.addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); saveAlt(); } });
