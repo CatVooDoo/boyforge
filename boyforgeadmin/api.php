@@ -13,13 +13,18 @@ if (!isAdminLoggedIn()) {
 }
 
 $sentCsrf = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-if (!verifyCsrfToken($sentCsrf)) {
+if (!is_string($sentCsrf) || !verifyCsrfToken($sentCsrf)) {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Недействительный токен безопасности (CSRF)'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 $action = $_GET['action'] ?? '';
+
+if (is_string($action) && str_starts_with($action, 'slider_')) {
+    require __DIR__ . '/includes/slider_actions.php';
+    exit;
+}
 
 switch ($action) {
     case 'toggle_status':

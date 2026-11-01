@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/router.php';
+require_once __DIR__ . '/includes/slider.php';
 
 try {
     $popStmt = $pdo->query("SELECT * FROM products WHERE is_active = 1 AND is_popular = 1 ORDER BY sort_order ASC, id ASC");
@@ -9,6 +10,9 @@ try {
 } catch (Exception $e) {
     $popularProducts = [];
 }
+
+$sliderSlides = getSliderSlidesByDevice($pdo, true);
+
 $pageTitle = 'BOYFORGE — кузница стильной одежды';
 $bodyClass = 'page-home';
 
@@ -17,25 +21,22 @@ require __DIR__ . '/includes/components/header.php';
 
 <main>
 
-    <!-- ===== 1. HERO — видео-слайдер (3 слайда × 2 формата) ===== -->
+    <!-- ===== 1. HERO — слайдер (Десктоп + Мобильная версия) ===== -->
     <section class="hero-slider" aria-label="BOYFORGE — кузница стильной одежды">
       <div class="hero-track">
-
-                <!-- Слайд 1 -->
-        <div class="hero-slide is-active" aria-label="Слайд 1">
-          <img class="hero-image" src="images/slider/hero-1.jpg" alt="Слайд 1">
-        </div>
-
-        <!-- Слайд 2 -->
-        <div class="hero-slide" aria-label="Слайд 2">
-          <img class="hero-image" src="images/slider/hero-2.jpg" alt="Слайд 2">
-        </div>
-
-        <!-- Слайд 3 -->
-        <div class="hero-slide" aria-label="Слайд 3">
-          <img class="hero-image" src="images/slider/hero-3.jpg" alt="Слайд 3">
-        </div>
-
+        <?php foreach ($sliderSlides as $device => $deviceSlides): ?>
+          <?php foreach ($deviceSlides as $idx => $slide):
+            $sImg = htmlspecialchars('/' . ltrim((string)$slide['image_path'], '/'), ENT_QUOTES, 'UTF-8');
+            $sAlt = htmlspecialchars((string)($slide['alt_text'] ?: ('Слайд ' . ($idx + 1))), ENT_QUOTES, 'UTF-8');
+          ?>
+          <div class="hero-slide hero-slide--<?= $device ?><?= $idx === 0 ? ' is-active' : '' ?>" data-device="<?= $device ?>" aria-label="<?= $sAlt ?>">
+            <picture>
+              <source media="<?= $device === 'mobile' ? '(max-width: 767px)' : '(min-width: 768px)' ?>" srcset="<?= $sImg ?>">
+              <img class="hero-image" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="<?= $sAlt ?>" decoding="async"<?= $idx === 0 ? ' fetchpriority="high"' : ' loading="lazy"' ?>>
+            </picture>
+          </div>
+          <?php endforeach; ?>
+        <?php endforeach; ?>
       </div>
 
       <div class="hero-slider-content container">
@@ -43,9 +44,9 @@ require __DIR__ . '/includes/components/header.php';
         <a href="/catalog" class="hero-btn">Перейти в каталог</a>
       </div>
 
-      <button class="hero-arrow hero-prev" aria-label="Предыдущий слайд">&#8249;</button>
-      <button class="hero-arrow hero-next" aria-label="Следующий слайд">&#8250;</button>
-      <div class="hero-dots" role="tablist" aria-label="Слайды"></div>
+      <button class="hero-arrow hero-prev" hidden aria-label="Предыдущий слайд">&#8249;</button>
+      <button class="hero-arrow hero-next" hidden aria-label="Следующий слайд">&#8250;</button>
+      <div class="hero-dots" hidden role="group" aria-label="Слайды"></div>
     </section>
 
      <!-- ===== 2. ПОПУЛЯРНЫЕ ПОЗИЦИИ ===== -->

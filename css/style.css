@@ -2572,12 +2572,16 @@ body:not(.home){
 }
 
 /* по умолчанию (десктоп) — показываем десктопное, прячем мобильное */
+.hero-slide--desktop,
 .hero-slide video.hero-video--desktop{ display:block; }
+.hero-slide--mobile,
 .hero-slide video.hero-video--mobile{ display:none; }
 
 /* мобилка — наоборот */
 @media (max-width:767px){
+  .hero-slide--desktop,
   .hero-slide video.hero-video--desktop{ display:none; }
+  .hero-slide--mobile,
   .hero-slide video.hero-video--mobile{ display:block; }
 }
 
@@ -3904,3 +3908,9 @@ body:not(.home){
 .checkout-promo-feedback button{font:inherit;font-size:10px;text-decoration:underline;flex-shrink:0}.checkout-promo-breakdown{display:grid;gap:8px;padding-top:14px;margin-top:14px;border-top:1px solid #e5e7eb;font-size:11px}
 .checkout-promo-breakdown>div{display:flex;justify-content:space-between;gap:12px}.checkout-promo-saving{color:#2e7d32}.checkout-promo-total{padding-top:10px;border-top:1px solid #e5e7eb;font-size:13px}
 @media(max-width:520px){.checkout-promo{padding:12px}.checkout-promo-controls{flex-wrap:wrap}.checkout-promo-controls .ozon-input{flex-basis:100%}.checkout-promo-apply{width:100%}}
+
+/* Slider controls remain hidden for empty and single-image device pools. */
+.hero-slider [hidden] { display: none !important; }
+.hero-slide picture { display: block; }
+.hero-dots { max-width: calc(100% - 32px); margin-inline: auto; overflow-x: auto; justify-content: safe center; padding: 8px; scrollbar-width: thin; }
+.hero-dots button { flex: 0 0 10px; }

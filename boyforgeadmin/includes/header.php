@@ -28,6 +28,7 @@ $isProductsActive = ($currentScript === 'index.php' || $currentScript === 'edit.
 $isCategoriesActive = ($currentScript === 'categories.php');
 $isOrdersActive = ($currentScript === 'orders.php');
 $isCartRulesActive = ($currentScript === 'cart_rules.php');
+$isContentActive = ($currentScript === 'content.php');
 $isLogsActive = ($currentScript === 'logs.php');
 ?>
 <header class="admin-header">
@@ -39,6 +40,7 @@ $isLogsActive = ($currentScript === 'logs.php');
         <a href="categories.php" class="nav-link <?= $isCategoriesActive ? 'active' : '' ?>">Категории</a>
         <a href="orders.php" class="nav-link <?= $isOrdersActive ? 'active' : '' ?>">Заказы</a>
         <a href="cart_rules.php" class="nav-link <?= $isCartRulesActive ? 'active' : '' ?>">Правила корзины</a>
+        <a href="content.php" class="nav-link <?= $isContentActive ? 'active' : '' ?>">Контент</a>
         <a href="logs.php" class="nav-link <?= $isLogsActive ? 'active' : '' ?>">Логи 5Post</a>
       </nav>
     </div>

@@ -46,6 +46,16 @@ function renderSvgIcon(string $name, string $class = 'icon'): string {
             return '<svg ' . $baseAttrs . '><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>';
         case 'palette':
             return '<svg ' . $baseAttrs . '><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.67-.75 1.67-1.67 0-.44-.18-.84-.46-1.14-.27-.29-.44-.69-.44-1.13 0-.92.75-1.67 1.67-1.67h1.56c3.08 0 5.6-2.52 5.6-5.6 0-5.96-4.66-10.79-10-10.79z"></path></svg>';
+        case 'monitor':
+            return '<svg ' . $baseAttrs . '><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>';
+        case 'smartphone':
+            return '<svg ' . $baseAttrs . '><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>';
+        case 'layers':
+            return '<svg ' . $baseAttrs . '><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>';
+        case 'arrow-up':
+            return '<svg ' . $baseAttrs . '><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>';
+        case 'arrow-down':
+            return '<svg ' . $baseAttrs . '><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>';
         default:
             return '<svg ' . $baseAttrs . '><circle cx="12" cy="12" r="10"></circle></svg>';
     }

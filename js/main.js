@@ -188,66 +188,120 @@
   const slider = document.querySelector('.hero-slider');
   if (!slider) return;
 
-  const slides = [...slider.querySelectorAll('.hero-slide')];
+  const allSlides = [...slider.querySelectorAll('.hero-slide')];
+  const desktopSlides = allSlides.filter(s => s.dataset.device === 'desktop');
+  const mobileSlides = allSlides.filter(s => s.dataset.device === 'mobile');
+  const hasDeviceSplit = desktopSlides.length > 0 || mobileSlides.length > 0;
+
   const dotsWrap = slider.querySelector('.hero-dots');
   const prevBtn = slider.querySelector('.hero-prev');
   const nextBtn = slider.querySelector('.hero-next');
-  let index = 0;
-  let timerId;
+  const mobileMedia = window.matchMedia('(max-width: 767px)');
 
-  slides.forEach((_, i) => {
-    const dot = document.createElement('button');
-    dot.setAttribute('aria-label', 'Слайд ' + (i + 1));
-    if (i === 0) dot.classList.add('is-active');
-    dot.addEventListener('click', () => go(i));
-    dotsWrap.appendChild(dot);
-  });
-  const dots = [...dotsWrap.children];
+  let slides = [];
+  let dots = [];
+  let index = 0;
+  let timerId = null;
+  let hovered = false;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  function getActivePool() {
+    if (!hasDeviceSplit) return allSlides;
+    return mobileMedia.matches ? mobileSlides : desktopSlides;
+  }
 
   function startTimer() {
     clearInterval(timerId);
-    timerId = setInterval(() => next(), 5000);
+    if (slides.length > 1 && !document.hidden && !hovered && !slider.contains(document.activeElement) && !reducedMotion.matches) {
+      timerId = setInterval(() => next(), 5000);
+    }
   }
 
   function go(i) {
-    slides[index].classList.remove('is-active');
-    dots[index].classList.remove('is-active');
+    if (slides.length <= 1) return;
+    if (slides[index]) slides[index].classList.remove('is-active');
+    if (dots[index]) dots[index].classList.remove('is-active');
     index = (i + slides.length) % slides.length;
-    slides[index].classList.add('is-active');
-    dots[index].classList.add('is-active');
+    if (slides[index]) slides[index].classList.add('is-active');
+    if (dots[index]) dots[index].classList.add('is-active');
+    updateAccessibility();
     startTimer();
   }
-  
+
+  function updateAccessibility() {
+    allSlides.forEach(slide => slide.setAttribute('aria-hidden', String(slide !== slides[index])));
+    dots.forEach((dot, i) => dot.setAttribute('aria-current', String(i === index)));
+  }
+
   const next = () => go(index + 1);
   const prev = () => go(index - 1);
+
+  function setupPool() {
+    clearInterval(timerId);
+    slides = getActivePool();
+    index = 0;
+
+    allSlides.forEach(s => s.classList.remove('is-active'));
+    if (dotsWrap) dotsWrap.innerHTML = '';
+    dots = [];
+
+    if (slides.length > 0) {
+      slides[0].classList.add('is-active');
+    }
+
+    const showControls = slides.length > 1;
+    if (prevBtn) prevBtn.hidden = !showControls;
+    if (nextBtn) nextBtn.hidden = !showControls;
+    if (dotsWrap) dotsWrap.hidden = !showControls;
+
+    if (showControls && dotsWrap) {
+      slides.forEach((_, i) => {
+        const dot = document.createElement('button');
+        dot.setAttribute('aria-label', 'Слайд ' + (i + 1));
+        if (i === 0) dot.classList.add('is-active');
+        dot.addEventListener('click', () => go(i));
+        dotsWrap.appendChild(dot);
+      });
+      dots = [...dotsWrap.children];
+      startTimer();
+    }
+    updateAccessibility();
+  }
 
   nextBtn && nextBtn.addEventListener('click', next);
   prevBtn && prevBtn.addEventListener('click', prev);
 
   let startX = 0;
+  let startY = 0;
   let isDragging = false;
 
   slider.addEventListener('touchstart', e => {
+    if (slides.length <= 1) return;
     isDragging = false;
     startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
     clearInterval(timerId);
   }, { passive: true });
 
-  slider.addEventListener('touchmove', e => {
+  slider.addEventListener('touchmove', () => {
+    if (slides.length <= 1) return;
     isDragging = true;
   }, { passive: true });
 
   slider.addEventListener('touchend', e => {
+    if (slides.length <= 1) return;
     const dx = e.changedTouches[0].clientX - startX;
-    if (Math.abs(dx) > 50) {
+    const dy = e.changedTouches[0].clientY - startY;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
       if (dx < 0) next(); else prev();
     } else {
       isDragging = false;
       startTimer();
     }
+    updateAccessibility();
   }, { passive: true });
 
-  slides.forEach(slide => {
+  allSlides.forEach(slide => {
     slide.addEventListener('click', e => {
       if (isDragging) {
         e.preventDefault();
@@ -255,7 +309,17 @@
     });
   });
 
-  startTimer();
+  if (typeof mobileMedia.addEventListener === 'function') {
+    mobileMedia.addEventListener('change', setupPool);
+  }
+  slider.addEventListener('mouseenter', () => { hovered = true; clearInterval(timerId); });
+  slider.addEventListener('mouseleave', () => { hovered = false; startTimer(); });
+  slider.addEventListener('focusin', () => clearInterval(timerId));
+  slider.addEventListener('focusout', () => setTimeout(startTimer, 0));
+  slider.addEventListener('touchcancel', startTimer, { passive: true });
+  document.addEventListener('visibilitychange', startTimer);
+  reducedMotion.addEventListener('change', startTimer);
+  setupPool();
 })();
 
 (function () {
