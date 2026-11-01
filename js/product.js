@@ -306,6 +306,7 @@
     if (addToCartBtn) {
       addToCartBtn.addEventListener("click", function (e) {
         e.preventDefault();
+        if (addToCartBtn.disabled) return;
         var gender = getGender();
         if (!gender) {
           flagGenderError();
@@ -351,21 +352,29 @@
           return;
         }
 
-        addToCartBtn.classList.add("is-added");
-        if (addToCartBtnText) {
-          addToCartBtnText.textContent = "Добавлено в корзину";
-        }
         clearTimeout(addFeedbackTimer);
+        addToCartBtn.classList.remove("is-added");
+        addToCartBtn.classList.add("is-loading");
+        addToCartBtn.disabled = true;
+        addToCartBtn.setAttribute("aria-busy", "true");
         addFeedbackTimer = setTimeout(function () {
-          addToCartBtn.classList.remove("is-added");
+          addToCartBtn.classList.remove("is-loading");
+          addToCartBtn.classList.add("is-added");
+          addToCartBtn.disabled = false;
+          addToCartBtn.setAttribute("aria-busy", "false");
           if (addToCartBtnText) {
-            addToCartBtnText.textContent = "Добавить в корзину";
+            addToCartBtnText.textContent = "Добавлено в корзину";
           }
-        }, 1600);
-
-        if (window.BFCart.showToast) {
-          window.BFCart.showToast(productName + " · " + gender + ", " + size);
-        }
+          if (typeof window.BFCart.openDrawer === "function") {
+            window.BFCart.openDrawer();
+          }
+          addFeedbackTimer = setTimeout(function () {
+            addToCartBtn.classList.remove("is-added");
+            if (addToCartBtnText) {
+              addToCartBtnText.textContent = "Добавить в корзину";
+            }
+          }, 1600);
+        }, 350);
       });
     }
 
