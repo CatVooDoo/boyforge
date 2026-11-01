@@ -7,7 +7,7 @@ const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const item = { productId: '10', name: 'Футболка', gender: 'Мужской', size: 'L', qty: 1, priceNumeric: 3200 };
 
-function cartHarness() {
+function cartHarness(elements) {
   const requests = [];
   const storage = new Map();
   const localStorage = {
@@ -18,10 +18,30 @@ function cartHarness() {
   const window = { localStorage };
   const context = vm.createContext({
     window,
+    ...(elements ? { document: {
+      readyState: 'loading',
+      addEventListener() {},
+      getElementById: id => elements[id] || null
+    } } : {}),
     fetch: (url, options) => new Promise((resolve, reject) => requests.push({ url, options, resolve, reject }))
   });
   vm.runInContext(read('js/cart.js'), context);
   return { cart: window.BFCart, requests };
+}
+
+function testEmptyCartControls() {
+  const elements = Object.fromEntries(['cartEmptyState', 'cartItemsList', 'cartDrawerFooter', 'cartCheckoutBtn']
+    .map(id => [id, {}]));
+  const { cart } = cartHarness(elements);
+  for (const empty of [() => cart.removeItem('10__Мужской__L'), () => cart.clear()]) {
+    cart.addItem(item);
+    assert.equal(elements.cartCheckoutBtn.disabled, false);
+    empty();
+    assert.equal(elements.cartCheckoutBtn.disabled, true, 'empty cart disables stale checkout control');
+    assert.equal(elements.cartDrawerFooter.hidden, true);
+    assert.equal(elements.cartEmptyState.hidden, false);
+    assert.equal(elements.cartCheckoutBtn.textContent, 'Перейти к оформлению');
+  }
 }
 
 async function testCartRaces() {
@@ -98,6 +118,7 @@ async function testPaymentReturn() {
 }
 
 (async () => {
+  testEmptyCartControls();
   await testCartRaces();
   await testPaymentReturn();
   console.log('OK: cart mutations, out-of-order validation, server failures and payment-return confirmation');

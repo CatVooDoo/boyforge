@@ -94,19 +94,6 @@ require __DIR__ . '/includes/components/header.php';
       <a href="/catalog" class="btn-outline reveal">Весь каталог</a>
     </section>
 
-    <!-- ===== 3. О БРЕНДЕ — короткий блок ===== -->
-    <section class="section theme-dark">
-      <div class="container">
-        <div class="mini-head reveal">
-          <h2>Любое дело начинается с тишины</h2>
-        </div>
-        <div class="brand-intro reveal">
-          <p>Как и раньше важны труд, характер и уважение к тому, для кого это создаётся. Чтобы с первого взгляда вещь становилась любимой в гардеробе.</p>
-          <a href="/about" class="btn-outline">О бренде</a>
-        </div>
-      </div>
-    </section>
-
     <!-- ===== 4. НАВИГАЦИОННЫЕ ПЛИТКИ ===== -->
     <section class="container section">
       <div class="cat-grid">
@@ -126,28 +113,6 @@ require __DIR__ . '/includes/components/header.php';
           <img src="/images/tile-returns.jpg" alt="Возврат" loading="lazy">
           <div class="cat-tile-label"><span>Возврат</span></div>
         </a>
-      </div>
-    </section>
-
-    <!-- ===== 5. ГАЛЕРЕЯ ===== -->
-    <section class="container section">
-      <div class="mini-head reveal">
-        <h2>Наши покупатели</h2>
-        <div class="sub">Оставив отзыв, ты можешь попасть сюда</div>
-      </div>
-
-      <div class="gallery-marquee reveal" id="galleryMarquee">
-        <div class="gallery-track" id="galleryTrack">
-          <button class="gallery-item" data-src="/images/g1.jpg"><img src="/images/g1.jpg" alt="Фото 1" loading="lazy"></button>
-          <button class="gallery-item" data-src="/images/g2.jpg"><img src="/images/g2.jpg" alt="Фото 2" loading="lazy"></button>
-          <button class="gallery-item" data-src="/images/g3.jpg"><img src="/images/g3.jpg" alt="Фото 3" loading="lazy"></button>
-          <button class="gallery-item" data-src="/images/g4.jpg"><img src="/images/g4.jpg" alt="Фото 4" loading="lazy"></button>
-          <button class="gallery-item" data-src="/images/g5.jpg"><img src="/images/g5.jpg" alt="Фото 5" loading="lazy"></button>
-          <button class="gallery-item" data-src="/images/g6.jpg"><img src="/images/g6.jpg" alt="Фото 6" loading="lazy"></button>
-          <button class="gallery-item" data-src="/images/g7.jpg"><img src="/images/g7.jpg" alt="Фото 7" loading="lazy"></button>
-          <button class="gallery-item" data-src="/images/g8.jpg"><img src="/images/g8.jpg" alt="Фото 8" loading="lazy"></button>
-          <button class="gallery-item" data-src="/images/g9.jpg"><img src="/images/g9.jpg" alt="Фото 9" loading="lazy"></button>
-        </div>
       </div>
     </section>
 

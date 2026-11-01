@@ -353,7 +353,7 @@
 
         addToCartBtn.classList.add("is-added");
         if (addToCartBtnText) {
-          addToCartBtnText.textContent = "Добавлено в корзину ✓";
+          addToCartBtnText.textContent = "Добавлено в корзину";
         }
         clearTimeout(addFeedbackTimer);
         addFeedbackTimer = setTimeout(function () {

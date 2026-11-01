@@ -318,6 +318,10 @@
       listEl.hidden = true;
       listEl.innerHTML = "";
       footerEl.hidden = true;
+      if (checkoutBtn) {
+        checkoutBtn.disabled = true;
+        checkoutBtn.textContent = "Перейти к оформлению";
+      }
       if (clearBtn) clearBtn.hidden = true;
       if (errorEl) {
         errorEl.hidden = true;
