@@ -11,7 +11,7 @@ require_once __DIR__ . '/includes/header.php';
 <div class="content-editor">
   <div class="page-head">
     <div><div class="content-kicker">Витрина / Контент</div><h1 class="page-title">Главный слайдер</h1>
-      <div class="page-subtitle">Два формата. Своя история для каждого экрана.</div></div>
+      <div class="page-subtitle">Два формата. </div></div>
     <a href="/" target="_blank" rel="noopener" class="btn btn-secondary"><?= renderSvgIcon('external') ?> Открыть сайт</a>
   </div>
   <nav class="content-tabs-nav" aria-label="Разделы контента"><a href="content.php" class="content-tab-btn active" aria-current="page"><?= renderSvgIcon('layers') ?> Слайдер</a></nav>
