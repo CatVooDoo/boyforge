@@ -59,3 +59,6 @@ opencode.jsonc
 /logs/
 
 js/products.js
+
+# Local notification settings (may contain secrets)
+/includes/settings.json
