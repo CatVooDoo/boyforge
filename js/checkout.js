@@ -172,6 +172,7 @@
         id: main ? main.dataset.productId : "",
         name: main ? main.dataset.productName : "Товар BOYFORGE",
         price: main ? main.dataset.productPrice : "3 200 ₽",
+        dualSizes: !main || main.dataset.sizeChartMode !== "single",
         gender: gActive ? (gActive.getAttribute("data-gender") || gActive.textContent.trim()) : "",
         size: sActive ? sActive.textContent.trim() : "",
         img: mainImgEl ? mainImgEl.src : ""
@@ -845,7 +846,7 @@
 
     function openSingleModal() {
       const state = getProductState();
-      if (!state.gender) {
+      if (state.dualSizes && !state.gender) {
         flagGenderError();
         return;
       }
@@ -869,7 +870,10 @@
 
       if (prodNameEl) prodNameEl.textContent = state.name;
       if (prodPriceEl) prodPriceEl.textContent = state.price;
-      if (prodGenderEl) prodGenderEl.textContent = state.gender;
+      if (prodGenderEl) {
+        prodGenderEl.textContent = state.gender;
+        prodGenderEl.hidden = !state.gender;
+      }
       if (prodSizeEl) prodSizeEl.textContent = state.size || "M";
       if (prodThumbEl && state.img) prodThumbEl.src = state.img;
 
@@ -972,7 +976,7 @@
             const qtySuffix = Number(it.qty) > 1 ? ` × ${Number(it.qty)} шт.` : "";
             return `<div><span>Товар:</span> ${escapeHtml(it.name || it.productName)}${meta ? ` (${escapeHtml(meta)})` : ""}${qtySuffix}</div>`;
           }).join("")
-        : `<div><span>Товар:</span> ${escapeHtml(order.productName)} (${escapeHtml(order.gender)}, размер ${escapeHtml(order.size)})</div>`;
+        : `<div><span>Товар:</span> ${escapeHtml(order.productName)} (${[order.gender, order.size].filter(Boolean).map(escapeHtml).join(", ")})</div>`;
 
       modalBody.innerHTML = `
         <div class="ozon-success-box order-success-box">

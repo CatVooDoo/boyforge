@@ -27,6 +27,45 @@ if (is_string($action) && str_starts_with($action, 'slider_')) {
 }
 
 switch ($action) {
+    case 'set_category_size_rules':
+        $id = (int)($_POST['id'] ?? 0);
+        $raw = $_POST['size_rules'] ?? null;
+        if ($id <= 0 || !is_array($raw)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Некорректные настройки размеров'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $rules = [];
+        foreach (['Общая' => commonSizes()] + sizesByGender() as $chart => $sizes) {
+            $rules[$chart] = ['hidden' => [], 'blocked' => []];
+            foreach ($sizes as $size) {
+                $state = $raw[$chart][$size] ?? 'available';
+                if (!in_array($state, ['available', 'hidden', 'blocked'], true)) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'error' => 'Некорректное состояние размера'], JSON_UNESCAPED_UNICODE);
+                    exit;
+                }
+                if ($state !== 'available') $rules[$chart][$state][] = $size;
+            }
+        }
+        $stmt = $pdo->prepare('UPDATE categories SET size_chart_rules = ? WHERE id = ?');
+        $stmt->execute([json_encode($rules, JSON_UNESCAPED_UNICODE), $id]);
+        echo json_encode(['success' => true]);
+        exit;
+
+    case 'set_category_size_chart':
+        $id = (int)($_POST['id'] ?? 0);
+        $mode = (string)($_POST['mode'] ?? '');
+        if ($id <= 0 || !in_array($mode, ['single', 'dual'], true)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Некорректный режим размерной сетки'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $stmt = $pdo->prepare('UPDATE categories SET size_chart_mode = ? WHERE id = ?');
+        $stmt->execute([$mode, $id]);
+        echo json_encode(['success' => true]);
+        exit;
+
     case 'toggle_status':
         $id = (int)($_POST['id'] ?? 0);
         $status = (int)($_POST['status'] ?? 0) === 1 ? 1 : 0;

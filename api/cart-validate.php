@@ -68,6 +68,9 @@ foreach (array_slice($rawItems, 0, 50) as $row) {
         continue;
     }
 
+    $product = withProductSizeMode($pdo, $product);
+    if (!productHasDualSizes($product)) $gender = '';
+
     $priceStr = (string)($product['price'] ?? '0');
     $unitPrice = round((float)preg_replace('/[^\d.]/', '', str_replace(',', '.', $priceStr)), 2);
     if ($unitPrice <= 0 && !empty($product['price_numeric'])) {

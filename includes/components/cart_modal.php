@@ -27,7 +27,7 @@ $bfYandexApiKey = function_exists('env_get') ? (env_get('YANDEX_MAPS_API_KEY') ?
           </svg>
         </div>
         <div class="cart-empty-title">В корзине пока пусто</div>
-        <p class="cart-empty-sub">Выберите модель, пол и размер в каталоге — доставим через 5Post по всей России.</p>
+        <p class="cart-empty-sub">Выберите модель и размер в каталоге — доставим через 5Post по всей России.</p>
         <a href="/catalog" class="btn-primary cart-empty-cta">Перейти в каталог</a>
       </div>
 
@@ -73,7 +73,7 @@ $bfYandexApiKey = function_exists('env_get') ? (env_get('YANDEX_MAPS_API_KEY') ?
             <div class="ozon-prod-name" id="orderModalProdName">Товар BOYFORGE</div>
             <div class="ozon-prod-price" id="orderModalProdPrice">—</div>
             <div class="ozon-prod-tags">
-              <span class="ozon-pill" id="orderModalProdGender">Мужской</span>
+              <span class="ozon-pill" id="orderModalProdGender" hidden></span>
               <span class="ozon-pill">Размер: <strong id="orderModalProdSize">M</strong></span>
             </div>
           </div>

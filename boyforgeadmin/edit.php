@@ -144,7 +144,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             fn($s) => in_array($s, allSizes(), true)
         )));
 
+        $unavailableCommon = $_POST['sizes_unavailable_common'] ?? [];
+        if (!is_array($unavailableCommon)) $unavailableCommon = [];
+        $unavailableCommon = array_values(array_intersect(commonSizes(), $unavailableCommon));
+
         $sizesJson = json_encode([
+            'Общая' => $unavailableCommon,
             'Мужской' => $unavailableMale,
             'Женский' => $unavailableFemale
         ], JSON_UNESCAPED_UNICODE);
@@ -263,6 +268,7 @@ $imgVal = htmlspecialchars($product['img'] ?? '');
 $currentUnavailableSizes = productUnavailableSizes($product['sizes'] ?? null);
 $unavMale = $currentUnavailableSizes['Мужской'] ?? [];
 $unavFemale = $currentUnavailableSizes['Женский'] ?? [];
+$unavCommon = $currentUnavailableSizes['Общая'] ?? [];
 
 $currentTags = [];
 if (!empty($product['tags'])) {
@@ -366,7 +372,7 @@ $allCategories = $pdo->query("SELECT * FROM categories ORDER BY sort_order ASC, 
               <?php
                 $isSelected = ($catVal === $catRow['name'] || $catIdVal === $catRow['slug']);
               ?>
-              <option value="<?= htmlspecialchars($catRow['name']) ?>" data-slug="<?= htmlspecialchars($catRow['slug']) ?>" <?= $isSelected ? 'selected' : '' ?>>
+              <option value="<?= htmlspecialchars($catRow['name']) ?>" data-size-chart-mode="<?= htmlspecialchars($catRow['size_chart_mode'] ?? 'single') ?>" data-slug="<?= htmlspecialchars($catRow['slug']) ?>" <?= $isSelected ? 'selected' : '' ?>>
                 <?= htmlspecialchars($catRow['name']) ?>
               </option>
             <?php endforeach; ?>
@@ -426,6 +432,20 @@ $allCategories = $pdo->query("SELECT * FROM categories ORDER BY sort_order ASC, 
     </div>
 
     <div class="form-group" style="margin-top: 16px;">
+      <div id="commonSizeSettings">
+      <label class="form-label">Недоступные размеры (Общая сетка S–2XL)</label>
+      <div class="tags-badge-container" id="sizesContainerCommon" style="display:flex; flex-wrap:wrap; gap:10px;">
+        <?php foreach (commonSizes() as $sz): ?>
+          <?php $sizeChecked = in_array($sz, $unavCommon, true); ?>
+          <label class="badge-checkbox-item size-check-item<?= $sizeChecked ? ' is-out' : '' ?>" data-size="<?= htmlspecialchars($sz) ?>"
+                 style="display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border:1.5px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">
+            <input type="checkbox" name="sizes_unavailable_common[]" value="<?= htmlspecialchars($sz) ?>" <?= $sizeChecked ? 'checked' : '' ?>>
+            <span class="size-check-label" style="font-weight:600; font-size:13px; position:relative;"><?= htmlspecialchars($sz) ?></span>
+          </label>
+        <?php endforeach; ?>
+      </div>
+      </div>
+      <div id="dualSizeSettings">
       <label class="form-label">Недоступные размеры (Мужская сетка)</label>
       <div class="tags-badge-container" id="sizesContainerMale" style="display:flex; flex-wrap:wrap; gap:10px;">
         <?php foreach (allSizes() as $sz): ?>
@@ -448,6 +468,7 @@ $allCategories = $pdo->query("SELECT * FROM categories ORDER BY sort_order ASC, 
             <span class="size-check-label" style="font-weight:600; font-size:13px; position:relative;"><?= htmlspecialchars($sz) ?></span>
           </label>
         <?php endforeach; ?>
+      </div>
       </div>
       <div class="form-help" style="margin-top: 8px;">Отметьте галочкой размеры, которых сейчас нет в наличии — на сайте они будут перечёркнуты и недоступны для заказа.</div>
     </div>
@@ -696,6 +717,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    initSizesContainer('sizesContainerCommon');
+    const sizeCategory = document.getElementById('cat');
+    function updateSizeSettings() {
+      const option = sizeCategory.options[sizeCategory.selectedIndex];
+      const dual = option && option.dataset.sizeChartMode === 'dual';
+      document.getElementById('commonSizeSettings').hidden = dual;
+      document.getElementById('dualSizeSettings').hidden = !dual;
+    }
+    sizeCategory.addEventListener('change', updateSizeSettings);
+    updateSizeSettings();
     initSizesContainer('sizesContainerMale');
     initSizesContainer('sizesContainerFemale');
 });

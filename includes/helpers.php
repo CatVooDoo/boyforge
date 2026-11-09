@@ -5,6 +5,50 @@ function allSizes(): array {
     return ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
 }
 
+function commonSizes(): array {
+    return ['S', 'M', 'L', 'XL', '2XL'];
+}
+
+function productHasDualSizes(array $product): bool {
+    return ($product['size_chart_mode'] ?? 'single') === 'dual';
+}
+
+/** Режим категории применяется и на витрине, и при серверной проверке заказа. */
+function withProductSizeMode(PDO $pdo, array $product): array {
+    $stmt = $pdo->prepare('SELECT * FROM categories WHERE slug = ? OR name = ? ORDER BY (slug = ?) DESC LIMIT 1');
+    $slug = (string)($product['cat_id'] ?? '');
+    $stmt->execute([$slug, (string)($product['cat'] ?? ''), $slug]);
+    $category = $stmt->fetch(PDO::FETCH_ASSOC);
+    $product['size_chart_mode'] = ($category['size_chart_mode'] ?? 'single') === 'dual' ? 'dual' : 'single';
+    $product['category_size_rules'] = categorySizeRules($category['size_chart_rules'] ?? null);
+    return $product;
+}
+
+/** Правила категории хранятся отдельно от наличия размеров конкретного товара. */
+function categorySizeRules($raw): array {
+    $parsed = is_array($raw) ? $raw : json_decode((string)($raw ?? ''), true);
+    $rules = [];
+    foreach (['Общая' => commonSizes()] + sizesByGender() as $chart => $sizes) {
+        foreach (['hidden', 'blocked'] as $state) {
+            $list = $parsed[$chart][$state] ?? [];
+            $rules[$chart][$state] = is_array($list) ? array_values(array_intersect($sizes, array_filter($list, 'is_string'))) : [];
+        }
+    }
+    return $rules;
+}
+
+function productHiddenSizes(array $product, string $chart): array {
+    return $product['category_size_rules'][$chart]['hidden'] ?? [];
+}
+
+function effectiveProductUnavailableSizes(array $product): array {
+    $unavailable = productUnavailableSizes($product['sizes'] ?? null);
+    foreach ($unavailable as $chart => $sizes) {
+        $unavailable[$chart] = array_values(array_unique(array_merge($sizes, $product['category_size_rules'][$chart]['blocked'] ?? [])));
+    }
+    return $unavailable;
+}
+
 function sizesByGender(): array {
     return [
         'Женский' => ['XS', 'S', 'M', 'L', 'XL'],
@@ -14,6 +58,19 @@ function sizesByGender(): array {
 
 /** Единая проверка варианта товара для корзины и создания платежа. */
 function productVariantError(array $product, string $gender, string $size): string {
+    $chart = productHasDualSizes($product) ? $gender : 'Общая';
+    if (in_array($size, productHiddenSizes($product, $chart), true)) {
+        return 'Выберите доступный размер для товара «' . (string)($product['name'] ?? 'Товар BOYFORGE') . '»';
+    }
+    if (!productHasDualSizes($product)) {
+        $name = (string)($product['name'] ?? 'Товар BOYFORGE');
+        if (!in_array($size, commonSizes(), true)) {
+            return 'Выберите доступный размер для товара «' . $name . '»';
+        }
+        $unavailable = effectiveProductUnavailableSizes($product);
+        return in_array($size, $unavailable['Общая'], true)
+            ? sprintf('Размер %s для товара «%s» закончился', $size, $name) : '';
+    }
     $sizes = sizesByGender();
     $name = (string)($product['name'] ?? 'Товар BOYFORGE');
     if (!isset($sizes[$gender])) {
@@ -22,7 +79,7 @@ function productVariantError(array $product, string $gender, string $size): stri
     if ($size === '' || !in_array($size, $sizes[$gender], true)) {
         return 'Выберите доступный размер для товара «' . $name . '»';
     }
-    $unavailable = productUnavailableSizes($product['sizes'] ?? null);
+    $unavailable = effectiveProductUnavailableSizes($product);
     if (in_array($size, $unavailable[$gender] ?? [], true)) {
         return sprintf('Размер %s (%s) для товара «%s» закончился', $size, $gender, $name);
     }
@@ -36,7 +93,7 @@ function productUnavailableSizes($sizesRaw): array {
         $parsed = json_decode((string)($sizesRaw ?? ''), true);
     }
     
-    $result = ['Мужской' => [], 'Женский' => []];
+    $result = ['Мужской' => [], 'Женский' => [], 'Общая' => []];
     $known = allSizes();
     
     if (!is_array($parsed)) {
@@ -53,8 +110,9 @@ function productUnavailableSizes($sizesRaw): array {
         }
         $result['Мужской'] = $flat;
         $result['Женский'] = $flat;
+        $result['Общая'] = $flat;
     } else {
-        foreach (['Мужской', 'Женский'] as $gender) {
+        foreach (['Мужской', 'Женский', 'Общая'] as $gender) {
             if (isset($parsed[$gender]) && is_array($parsed[$gender])) {
                 foreach ($parsed[$gender] as $s) {
                     $s = trim((string)$s);

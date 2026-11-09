@@ -31,6 +31,8 @@ if ($id > 0) {
 $found = ($product !== false && $product !== null);
 
 if ($found) {
+    $product = withProductSizeMode($pdo, $product);
+    $dualSizes = productHasDualSizes($product);
     $pName = htmlspecialchars($product['name']);
     $pPrice = htmlspecialchars($product['price']);
     $pSub = htmlspecialchars($product['sub'] ?: 'Футболка · авторский принт');
@@ -74,6 +76,7 @@ require __DIR__ . '/includes/components/header.php';
 
   <main class="container"
     <?php if ($found): ?>
+      data-size-chart-mode="<?= $dualSizes ? 'dual' : 'single' ?>"
       data-product-id="<?= (int)$product['id'] ?>"
       data-product-name="<?= htmlspecialchars($product['name']) ?>"
       data-product-price="<?= htmlspecialchars($product['price']) ?>"
@@ -134,6 +137,7 @@ require __DIR__ . '/includes/components/header.php';
             <span class="new" id="prodPrice"><?= $pPrice ?></span>
           </div>
 
+          <?php if ($dualSizes): ?>
           <div class="gender-title">
             <span>Пол</span>
           </div>
@@ -142,13 +146,15 @@ require __DIR__ . '/includes/components/header.php';
             <button type="button" data-gender="Женский">Женский</button>
           </div>
 
+          <?php endif; ?>
           <div class="size-title">
-            <span>Размер</span>
+            <span>Выберите размер</span>
           </div>
-          <?php $unavailableSizes = productUnavailableSizes($product['sizes'] ?? null); ?>
-          <div class="sizes" data-unavailable-male="<?= htmlspecialchars(implode(',', $unavailableSizes['Мужской'] ?? [])) ?>" data-unavailable-female="<?= htmlspecialchars(implode(',', $unavailableSizes['Женский'] ?? [])) ?>">
-            <?php foreach (allSizes() as $sz): ?>
-              <?php $isOut = in_array($sz, $unavailableSizes['Мужской'] ?? [], true) && in_array($sz, $unavailableSizes['Женский'] ?? [], true); ?>
+          <?php $unavailableSizes = effectiveProductUnavailableSizes($product); ?>
+          <div class="sizes" data-hidden-common="<?= htmlspecialchars(implode(',', productHiddenSizes($product, 'Общая'))) ?>" data-hidden-male="<?= htmlspecialchars(implode(',', productHiddenSizes($product, 'Мужской'))) ?>" data-hidden-female="<?= htmlspecialchars(implode(',', productHiddenSizes($product, 'Женский'))) ?>" data-unavailable-common="<?= htmlspecialchars(implode(',', $unavailableSizes['Общая'])) ?>" data-unavailable-male="<?= htmlspecialchars(implode(',', $unavailableSizes['Мужской'] ?? [])) ?>" data-unavailable-female="<?= htmlspecialchars(implode(',', $unavailableSizes['Женский'] ?? [])) ?>">
+            <?php foreach ($dualSizes ? allSizes() : commonSizes() as $sz): ?>
+              <?php if ($dualSizes ? (in_array($sz, productHiddenSizes($product, 'Мужской'), true) && in_array($sz, productHiddenSizes($product, 'Женский'), true)) : in_array($sz, productHiddenSizes($product, 'Общая'), true)) continue; ?>
+              <?php $isOut = $dualSizes ? (in_array($sz, $unavailableSizes['Мужской'], true) && in_array($sz, $unavailableSizes['Женский'], true)) : in_array($sz, $unavailableSizes['Общая'], true); ?>
               <button type="button"<?= $isOut ? ' class="size-out" disabled aria-disabled="true" title="Нет в наличии"' : '' ?>><?= htmlspecialchars($sz) ?></button>
             <?php endforeach; ?>
           </div>

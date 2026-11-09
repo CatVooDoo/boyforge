@@ -23,7 +23,8 @@ function priceCheckout(PDO $pdo, array $input): array {
         $stmt->execute([$id]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$product) throw new InvalidArgumentException('Товар не найден или снят с публикации.');
-        $gender = trim((string)($row['gender'] ?? ''));
+        $product = withProductSizeMode($pdo, $product);
+        $gender = productHasDualSizes($product) ? trim((string)($row['gender'] ?? '')) : '';
         $size = trim((string)($row['size'] ?? ''));
         $error = productVariantError($product, $gender, $size);
         if ($error !== '') throw new InvalidArgumentException($error);

@@ -17,12 +17,14 @@ class Element {
 }
 const elements = new Map();
 const get = id => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id); };
-const main = {dataset: {productId: '1', productName: 'Футболка', productPrice: '3 200 ₽'}};
+const singleChart = process.argv.includes('--single-chart');
+const expectedGender = singleChart ? '' : 'Мужской';
+const main = {dataset: {productId: '1', productName: 'Футболка', productPrice: '3 200 ₽', sizeChartMode: singleChart ? 'single' : 'dual'}};
 let ready;
 const requests = [];
 const document = {
   getElementById: get,
-  querySelector: selector => selector === 'main.container' ? main : ['#genders button.active', '.sizes button.active'].includes(selector) ? Object.assign(new Element(), {textContent: 'M'}) : null,
+  querySelector: selector => singleChart && selector === '#genders button.active' ? null : selector === 'main.container' ? main : ['#genders button.active', '.sizes button.active'].includes(selector) ? Object.assign(new Element(), {textContent: 'M'}) : null,
   querySelectorAll: () => [],
   addEventListener: (event, fn) => { if (event === 'DOMContentLoaded') ready = fn; },
   body: new Element()
@@ -38,6 +40,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 const reply = async (request, body) => { request.resolve({ok: true, json: async () => body}); await tick(); };
 (async () => {
   window.BFCheckout.openSingleModal();
+  assert.equal(get('orderModalProdGender').hidden, singleChart);
   get('orderFio').value = 'Тестовый Покупатель';
   get('orderEmail').value = 'buyer@example.invalid';
   get('orderPhone').value = '+7 (999) 123-45-67';
@@ -47,13 +50,14 @@ const reply = async (request, body) => { request.resolve({ok: true, json: async 
   get('orderForm').listeners.submit({preventDefault() {}});
   const preview = requests.at(-1);
   assert.equal(preview.url, '/api/promo-validate.php');
-  assert.deepEqual(JSON.parse(preview.options.body), {promoCode: 'SAVE10', items: [{productId: '1', gender: 'Мужской', size: 'M', qty: 1}]});
+  assert.deepEqual(JSON.parse(preview.options.body), {promoCode: 'SAVE10', items: [{productId: '1', gender: expectedGender, size: 'M', qty: 1}]});
   await reply(preview, {success: true, subtotal: 3200, total: 2880, discount: 320, promo: {code: 'SAVE10', percent: 10, category: 'Футболка'}});
   const payment = requests.at(-1);
   assert.equal(payment.url, '/api/yookassa/create.php');
   const payload = JSON.parse(payment.options.body);
   assert.equal(payload.promoCode, 'SAVE10');
   assert.equal(payload.productId, '1');
+  assert.equal(payload.gender, expectedGender);
   assert.equal(payload.deliveryProvider, 'fivepost');
   assert.equal(payload.deliveryQuoteCost, undefined);
   assert.match(get('checkoutPromoTotal').textContent, /2.880/);

@@ -198,6 +198,7 @@
     var addToCartBtn = document.getElementById("addToCartBtn");
     var addToCartBtnText = document.getElementById("addToCartBtnText");
     var addFeedbackTimer = null;
+    var dualSizes = main.dataset.sizeChartMode !== "single";
     var gendersWrap = document.getElementById("genders");
     var sizesWrap = document.querySelector(".sizes");
 
@@ -213,21 +214,22 @@
     function renderSizes(gender) {
       if (!sizesWrap) return;
 
-      var list = SIZES_BY_GENDER[gender];
+      var list = dualSizes ? SIZES_BY_GENDER[gender] : ["S", "M", "L", "XL", "2XL"];
       if (!list) {
         sizesWrap.innerHTML = "";
         sizesWrap.style.display = "none";
         return;
       }
 
-      var attrName = gender === "Мужской" ? "data-unavailable-male" : "data-unavailable-female";
+      var attrName = dualSizes ? (gender === "Мужской" ? "data-unavailable-male" : "data-unavailable-female") : "data-unavailable-common";
       var unavailable = (sizesWrap.getAttribute(attrName) || "")
         .split(",")
         .map(function (s) { return s.trim(); })
         .filter(Boolean);
 
+      var hidden = (sizesWrap.getAttribute(attrName.replace("unavailable", "hidden")) || "").split(",");
       sizesWrap.style.display = "";
-      sizesWrap.innerHTML = list.map(function (s) {
+      sizesWrap.innerHTML = list.filter(function (s) { return hidden.indexOf(s) === -1; }).map(function (s) {
         if (unavailable.indexOf(s) !== -1) {
           return '<button type="button" class="size-out" disabled aria-disabled="true" title="Нет в наличии">' + s + "</button>";
         }
@@ -287,7 +289,7 @@
 
     if (orderBtn) {
       orderBtn.addEventListener("click", function (e) {
-        if (!getGender()) {
+        if (dualSizes && !getGender()) {
           e.preventDefault();
           flagGenderError();
           if (gendersWrap) gendersWrap.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -308,7 +310,7 @@
         e.preventDefault();
         if (addToCartBtn.disabled) return;
         var gender = getGender();
-        if (!gender) {
+        if (dualSizes && !gender) {
           flagGenderError();
           if (gendersWrap) gendersWrap.scrollIntoView({ behavior: "smooth", block: "center" });
           return;

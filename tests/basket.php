@@ -20,11 +20,40 @@ function check(bool $ok, string $message): void {
     echo "OK: $message\n";
 }
 
-$variantProduct = ['name' => 'Футболка', 'sizes' => ['Мужской' => ['L']]];
+$variantProduct = ['size_chart_mode' => 'dual', 'name' => 'Футболка', 'sizes' => ['Мужской' => ['L']]];
 foreach ([['', ''], ['', 'M'], ['Мужской', ''], ['Женский', '3XL'], ['Мужской', 'L']] as [$gender, $size]) {
     check(productVariantError($variantProduct, $gender, $size) !== '', 'empty, invalid or unavailable variant is rejected: ' . $gender . '/' . $size);
 }
 check(productVariantError($variantProduct, 'Мужской', 'M') === '', 'available variant is accepted');
+
+$commonProduct = ['name' => 'Футболка', 'sizes' => ['Общая' => ['L'], 'Мужской' => ['XL']]];
+foreach (commonSizes() as $size) {
+    check((productVariantError($commonProduct, '', $size) === '') === ($size !== 'L'), 'common availability without gender: ' . $size);
+}
+foreach (['', 'XS', '3XL'] as $size) {
+    check(productVariantError($commonProduct, '', $size) !== '', 'common chart rejects size: ' . $size);
+}
+check(formatOrderItemTitle(['name' => 'Футболка', 'gender' => '', 'size' => 'XL']) === 'Футболка XL', 'common item title has only name and size');
+$commonItem = ['name' => 'Футболка', 'gender' => '', 'size' => 'XL', 'qty' => 1, 'price' => 3200];
+check(buildYookassaPrepaymentItems([$commonItem], 1)[0]['description'] === 'Футболка XL', 'single common receipt includes size without gender');
+
+$categoryRestricted = $commonProduct;
+$categoryRestricted['category_size_rules'] = categorySizeRules([
+    'Общая' => ['hidden' => ['S'], 'blocked' => ['XL']],
+    'Мужской' => ['hidden' => ['M'], 'blocked' => ['2XL']],
+]);
+foreach (['S', 'XL', 'L'] as $size) {
+    check(productVariantError($categoryRestricted, '', $size) !== '', 'common category and product restrictions are enforced: ' . $size);
+}
+check(productVariantError($categoryRestricted, '', 'M') === '', 'dual-chart restrictions do not affect common chart');
+$categoryRestricted['size_chart_mode'] = 'dual';
+foreach (['M', '2XL', 'XL'] as $size) {
+    check(productVariantError($categoryRestricted, 'Мужской', $size) !== '', 'dual category and product restrictions are enforced: ' . $size);
+}
+check(productVariantError($categoryRestricted, 'Женский', 'M') === '', 'male restrictions do not affect female chart');
+$categoryRestricted['category_size_rules'] = categorySizeRules(null);
+check(productVariantError($categoryRestricted, 'Мужской', 'XL') !== '', 'removing category rules preserves product availability');
+check(productVariantError($categoryRestricted, 'Мужской', 'M') === '', 'removing category rules restores unrestricted sizes');
 
 class FakeBasketCdek extends CdekClient {
     public array $calls = [];

@@ -226,6 +226,13 @@ function initDatabase(PDO $pdo): void {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
     
     $pdo->exec($sqlCats);
+    if (!$pdo->query("SHOW COLUMNS FROM categories LIKE 'size_chart_mode'")->fetch()) {
+        $pdo->exec("ALTER TABLE categories ADD COLUMN size_chart_mode VARCHAR(16) NOT NULL DEFAULT 'single'");
+    }
+
+    if (!$pdo->query("SHOW COLUMNS FROM categories LIKE 'size_chart_rules'")->fetch()) {
+        $pdo->exec("ALTER TABLE categories ADD COLUMN size_chart_rules JSON NULL");
+    }
 
     $catCount = (int)$pdo->query("SELECT COUNT(*) FROM categories")->fetchColumn();
     if ($catCount === 0) {

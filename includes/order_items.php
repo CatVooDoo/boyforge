@@ -130,7 +130,7 @@ function formatOrderItemTitle(array $item, bool $includeQty = true): string {
     $variantParts = array_values(array_filter([$gender, $size], static fn(string $v): bool => $v !== ''));
     $title = $name;
     if (!empty($variantParts)) {
-        $title .= ' (' . implode(', ', $variantParts) . ')';
+        $title .= $gender === '' ? ' ' . $size : ' (' . implode(', ', $variantParts) . ')';
     }
     if ($includeQty && $qty > 1) {
         $title .= ' × ' . $qty . ' шт.';
@@ -276,7 +276,7 @@ function buildYookassaPrepaymentItems(array $items, int $vatCode, float $deliver
     foreach ($items as $item) {
         $qty = max(1, (int)($item['qty'] ?? 1));
         $unitPrice = round((float)($item['price'] ?? 0), 2);
-        $itemLabel = $isSingleLine
+        $itemLabel = $isSingleLine && !empty($item['gender'])
             ? trim((string)($item['name'] ?? 'Товар BOYFORGE'))
             : formatOrderItemTitle($item, false);
         $desc = $prefix . $itemLabel;
@@ -351,7 +351,7 @@ function buildYookassaClosingReceiptPayload(
         $unitPrice = round((float)$unit['price'], 2);
         $goodsTotal += $unitPrice;
         $unitCode = $isMarked ? $normalizedCodes[$idx] : '';
-        $unitTitle = $unit['name'] . ($unit['size'] !== '' ? ' (' . $unit['size'] . ')' : '');
+        $unitTitle = $unit['gender'] === '' ? formatOrderItemTitle($unit, false) : $unit['name'] . ($unit['size'] !== '' ? ' (' . $unit['size'] . ')' : '');
 
         $itemEntry = [
             'description'     => mb_substr('Отгрузка: ' . $unitTitle, 0, 128),
@@ -448,7 +448,7 @@ function buildYookassaRefundReceiptPayload(
         if ($hasAllUnitMarks) {
             $isSingleUnit = count($units) === 1;
             foreach ($units as $idx => $unit) {
-                $unitTitle = $isSingleUnit ? $unit['name'] : formatOrderItemTitle($unit, false);
+                $unitTitle = $isSingleUnit && $unit['gender'] !== '' ? $unit['name'] : formatOrderItemTitle($unit, false);
                 $receiptItems[] = [
                     'description'     => mb_substr('Возврат: ' . $unitTitle, 0, 128),
                     'quantity'        => '1.000',
@@ -469,7 +469,7 @@ function buildYookassaRefundReceiptPayload(
             $isSingleLine = count($items) === 1;
             foreach ($items as $item) {
                 $qty = max(1, (int)($item['qty'] ?? 1));
-                $itemTitle = $isSingleLine ? $item['name'] : formatOrderItemTitle($item, false);
+                $itemTitle = $isSingleLine && $item['gender'] !== '' ? $item['name'] : formatOrderItemTitle($item, false);
                 $receiptItems[] = [
                     'description'     => mb_substr('Возврат: ' . $itemTitle, 0, 128),
                     'quantity'        => number_format((float)$qty, 3, '.', ''),

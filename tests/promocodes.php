@@ -12,6 +12,8 @@ function rejects(callable $fn, string $message): void {
     throw new RuntimeException('FAIL: ' . $message);
 }
 class PromoTestPDO extends PDO {
+    public string $sizeMode = 'dual';
+    public array $sizeRules = [];
     public array $products = [];
     public array $promos = [];
     public function __construct() {}
@@ -28,6 +30,8 @@ class PromoTestStatement extends PDOStatement {
                 $match = str_contains($this->sql, 'cat_id =') ? $product['cat_id'] === $id : (string)$product['id'] === $id;
                 if ($match && $product['is_active']) { $this->result = $product; break; }
             }
+        } elseif (str_contains($this->sql, 'FROM categories')) {
+            $this->result = ['size_chart_mode' => $this->db->sizeMode, 'size_chart_rules' => $this->db->sizeRules];
         } else {
             $promo = $this->db->promos[$id] ?? null;
             if ($promo && $promo['is_active'] && $promo['category_active']) $this->result = $promo;
@@ -96,3 +100,21 @@ $rounded = priceCheckout($db, ['items' => [$cart['items'][0]], 'promoCode' => '�
 expect(abs((float)$rounded['items'][0]['price'] - 66.99) < 0.0001 && $rounded['total'] === 133.98, 'rounding per unit keeps payment and marked receipt totals identical');
 ob_start(); require __DIR__ . '/../includes/email_templates/receipt.php'; $html = ob_get_clean();
 expect(str_contains($html, '12 570.00 ₽'), 'customer email uses the discounted total plus unchanged delivery');
+
+$db->sizeMode = 'single';
+$commonCheckout = priceCheckout($db, ['items' => [
+    ['productId' => '1', 'gender' => 'Мужской', 'size' => 'XL', 'qty' => 1],
+    ['productId' => '1', 'gender' => 'Женский', 'size' => 'XL', 'qty' => 1],
+]]);
+expect(count($commonCheckout['items']) === 1 && $commonCheckout['items'][0]['gender'] === '' && $commonCheckout['items'][0]['qty'] === 2, 'common checkout clears legacy gender and merges identical sizes');
+rejects(fn() => priceCheckout($db, ['productId' => '1', 'size' => '3XL']), 'common checkout rejects sizes outside S–2XL');
+$db->sizeMode = 'dual';
+rejects(fn() => priceCheckout($db, ['productId' => '1', 'size' => 'XL']), 'dual checkout requires gender again');
+
+$db->sizeMode = 'single';
+$db->sizeRules = ['Общая' => ['hidden' => ['S'], 'blocked' => ['XL']]];
+foreach (['S', 'XL'] as $size) {
+    rejects(fn() => priceCheckout($db, ['productId' => '1', 'size' => $size]), 'checkout rejects hidden or blocked category size: ' . $size);
+}
+$db->sizeRules = [];
+expect(priceCheckout($db, ['productId' => '1', 'size' => 'XL'])['items'][0]['size'] === 'XL', 'checkout restores size after category restriction is removed');

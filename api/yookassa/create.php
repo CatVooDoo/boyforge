@@ -119,7 +119,7 @@ $totalValue = round($priceValue + $deliveryCost, 2);
 $orderId = $newOrderId;
 if (count($verifiedItems) === 1 && (int)$verifiedItems[0]['qty'] === 1) {
     $it0 = $verifiedItems[0];
-    $description = "Оплата заказа {$orderId}: {$it0['name']} ({$it0['gender']}, {$it0['size']})";
+    $description = "Оплата заказа {$orderId}: " . formatOrderItemTitle($it0, false);
 } else {
     $description = "Оплата заказа {$orderId} ({$totalUnits} шт.): {$summary['product_name']}";
 }
