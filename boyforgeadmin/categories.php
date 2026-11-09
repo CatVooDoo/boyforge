@@ -79,6 +79,7 @@ foreach ($categories as $c) {
           <th style="width: 50px;">ID</th>
           <th>Название категории</th>
           <th>Системный код (Slug)</th>
+          <th>Размерная сетка</th>
           <th style="text-align: center; width: 150px;">Товаров в категории</th>
           <th style="text-align: center; width: 110px;">Порядок</th>
           <th style="text-align: center; width: 90px;">Статус</th>
@@ -88,7 +89,7 @@ foreach ($categories as $c) {
       <tbody>
         <?php if (empty($categories)): ?>
           <tr>
-            <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
               Категорий пока нет. Нажмите «Добавить категорию», чтобы создать первую.
             </td>
           </tr>
@@ -113,6 +114,13 @@ foreach ($categories as $c) {
                 <code style="background: var(--bg-card-muted); padding: 3px 8px; border-radius: 4px; font-size: 11px; border: 1px solid var(--border-color); color: #333333;"><?= $cSlug ?></code>
               </td>
 
+              <td>
+                <select class="form-select cat-size-chart" data-id="<?= $cId ?>" data-mode="<?= htmlspecialchars($cat['size_chart_mode']) ?>" aria-label="Размерная сетка: <?= $cName ?>">
+                  <option value="single" <?= $cat['size_chart_mode'] !== 'dual' ? 'selected' : '' ?>>Одна общая (S–2XL)</option>
+                  <option value="dual" <?= $cat['size_chart_mode'] === 'dual' ? 'selected' : '' ?>>Две: мужская и женская</option>
+                </select>
+                <button type="button" class="btn btn-secondary cat-size-open" data-target="categorySizes<?= $cId ?>" style="margin-top: 10px;">Настроить размеры</button>
+              </td>
               <td style="text-align: center;">
                 <span class="category-badge" style="background: <?= $cCount > 0 ? 'var(--bg-card-muted)' : '#fafaf8' ?>;">
                   <?= $cCount ?> поз.
@@ -148,6 +156,79 @@ foreach ($categories as $c) {
     </table>
   </div>
 </div>
+
+<style>
+.cat-sizes-modal[hidden], .cat-sizes-modal [hidden] { display: none !important; }
+.cat-sizes-modal .modal-box { max-width: 650px; max-height: 90vh; overflow-y: auto; }
+.cat-sizes-modal .cat-sizes-heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
+.cat-sizes-modal .cat-sizes-chart { margin: 20px 0; }
+.cat-sizes-modal .cat-sizes-toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.cat-sizes-modal .cat-sizes-toolbar button { font-size: 11px; padding: 6px 10px; }
+.cat-sizes-modal .cat-size-row { display: grid; grid-template-columns: 44px 1fr; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border-color); }
+.cat-sizes-modal .cat-size-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.cat-sizes-modal .cat-size-choice { position: relative; cursor: pointer; }
+.cat-sizes-modal .cat-size-choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.cat-sizes-modal .cat-size-choice span { display: block; text-align: center; padding: 9px 5px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; color: var(--text-muted); }
+.cat-sizes-modal .cat-size-choice input:checked + span { border-color: #166534; background: #f0fdf4; color: #166534; font-weight: 600; }
+.cat-sizes-modal .cat-size-choice input[value="hidden"]:checked + span { border-color: #64748b; background: #f1f5f9; color: #475569; }
+.cat-sizes-modal .cat-size-choice input[value="blocked"]:checked + span { border-color: #b91c1c; background: #fef2f2; color: #b91c1c; }
+.cat-sizes-modal .cat-size-choice input:focus-visible + span { outline: 2px solid #111; outline-offset: 2px; }
+.cat-sizes-modal .modal-actions { position: sticky; bottom: 0; padding: 14px 0; background: #fff; border-top: 1px solid var(--border-color); }
+.cat-sizes-modal .cat-sizes-status { min-height: 20px; margin: 12px 0; font-size: 12px; color: var(--text-muted); }
+@media (max-width: 480px) {
+  .cat-sizes-modal { padding: 10px; }
+  .cat-sizes-modal .modal-box { padding: 18px; }
+  .cat-sizes-modal .cat-size-row { grid-template-columns: 30px 1fr; gap: 4px; }
+  .cat-sizes-modal .cat-size-choice span { font-size: 10px; padding: 10px 2px; }
+}
+</style>
+
+<?php foreach ($categories as $cat): ?>
+  <?php $sizeRules = categorySizeRules($cat['size_chart_rules'] ?? null); $sizeCatId = (int)$cat['id']; ?>
+  <div class="modal-overlay cat-sizes-modal" id="categorySizes<?= $sizeCatId ?>" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="categorySizesTitle<?= $sizeCatId ?>">
+      <div class="cat-sizes-heading">
+        <div>
+          <h2 class="modal-title" id="categorySizesTitle<?= $sizeCatId ?>">Размеры · <?= htmlspecialchars($cat['name']) ?></h2>
+          <p class="form-help">Настройки применяются ко всем товарам категории.</p>
+        </div>
+        <button type="button" class="btn-icon cat-size-close" aria-label="Закрыть">✕</button>
+      </div>
+      <form class="cat-size-rules" data-id="<?= $sizeCatId ?>">
+        <p class="form-help">«Скрыт» — не виден покупателю. «Нет в наличии» — виден, но заказать нельзя. «Доступен» — учитывается наличие у товара.</p>
+        <?php foreach (['Общая' => commonSizes()] + sizesByGender() as $chart => $chartSizes): ?>
+          <section class="cat-sizes-chart" data-size-rules-chart="<?= $chart === 'Общая' ? 'single' : 'dual' ?>" <?= (($cat['size_chart_mode'] === 'dual') !== ($chart !== 'Общая')) ? 'hidden' : '' ?>>
+            <strong><?= ['Общая' => 'Общая сетка', 'Мужской' => 'Мужская сетка', 'Женский' => 'Женская сетка'][$chart] ?></strong>
+            <div class="cat-sizes-toolbar" aria-label="Массовое изменение: <?= htmlspecialchars($chart) ?>">
+              <button type="button" class="btn btn-secondary" data-size-bulk="available">Все доступны</button>
+              <button type="button" class="btn btn-secondary" data-size-bulk="hidden">Скрыть все</button>
+              <button type="button" class="btn btn-secondary" data-size-bulk="blocked">Все недоступны</button>
+            </div>
+            <?php foreach ($chartSizes as $size): ?>
+              <?php $sizeState = in_array($size, $sizeRules[$chart]['hidden'], true) ? 'hidden' : (in_array($size, $sizeRules[$chart]['blocked'], true) ? 'blocked' : 'available'); ?>
+              <div class="cat-size-row" role="group" aria-label="<?= htmlspecialchars($chart . ': ' . $size) ?>">
+                <strong><?= htmlspecialchars($size) ?></strong>
+                <div class="cat-size-options">
+                  <?php foreach (['available' => 'Доступен', 'hidden' => 'Скрыт', 'blocked' => 'Нет в наличии'] as $state => $label): ?>
+                    <label class="cat-size-choice">
+                      <input type="radio" name="size_rules[<?= htmlspecialchars($chart) ?>][<?= htmlspecialchars($size) ?>]" value="<?= $state ?>" <?= $sizeState === $state ? 'checked' : '' ?>>
+                      <span><?= $label ?></span>
+                    </label>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </section>
+        <?php endforeach; ?>
+        <p class="cat-sizes-status" role="status" aria-live="polite">Изменений нет</p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary cat-size-close">Закрыть</button>
+          <button type="submit" class="btn btn-primary" disabled>Сохранить размеры</button>
+        </div>
+      </form>
+    </div>
+  </div>
+<?php endforeach; ?>
 
 <!-- Модальное окно создания / редактирования категории -->
 <div class="modal-overlay" id="categoryModal">
@@ -289,6 +370,108 @@ document.addEventListener("DOMContentLoaded", function () {
         btnSave.disabled = false;
         showToast("Ошибка сети", "error");
       });
+  });
+
+  document.querySelectorAll(".cat-size-open").forEach((button) => {
+    button.addEventListener("click", () => {
+      const overlay = document.getElementById(button.dataset.target);
+      overlay.hidden = false;
+      overlay.classList.add("active");
+      overlay.querySelector(".cat-size-close").focus();
+    });
+  });
+
+  document.querySelectorAll(".cat-size-rules").forEach((form) => {
+    const overlay = form.closest(".cat-sizes-modal");
+    const saveButton = form.querySelector('button[type="submit"]');
+    const status = form.querySelector(".cat-sizes-status");
+    const radios = Array.from(form.querySelectorAll('input[type="radio"]'));
+    let saving = false;
+    function updateStatus() {
+      const changed = radios.some((radio) => radio.checked !== radio.defaultChecked);
+      saveButton.disabled = saving || !changed;
+      status.textContent = changed ? "Есть несохранённые изменения" : "Изменений нет";
+    }
+    function closeSizes() {
+      if (saving) return;
+      form.reset();
+      updateStatus();
+      overlay.classList.remove("active");
+      overlay.hidden = true;
+      document.querySelector('.cat-size-open[data-target="' + overlay.id + '"]').focus();
+    }
+    overlay.querySelectorAll(".cat-size-close").forEach((button) => button.addEventListener("click", closeSizes));
+    overlay.addEventListener("click", (event) => { if (event.target === overlay) closeSizes(); });
+    overlay.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") { event.preventDefault(); closeSizes(); }
+      if (event.key === "Tab") {
+        const focusable = Array.from(overlay.querySelectorAll('button:not([disabled]), input:not([disabled])')).filter((element) => element.getClientRects().length);
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+    });
+    form.addEventListener("change", updateStatus);
+    form.querySelectorAll("[data-size-bulk]").forEach((button) => {
+      button.addEventListener("click", () => {
+        button.closest("[data-size-rules-chart]").querySelectorAll('input[type="radio"]').forEach((radio) => {
+          radio.checked = radio.value === button.dataset.sizeBulk;
+        });
+        updateStatus();
+      });
+    });
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      if (saving || saveButton.disabled) return;
+      const data = new FormData(this);
+      data.set("id", this.dataset.id);
+      data.set("csrf_token", document.querySelector('meta[name="csrf-token"]')?.content || "");
+      const submitted = radios.map((radio) => radio.checked);
+      saving = true;
+      form.querySelectorAll("input, button").forEach((control) => { control.disabled = true; });
+      status.textContent = "Сохраняем…";
+      try {
+        const response = await fetch("api.php?action=set_category_size_rules", { method: "POST", body: data });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || "Ошибка сохранения размеров");
+        radios.forEach((radio, index) => { radio.defaultChecked = submitted[index]; });
+        status.textContent = "Размеры сохранены для всех товаров категории";
+        showToast(status.textContent, "success");
+      } catch (error) {
+        status.textContent = error.message + ". Изменения не сохранены — попробуйте ещё раз.";
+        showToast(error.message, "error");
+      } finally {
+        saving = false;
+        form.querySelectorAll("input, button").forEach((control) => { control.disabled = false; });
+        saveButton.disabled = !radios.some((radio) => radio.checked !== radio.defaultChecked);
+      }
+    });
+  });
+
+  document.querySelectorAll(".cat-size-chart").forEach((select) => {
+    select.addEventListener("change", async function () {
+      const previous = this.dataset.mode;
+      this.disabled = true;
+      const data = new FormData();
+      data.set("id", this.dataset.id);
+      data.set("mode", this.value);
+      data.set("csrf_token", document.querySelector('meta[name="csrf-token"]')?.content || "");
+      try {
+        const response = await fetch("api.php?action=set_category_size_chart", { method: "POST", body: data });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || "Ошибка сохранения сетки");
+        this.dataset.mode = this.value;
+        document.getElementById("categorySizes" + this.dataset.id).querySelectorAll("[data-size-rules-chart]").forEach((group) => {
+          group.hidden = group.dataset.sizeRulesChart !== this.value;
+        });
+        showToast("Размерная сетка сохранена", "success");
+      } catch (error) {
+        this.value = previous;
+        showToast(error.message, "error");
+      } finally {
+        this.disabled = false;
+      }
+    });
   });
 
   document.querySelectorAll(".cat-status-switch-input").forEach((toggle) => {
