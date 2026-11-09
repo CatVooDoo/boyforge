@@ -1,5 +1,5 @@
-var SPREADSHEET_ID = "15TQEi8I2dkhpXoZfunY2PCaoL1zuQjZ7iTyEz9C7nbE";
-var SHEET_NAME = "Заказы";
+var SPREADSHEET_ID = "19b58Sk8ZD9NDl-qXCcLYDFq2xZCjLG1Cx_A3B7z_nms";
+var SHEET_NAME = "ЗАКАЗЫ";
 
 function doGet(e) {
   try {
@@ -90,7 +90,7 @@ function doPost(e) {
       data.status || "Оплачен",
       data.transactionId || "—",
       data.productName || "Товар BOYFORGE",
-      data.gender || "Мужской",
+      data.gender || "",
       data.size || "M",
       data.price || "3 200 ₽",
       data.fivepostPointAddress || "—",
