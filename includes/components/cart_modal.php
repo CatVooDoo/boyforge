@@ -215,5 +215,3 @@ $bfYandexApiKey = function_exists('env_get') ? (env_get('YANDEX_MAPS_API_KEY') ?
       yandexMapsApiKey: <?= json_encode($bfYandexApiKey, JSON_UNESCAPED_UNICODE) ?>
     });
   </script>
-  <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=<?= htmlspecialchars($bfYandexApiKey) ?>" defer></script>
-  <script src="https://yookassa.ru/checkout-widget/v1/checkout-widget.js"></script>
